@@ -1,0 +1,263 @@
+import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
+
+import '../models/concept.dart';
+import '../models/knowledge_graph.dart';
+import '../models/quiz_item.dart';
+import '../models/relationship.dart';
+
+const _systemPrompt = '''
+You are a knowledge extraction engine. Given a wiki document, extract:
+1. **Concepts**: Key ideas, terms, entities, or principles. Each gets a unique ID.
+2. **Relationships**: How concepts connect (e.g. "depends on", "is a type of", "enables").
+3. **Quiz items**: Flashcard-style questions that test understanding of each concept.
+
+Guidelines:
+- Extract 3-10 concepts per document depending on density.
+- Concept IDs must be canonical lowercase kebab-case based on the concept name (e.g. "docker-compose", "dependency-injection"). If existing concept IDs are provided, reuse them for the same concepts instead of creating new IDs.
+- Create relationships between concepts from THIS document. Use the concept IDs you generate.
+- For prerequisite relationships (concept A requires understanding concept B first), use the label "depends on". Reserve other labels like "is a type of", "enables", "related to" for non-prerequisite relationships.
+- Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
+- Use clear, concise language. Answers should be 1-3 sentences.
+''';
+
+const _toolName = 'extract_knowledge';
+
+const _extractionTool = Tool.custom(
+  name: _toolName,
+  description:
+      'Extract structured knowledge (concepts, relationships, quiz items) from a document.',
+  inputSchema: {
+    'type': 'object',
+    'required': ['concepts', 'relationships', 'quizItems'],
+    'properties': {
+      'concepts': {
+        'type': 'array',
+        'description': 'Key concepts extracted from the document.',
+        'items': {
+          'type': 'object',
+          'required': ['id', 'name', 'description'],
+          'properties': {
+            'id': {
+              'type': 'string',
+              'description':
+                  'Unique ID in kebab-case, e.g. "dependency-injection"',
+            },
+            'name': {
+              'type': 'string',
+              'description': 'Human-readable concept name',
+            },
+            'description': {
+              'type': 'string',
+              'description': '1-3 sentence description of the concept',
+            },
+            'tags': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description': 'Optional categorization tags',
+            },
+          },
+        },
+      },
+      'relationships': {
+        'type': 'array',
+        'description': 'How concepts relate to each other.',
+        'items': {
+          'type': 'object',
+          'required': ['id', 'fromConceptId', 'toConceptId', 'label'],
+          'properties': {
+            'id': {
+              'type': 'string',
+              'description': 'Unique relationship ID',
+            },
+            'fromConceptId': {
+              'type': 'string',
+              'description': 'Source concept ID',
+            },
+            'toConceptId': {
+              'type': 'string',
+              'description': 'Target concept ID',
+            },
+            'label': {
+              'type': 'string',
+              'description':
+                  'Relationship type, e.g. "depends on", "enables", "is a type of"',
+            },
+            'description': {
+              'type': 'string',
+              'description': 'Optional description of the relationship',
+            },
+          },
+        },
+      },
+      'quizItems': {
+        'type': 'array',
+        'description': 'Flashcard-style questions testing understanding.',
+        'items': {
+          'type': 'object',
+          'required': ['id', 'conceptId', 'question', 'answer'],
+          'properties': {
+            'id': {
+              'type': 'string',
+              'description': 'Unique quiz item ID',
+            },
+            'conceptId': {
+              'type': 'string',
+              'description': 'ID of the concept being tested',
+            },
+            'question': {
+              'type': 'string',
+              'description': 'The question to ask',
+            },
+            'answer': {
+              'type': 'string',
+              'description': 'The expected answer (1-3 sentences)',
+            },
+          },
+        },
+      },
+    },
+  },
+);
+
+class ExtractionService {
+  ExtractionService({
+    required String apiKey,
+    AnthropicClient? client,
+  }) : _client = client ?? AnthropicClient(apiKey: apiKey);
+
+  final AnthropicClient _client;
+
+  Future<ExtractionResult> extract({
+    required String documentTitle,
+    required String documentContent,
+    List<String> existingConceptIds = const [],
+  }) async {
+    final existingIdsNote = existingConceptIds.isNotEmpty
+        ? '\n\nExisting concept IDs in the knowledge graph (reuse these '
+            'when referring to the same concepts):\n'
+            '${existingConceptIds.join(', ')}\n'
+        : '';
+
+    final response = await _client.createMessage(
+      request: CreateMessageRequest(
+        model: const Model.modelId('claude-sonnet-4-5-20250929'),
+        maxTokens: 4096,
+        system: const CreateMessageRequestSystem.text(_systemPrompt),
+        tools: [_extractionTool],
+        toolChoice: const ToolChoice(
+          type: ToolChoiceType.tool,
+          name: _toolName,
+        ),
+        messages: [
+          Message(
+            role: MessageRole.user,
+            content: MessageContent.text(
+              'Extract knowledge from this document.'
+              '$existingIdsNote\n\n'
+              '# $documentTitle\n\n'
+              '$documentContent',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Find the tool use block
+    final content = response.content;
+    Map<String, dynamic>? toolInput;
+
+    if (content case MessageContentBlocks(value: final blocks)) {
+      for (final block in blocks) {
+        if (block case ToolUseBlock(name: _toolName, :final input)) {
+          toolInput = input;
+          break;
+        }
+      }
+    }
+
+    if (toolInput == null) {
+      throw ExtractionException(
+        'Claude did not return a tool use block for $_toolName',
+      );
+    }
+
+    return _parseResult(toolInput, documentTitle);
+  }
+
+  ExtractionResult _parseResult(
+    Map<String, dynamic> input,
+    String documentTitle,
+  ) {
+    final conceptsList = input['concepts'] as List<dynamic>? ?? [];
+    final relationshipsList = input['relationships'] as List<dynamic>? ?? [];
+    final quizItemsList = input['quizItems'] as List<dynamic>? ?? [];
+
+    // Build a set of valid concept IDs for validation
+    final conceptIds = <String>{};
+
+    final concepts = conceptsList.map((c) {
+      final map = c as Map<String, dynamic>;
+      final id = map['id'] as String;
+      conceptIds.add(id);
+      return Concept(
+        id: id,
+        name: map['name'] as String,
+        description: map['description'] as String,
+        sourceDocumentId: '', // Will be set by caller via withNewExtraction
+        tags: (map['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
+      );
+    }).toList();
+
+    final relationships = <Relationship>[];
+    for (final r in relationshipsList) {
+      final map = r as Map<String, dynamic>;
+      final fromId = map['fromConceptId'] as String;
+      final toId = map['toConceptId'] as String;
+
+      // Skip relationships with orphaned concept references
+      if (!conceptIds.contains(fromId) || !conceptIds.contains(toId)) {
+        continue;
+      }
+
+      relationships.add(Relationship(
+        id: map['id'] as String,
+        fromConceptId: fromId,
+        toConceptId: toId,
+        label: map['label'] as String,
+        description: map['description'] as String?,
+      ));
+    }
+
+    final quizItems = <QuizItem>[];
+    for (final q in quizItemsList) {
+      final map = q as Map<String, dynamic>;
+      final conceptId = map['conceptId'] as String;
+
+      if (!conceptIds.contains(conceptId)) {
+        continue;
+      }
+
+      quizItems.add(QuizItem.newCard(
+        id: map['id'] as String,
+        conceptId: conceptId,
+        question: map['question'] as String,
+        answer: map['answer'] as String,
+      ));
+    }
+
+    return ExtractionResult(
+      concepts: concepts,
+      relationships: relationships,
+      quizItems: quizItems,
+    );
+  }
+}
+
+class ExtractionException implements Exception {
+  ExtractionException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'ExtractionException: $message';
+}

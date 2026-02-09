@@ -1,0 +1,409 @@
+import 'dart:convert';
+
+import 'package:engram/src/models/concept.dart';
+import 'package:engram/src/models/document_metadata.dart';
+import 'package:engram/src/models/knowledge_graph.dart';
+import 'package:engram/src/models/quiz_item.dart';
+import 'package:engram/src/models/relationship.dart';
+import 'package:test/test.dart';
+
+void main() {
+  group('Concept', () {
+    test('fromJson/toJson round-trips', () {
+      const concept = Concept(
+        id: 'test-concept',
+        name: 'Test Concept',
+        description: 'A test concept',
+        sourceDocumentId: 'doc-1',
+        tags: ['test', 'example'],
+      );
+
+      final json = concept.toJson();
+      final restored = Concept.fromJson(json);
+
+      expect(restored.id, concept.id);
+      expect(restored.name, concept.name);
+      expect(restored.description, concept.description);
+      expect(restored.sourceDocumentId, concept.sourceDocumentId);
+      expect(restored.tags, concept.tags);
+    });
+
+    test('fromJson handles missing tags', () {
+      final concept = Concept.fromJson({
+        'id': 'test',
+        'name': 'Test',
+        'description': 'Desc',
+        'sourceDocumentId': 'doc-1',
+      });
+
+      expect(concept.tags, isEmpty);
+    });
+
+    test('withSourceDocumentId creates new instance', () {
+      const concept = Concept(
+        id: 'c1',
+        name: 'C1',
+        description: 'Desc',
+        sourceDocumentId: '',
+      );
+
+      final updated = concept.withSourceDocumentId('doc-1');
+      expect(updated.sourceDocumentId, 'doc-1');
+      expect(updated.id, 'c1');
+      expect(concept.sourceDocumentId, ''); // Original unchanged
+    });
+  });
+
+  group('Relationship', () {
+    test('fromJson/toJson round-trips', () {
+      const rel = Relationship(
+        id: 'r1',
+        fromConceptId: 'c1',
+        toConceptId: 'c2',
+        label: 'depends on',
+        description: 'C1 depends on C2',
+      );
+
+      final json = rel.toJson();
+      final restored = Relationship.fromJson(json);
+
+      expect(restored.id, rel.id);
+      expect(restored.fromConceptId, rel.fromConceptId);
+      expect(restored.toConceptId, rel.toConceptId);
+      expect(restored.label, rel.label);
+      expect(restored.description, rel.description);
+    });
+
+    test('toJson omits null description', () {
+      const rel = Relationship(
+        id: 'r1',
+        fromConceptId: 'c1',
+        toConceptId: 'c2',
+        label: 'enables',
+      );
+
+      final json = rel.toJson();
+      expect(json.containsKey('description'), isFalse);
+    });
+  });
+
+  group('QuizItem', () {
+    test('newCard sets SM-2 defaults', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+      );
+
+      expect(item.easeFactor, 2.5);
+      expect(item.interval, 0);
+      expect(item.repetitions, 0);
+      expect(item.lastReview, isNull);
+    });
+
+    test('fromJson/toJson round-trips', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+      );
+
+      final json = item.toJson();
+      final restored = QuizItem.fromJson(json);
+
+      expect(restored.id, item.id);
+      expect(restored.conceptId, item.conceptId);
+      expect(restored.question, item.question);
+      expect(restored.answer, item.answer);
+      expect(restored.easeFactor, item.easeFactor);
+      expect(restored.interval, item.interval);
+      expect(restored.repetitions, item.repetitions);
+      expect(restored.nextReview, item.nextReview);
+    });
+
+    test('withReview updates SM-2 state', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+      );
+
+      final updated = item.withReview(
+        easeFactor: 2.6,
+        interval: 1,
+        repetitions: 1,
+        nextReview: '2025-01-02T00:00:00.000Z',
+      );
+
+      expect(updated.easeFactor, 2.6);
+      expect(updated.interval, 1);
+      expect(updated.repetitions, 1);
+      expect(updated.nextReview, '2025-01-02T00:00:00.000Z');
+      expect(updated.lastReview, isNotNull);
+      // Original unchanged
+      expect(item.easeFactor, 2.5);
+    });
+  });
+
+  group('DocumentMetadata', () {
+    test('fromJson/toJson round-trips', () {
+      const meta = DocumentMetadata(
+        documentId: 'doc-1',
+        title: 'Test Doc',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        ingestedAt: '2025-01-01T01:00:00.000Z',
+      );
+
+      final json = meta.toJson();
+      final restored = DocumentMetadata.fromJson(json);
+
+      expect(restored.documentId, meta.documentId);
+      expect(restored.title, meta.title);
+      expect(restored.updatedAt, meta.updatedAt);
+      expect(restored.ingestedAt, meta.ingestedAt);
+    });
+  });
+
+  group('KnowledgeGraph', () {
+    test('empty graph serializes to empty lists', () {
+      const graph = KnowledgeGraph();
+      final json = graph.toJson();
+
+      expect(json['concepts'], isEmpty);
+      expect(json['relationships'], isEmpty);
+      expect(json['quizItems'], isEmpty);
+      expect(json['documentMetadata'], isEmpty);
+    });
+
+    test('full round-trip through JSON string', () {
+      final graph = KnowledgeGraph(
+        concepts: const [
+          Concept(
+            id: 'c1',
+            name: 'Concept 1',
+            description: 'Desc 1',
+            sourceDocumentId: 'doc-1',
+          ),
+        ],
+        relationships: const [
+          Relationship(
+            id: 'r1',
+            fromConceptId: 'c1',
+            toConceptId: 'c1',
+            label: 'self-referential',
+          ),
+        ],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc-1',
+            title: 'Doc 1',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+            ingestedAt: '2025-01-01T01:00:00.000Z',
+          ),
+        ],
+      );
+
+      final jsonStr = jsonEncode(graph.toJson());
+      final restored =
+          KnowledgeGraph.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+
+      expect(restored.concepts.length, 1);
+      expect(restored.relationships.length, 1);
+      expect(restored.quizItems.length, 1);
+      expect(restored.documentMetadata.length, 1);
+      expect(restored.concepts.first.id, 'c1');
+    });
+
+    test('withNewExtraction adds new data', () {
+      const graph = KnowledgeGraph();
+
+      final result = ExtractionResult(
+        concepts: const [
+          Concept(
+            id: 'c1',
+            name: 'C1',
+            description: 'Desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
+        ],
+      );
+
+      final updated = graph.withNewExtraction(
+        result,
+        documentId: 'doc-1',
+        documentTitle: 'Doc 1',
+        updatedAt: '2025-01-01',
+      );
+
+      expect(updated.concepts.length, 1);
+      expect(updated.concepts.first.sourceDocumentId, 'doc-1');
+      expect(updated.quizItems.length, 1);
+      expect(updated.documentMetadata.length, 1);
+    });
+
+    test('withNewExtraction replaces data from same document', () {
+      final initial = KnowledgeGraph(
+        concepts: const [
+          Concept(
+            id: 'c1',
+            name: 'Old',
+            description: 'Old desc',
+            sourceDocumentId: 'doc-1',
+          ),
+        ],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Old Q?',
+            answer: 'Old A.',
+          ),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc-1',
+            title: 'Doc 1',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+          ),
+        ],
+      );
+
+      final result = ExtractionResult(
+        concepts: const [
+          Concept(
+            id: 'c2',
+            name: 'New',
+            description: 'New desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q2',
+            conceptId: 'c2',
+            question: 'New Q?',
+            answer: 'New A.',
+          ),
+        ],
+      );
+
+      final updated = initial.withNewExtraction(
+        result,
+        documentId: 'doc-1',
+        documentTitle: 'Doc 1',
+        updatedAt: '2025-01-02',
+      );
+
+      expect(updated.concepts.length, 1);
+      expect(updated.concepts.first.id, 'c2');
+      expect(updated.quizItems.length, 1);
+      expect(updated.quizItems.first.id, 'q2');
+      expect(updated.documentMetadata.length, 1);
+    });
+
+    test('withNewExtraction preserves data from other documents', () {
+      final initial = KnowledgeGraph(
+        concepts: const [
+          Concept(
+            id: 'c1',
+            name: 'From Doc 1',
+            description: 'Desc',
+            sourceDocumentId: 'doc-1',
+          ),
+        ],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q1?',
+            answer: 'A1.',
+          ),
+        ],
+      );
+
+      final result = ExtractionResult(
+        concepts: const [
+          Concept(
+            id: 'c2',
+            name: 'From Doc 2',
+            description: 'Desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q2',
+            conceptId: 'c2',
+            question: 'Q2?',
+            answer: 'A2.',
+          ),
+        ],
+      );
+
+      final updated = initial.withNewExtraction(
+        result,
+        documentId: 'doc-2',
+        documentTitle: 'Doc 2',
+        updatedAt: '2025-01-01',
+      );
+
+      expect(updated.concepts.length, 2);
+      expect(updated.quizItems.length, 2);
+    });
+
+    test('withUpdatedQuizItem replaces the right item', () {
+      final graph = KnowledgeGraph(
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q1?',
+            answer: 'A1.',
+          ),
+          QuizItem.newCard(
+            id: 'q2',
+            conceptId: 'c2',
+            question: 'Q2?',
+            answer: 'A2.',
+          ),
+        ],
+      );
+
+      final updated = graph.quizItems.first.withReview(
+        easeFactor: 2.6,
+        interval: 1,
+        repetitions: 1,
+        nextReview: '2025-01-02T00:00:00.000Z',
+      );
+
+      final newGraph = graph.withUpdatedQuizItem(updated);
+
+      expect(newGraph.quizItems.length, 2);
+      expect(newGraph.quizItems.first.repetitions, 1);
+      expect(newGraph.quizItems.last.repetitions, 0);
+    });
+  });
+}
