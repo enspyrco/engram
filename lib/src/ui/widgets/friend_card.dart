@@ -32,14 +32,15 @@ class FriendCard extends StatelessWidget {
               backgroundImage: friend.photoUrl != null
                   ? NetworkImage(friend.photoUrl!)
                   : null,
-              child: friend.photoUrl == null
-                  ? Text(
-                      friend.displayName.isNotEmpty
-                          ? friend.displayName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(fontSize: 20),
-                    )
+              onBackgroundImageError: friend.photoUrl != null
+                  ? (_, __) {} // Silently fall back to child
                   : null,
+              child: Text(
+                friend.displayName.isNotEmpty
+                    ? friend.displayName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(fontSize: 20),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

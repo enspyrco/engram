@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,7 +15,7 @@ final socialRepositoryProvider = Provider<SocialRepository?>((ref) {
   if (user == null) return null;
 
   return SocialRepository(
-    firestore: FirebaseFirestore.instance,
+    firestore: ref.watch(firestoreProvider),
     userId: user.uid,
   );
 });
@@ -35,12 +34,14 @@ String hashWikiUrl(String url) {
 
 /// Manages friend discovery and the friends list.
 ///
-/// On initialization, hashes the user's wiki URL, joins the wiki group,
-/// and watches for new members to auto-populate the friends list.
+/// Watches the user's friends subcollection directly. Wiki group joining
+/// is handled as a one-shot side-effect, not on every rebuild.
 final friendsProvider =
     AsyncNotifierProvider<FriendsNotifier, List<Friend>>(FriendsNotifier.new);
 
 class FriendsNotifier extends AsyncNotifier<List<Friend>> {
+  bool _hasJoinedGroup = false;
+
   @override
   Future<List<Friend>> build() async {
     final socialRepo = ref.watch(socialRepositoryProvider);
@@ -50,32 +51,43 @@ class FriendsNotifier extends AsyncNotifier<List<Friend>> {
     final config = ref.watch(settingsProvider);
     if (config.outlineApiUrl.isEmpty) return [];
 
-    // Join the wiki group
     final wikiHash = hashWikiUrl(config.outlineApiUrl);
-    final profile = ref.watch(userProfileProvider).valueOrNull;
-    if (profile != null) {
-      await socialRepo.joinWikiGroup(
-        wikiUrlHash: wikiHash,
-        displayName: profile.displayName,
-        photoUrl: profile.photoUrl,
-      );
+
+    // Join the wiki group once per provider lifecycle (not on every rebuild)
+    if (!_hasJoinedGroup) {
+      final profile = ref.watch(userProfileProvider).valueOrNull;
+      if (profile != null) {
+        await socialRepo.joinWikiGroup(
+          wikiUrlHash: wikiHash,
+          displayName: profile.displayName,
+          photoUrl: profile.photoUrl,
+        );
+        _hasJoinedGroup = true;
+      }
     }
 
-    // Watch wiki group members and auto-add as friends
+    // Watch wiki group members and sync new ones to friends list
     final membersSubscription =
         socialRepo.watchWikiGroupMembers(wikiHash).listen((members) async {
+      final currentFriends = state.valueOrNull ?? [];
+      final currentUids = currentFriends.map((f) => f.uid).toSet();
+      // Only write friends we haven't already added
       for (final member in members) {
-        await socialRepo.addFriend(member);
+        if (!currentUids.contains(member.uid)) {
+          await socialRepo.addFriend(member);
+        }
       }
-      // Trigger a rebuild to pick up new friends
-      ref.invalidateSelf();
     });
-
-    // Clean up subscription when provider is disposed
     ref.onDispose(membersSubscription.cancel);
 
-    // Return current friends list
-    final friendsStream = socialRepo.watchFriends();
-    return await friendsStream.first;
+    // Watch friends stream and update state directly (no invalidateSelf)
+    final friendsSubscription =
+        socialRepo.watchFriends().listen((friends) {
+      state = AsyncData(friends);
+    });
+    ref.onDispose(friendsSubscription.cancel);
+
+    // Return initial friends list
+    return await socialRepo.watchFriends().first;
   }
 }
