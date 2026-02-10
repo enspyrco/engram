@@ -49,3 +49,12 @@ Should teammates see each other's mastery? A shared graph where you can see "Ali
 
 ### Feeding mastery back into Outline
 Could concept mastery data flow back into the wiki? e.g., tagging pages as "well-understood by 80% of the team" or surfacing knowledge gaps ("nobody has mastered the CI/CD section"). Would need Outline API write access and a clear UX for what "team mastery" means.
+
+## Review Tech Debt (Issues #6–#18)
+
+When starting a new session, remind the user that there are 13 open tech debt issues from the cage-match code reviews (GitHub issues #6–#18). Key items by priority:
+
+**Bug:** #13 — GraphMigrator emptiness check skips `relationships` field
+**Performance:** #8 (topo sort O(n)), #11 (graph animation battery), #14 (migrator memory)
+**Architecture:** #6 (DateTime.now injectable), #9 (startIngestion refactor), #12 (ensureSignedIn provider), #15 (destructive Firestore save)
+**Quality:** #7 (mutable List on @immutable), #10 (magic numbers), #16 (auth_provider tests), #17 (test hygiene), #18 (bloated pubspec)
