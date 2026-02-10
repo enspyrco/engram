@@ -1,8 +1,7 @@
-import 'dart:io' show Platform;
-
 import 'package:engram/src/providers/auth_provider.dart';
 import 'package:engram/src/ui/screens/sign_in_screen.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,7 +45,8 @@ void main() {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      if (Platform.isIOS || Platform.isMacOS) {
+      if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
         expect(find.text('Continue with Apple'), findsOneWidget);
       } else {
         expect(find.text('Continue with Apple'), findsNothing);

@@ -30,7 +30,8 @@ service cloud.firestore {
     }
 
     // --- Social: challenges ---
-    match /social/challenges/{challengeId} {
+    // Path matches code: social/challenges/items/{challengeId}
+    match /social/challenges/items/{challengeId} {
       // Sender or receiver can read
       allow read: if request.auth != null
         && (resource.data.fromUid == request.auth.uid
@@ -38,13 +39,16 @@ service cloud.firestore {
       // Any authed user can create (fromUid must match)
       allow create: if request.auth != null
         && request.resource.data.fromUid == request.auth.uid;
-      // Receiver can update status (accept/decline/complete)
+      // Receiver can only update status and score fields
       allow update: if request.auth != null
-        && resource.data.toUid == request.auth.uid;
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status', 'score']);
     }
 
     // --- Social: nudges ---
-    match /social/nudges/{nudgeId} {
+    // Path matches code: social/nudges/items/{nudgeId}
+    match /social/nudges/items/{nudgeId} {
       // Sender or receiver can read
       allow read: if request.auth != null
         && (resource.data.fromUid == request.auth.uid
@@ -52,9 +56,11 @@ service cloud.firestore {
       // Any authed user can create (fromUid must match)
       allow create: if request.auth != null
         && request.resource.data.fromUid == request.auth.uid;
-      // Receiver can update status (mark seen)
+      // Receiver can only update status field
       allow update: if request.auth != null
-        && resource.data.toUid == request.auth.uid;
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status']);
     }
   }
 }

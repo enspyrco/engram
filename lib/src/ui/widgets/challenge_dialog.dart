@@ -9,6 +9,13 @@ import '../../providers/challenge_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/user_profile_provider.dart';
 
+/// Minimum SM-2 repetitions to consider a concept "mastered".
+const int kMasteryMinRepetitions = 3;
+
+/// Minimum SM-2 ease factor to consider a concept "mastered".
+/// 2.5 is the initial ease factor — meaning the concept hasn't gotten harder.
+const double kMasteryMinEaseFactor = 2.5;
+
 /// Dialog to pick a mastered concept and send a challenge to a friend.
 class ChallengeDialog extends ConsumerStatefulWidget {
   const ChallengeDialog({super.key, required this.friend});
@@ -34,7 +41,9 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
           // Find concepts the current user has mastered
           // (quiz items with easeFactor >= 2.5 and repetitions >= 3)
           final masteredConceptIds = graph.quizItems
-              .where((q) => q.repetitions >= 3 && q.easeFactor >= 2.5)
+              .where((q) =>
+                  q.repetitions >= kMasteryMinRepetitions &&
+                  q.easeFactor >= kMasteryMinEaseFactor)
               .map((q) => q.conceptId)
               .toSet();
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/challenge.dart';
 import '../../models/friend.dart';
 import '../../models/nudge.dart';
 import '../../providers/auth_provider.dart';
@@ -42,7 +43,7 @@ class FriendsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required List<Friend> friends,
-    required List<dynamic> challenges,
+    required List<Challenge> challenges,
     required List<Nudge> nudges,
   }) {
     if (friends.isEmpty && challenges.isEmpty && nudges.isEmpty) {
