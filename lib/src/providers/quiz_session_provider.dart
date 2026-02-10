@@ -5,6 +5,9 @@ import '../engine/sm2.dart';
 import '../engine/streak.dart';
 import '../models/quiz_session_state.dart';
 import '../models/session_mode.dart';
+import 'auth_provider.dart';
+import 'catastrophe_provider.dart';
+import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'settings_provider.dart';
 
@@ -71,19 +74,37 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       repetitions: item.repetitions,
     );
 
+    // Check if this concept is in an active repair mission for 1.5x bonus
+    final activeMissions = ref.read(catastropheProvider).activeMissions;
+    final inMission = activeMissions.any(
+      (m) => m.conceptIds.contains(item.conceptId),
+    );
+    final effectiveInterval =
+        inMission ? (result.interval * 1.5).round() : result.interval;
+
     final nextReview = DateTime.now()
         .toUtc()
-        .add(Duration(days: result.interval))
+        .add(Duration(days: effectiveInterval))
         .toIso8601String();
 
     final updated = item.withReview(
       easeFactor: result.easeFactor,
-      interval: result.interval,
+      interval: effectiveInterval,
       repetitions: result.repetitions,
       nextReview: nextReview,
     );
 
     await ref.read(knowledgeGraphProvider.notifier).updateQuizItem(updated);
+
+    // Record mission progress and award glory points
+    if (inMission) {
+      ref.read(catastropheProvider.notifier).recordMissionReview(item.conceptId);
+      final teamRepo = ref.read(teamRepositoryProvider);
+      final uid = ref.read(authStateProvider).valueOrNull?.uid;
+      if (teamRepo != null && uid != null) {
+        await teamRepo.addGloryPoints(uid, missionPoints: 1);
+      }
+    }
 
     final newRatings = [...state.ratings, quality];
     final nextIndex = state.currentIndex + 1;

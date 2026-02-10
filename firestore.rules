@@ -63,6 +63,20 @@ service cloud.firestore {
       allow write: if isGroupMember(groupId) && request.auth.uid == uid;
     }
 
+    // Team goals: group members can read all, create own, update contributions.
+    match /wikiGroups/{groupId}/goals/{goalId} {
+      allow read: if isGroupMember(groupId);
+      allow create: if isGroupMember(groupId)
+        && request.resource.data.createdByUid == request.auth.uid;
+      allow update: if isGroupMember(groupId);
+    }
+
+    // Glory board: group members can read all and write any entry
+    // (cooperative system awards points across team members).
+    match /wikiGroups/{groupId}/glory/{uid} {
+      allow read, write: if isGroupMember(groupId);
+    }
+
     // --- Social: challenges ---
     // Path matches code: social/challenges/items/{challengeId}
     match /social/challenges/items/{challengeId} {

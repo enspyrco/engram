@@ -10,12 +10,16 @@ class MindMap extends StatelessWidget {
     required this.graph,
     this.teamNodes = const [],
     this.healthTier = HealthTier.healthy,
+    this.guardianMap = const {},
+    this.currentUserUid,
     super.key,
   });
 
   final KnowledgeGraph graph;
   final List<TeamNode> teamNodes;
   final HealthTier healthTier;
+  final Map<String, String> guardianMap;
+  final String? currentUserUid;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +31,8 @@ class MindMap extends StatelessWidget {
       graph: graph,
       teamNodes: teamNodes,
       healthTier: healthTier,
+      guardianMap: guardianMap,
+      currentUserUid: currentUserUid,
     );
   }
 }

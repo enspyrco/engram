@@ -115,7 +115,7 @@ class NavigationShellState extends ConsumerState<NavigationShell>
           NavigationDestination(
             icon: Icon(Icons.people_outlined),
             selectedIcon: Icon(Icons.people),
-            label: 'Friends',
+            label: 'Social',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
