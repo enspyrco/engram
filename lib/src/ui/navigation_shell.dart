@@ -6,6 +6,7 @@ import '../providers/notification_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/sync_provider.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/friends_screen.dart';
 import 'screens/ingest_screen.dart';
 import 'screens/quiz_screen.dart';
 import 'screens/settings_screen.dart';
@@ -28,6 +29,7 @@ class NavigationShellState extends ConsumerState<NavigationShell>
     DashboardScreen(),
     QuizScreen(),
     IngestScreen(),
+    FriendsScreen(),
     SettingsScreen(),
   ];
 
@@ -109,6 +111,11 @@ class NavigationShellState extends ConsumerState<NavigationShell>
             icon: Icon(Icons.download_outlined),
             selectedIcon: Icon(Icons.download),
             label: 'Ingest',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outlined),
+            selectedIcon: Icon(Icons.people),
+            label: 'Friends',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
