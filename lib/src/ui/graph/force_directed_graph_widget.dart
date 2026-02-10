@@ -1,0 +1,492 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+
+import '../../engine/force_directed_layout.dart';
+import '../../engine/graph_analyzer.dart';
+import '../../engine/mastery_state.dart';
+import '../../models/knowledge_graph.dart';
+import '../../models/network_health.dart';
+import 'catastrophe_painter.dart';
+import 'graph_edge.dart';
+import 'graph_node.dart';
+import 'graph_painter.dart';
+import 'particle_system.dart';
+import 'team_avatar_cache.dart';
+import 'team_node.dart';
+
+/// Interactive force-directed graph visualization.
+///
+/// Renders concept nodes with mastery coloring and optional team member avatars.
+/// The layout settles (ticker stops) so `pumpAndSettle()` works in tests.
+class ForceDirectedGraphWidget extends StatefulWidget {
+  const ForceDirectedGraphWidget({
+    required this.graph,
+    this.teamNodes = const [],
+    this.healthTier = HealthTier.healthy,
+    super.key,
+  });
+
+  final KnowledgeGraph graph;
+
+  /// Team member nodes to render alongside concepts. Each team node is
+  /// connected to its mastered concepts with weaker spring forces.
+  final List<TeamNode> teamNodes;
+
+  /// Current network health tier — drives catastrophe visual effects.
+  final HealthTier healthTier;
+
+  @override
+  State<ForceDirectedGraphWidget> createState() =>
+      _ForceDirectedGraphWidgetState();
+}
+
+class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
+    with TickerProviderStateMixin {
+  late ForceDirectedLayout _layout;
+  late List<GraphNode> _nodes;
+  late List<GraphEdge> _edges;
+  late Ticker _ticker;
+
+  final _transformController = TransformationController();
+  final _avatarCache = TeamAvatarCache();
+  String? _selectedNodeId;
+  OverlayEntry? _overlayEntry;
+
+  /// Offset into the layout positions list where team nodes begin.
+  int _teamNodeStartIndex = 0;
+
+  // Catastrophe visual system
+  late final AnimationController _catastropheController;
+  final ParticleSystem _particleSystem = ParticleSystem();
+  bool _catastropheActive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildGraph();
+    _ticker = createTicker(_onTick)..start();
+
+    _catastropheController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..addListener(_onCatastropheFrame);
+
+    _initCatastropheEffects();
+  }
+
+  @override
+  void didUpdateWidget(ForceDirectedGraphWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.graph != widget.graph ||
+        oldWidget.teamNodes != widget.teamNodes) {
+      _removeOverlay();
+      _buildGraph();
+      if (!_ticker.isActive) _ticker.start();
+    }
+    if (oldWidget.healthTier != widget.healthTier) {
+      _initCatastropheEffects();
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _catastropheController.dispose();
+    _ticker.dispose();
+    _transformController.dispose();
+    _avatarCache.dispose();
+    super.dispose();
+  }
+
+  void _initCatastropheEffects() {
+    final tier = widget.healthTier;
+    if (tier == HealthTier.healthy) {
+      _catastropheActive = false;
+      _catastropheController.stop();
+      _catastropheController.reset();
+    } else {
+      _catastropheActive = true;
+      _particleSystem.initialize(_edges, tier);
+      _catastropheController.repeat();
+    }
+  }
+
+  void _onCatastropheFrame() {
+    if (!_catastropheActive) return;
+    _particleSystem.step(widget.healthTier);
+    setState(() {});
+  }
+
+  void _buildGraph() {
+    final graph = widget.graph;
+    final analyzer = GraphAnalyzer(graph);
+
+    // Build concept nodes
+    _nodes = <GraphNode>[];
+    final nodeIndex = <String, int>{};
+
+    for (var i = 0; i < graph.concepts.length; i++) {
+      final concept = graph.concepts[i];
+      final state = masteryStateOf(concept.id, graph, analyzer);
+      final freshness = freshnessOf(concept.id, graph);
+      _nodes.add(GraphNode(
+        concept: concept,
+        masteryState: state,
+        freshness: freshness,
+      ));
+      nodeIndex[concept.id] = i;
+    }
+
+    // Build concept edges
+    _edges = <GraphEdge>[];
+    final layoutEdges = <(int, int)>[];
+
+    for (final rel in graph.relationships) {
+      final srcIdx = nodeIndex[rel.fromConceptId];
+      final tgtIdx = nodeIndex[rel.toConceptId];
+      if (srcIdx == null || tgtIdx == null) continue;
+      _edges.add(GraphEdge(
+        relationship: rel,
+        source: _nodes[srcIdx],
+        target: _nodes[tgtIdx],
+      ));
+      layoutEdges.add((srcIdx, tgtIdx));
+    }
+
+    // Add team nodes to the layout simulation.
+    // They get indices after concept nodes, with edges connecting them to
+    // mastered concepts. These use the same force simulation but the layout
+    // engine treats all edges equally — the weaker visual appearance is
+    // handled in the painter.
+    _teamNodeStartIndex = _nodes.length;
+    final teamNodes = widget.teamNodes;
+
+    for (var i = 0; i < teamNodes.length; i++) {
+      final teamIdx = _teamNodeStartIndex + i;
+
+      // Connect team node to each concept they've mastered
+      for (final conceptId in teamNodes[i].masteredConceptIds) {
+        final conceptIdx = nodeIndex[conceptId];
+        if (conceptIdx != null) {
+          layoutEdges.add((teamIdx, conceptIdx));
+        }
+      }
+
+      // Pre-load avatar images
+      final photoUrl = teamNodes[i].photoUrl;
+      if (photoUrl != null) {
+        _avatarCache.loadAvatar(
+          uid: teamNodes[i].friend.uid,
+          url: photoUrl,
+          onLoaded: () {
+            if (mounted) setState(() {});
+          },
+        );
+      }
+    }
+
+    // Initialize layout with total node count (concepts + team members)
+    _layout = ForceDirectedLayout(
+      nodeCount: _nodes.length + teamNodes.length,
+      edges: layoutEdges,
+      seed: 42,
+    );
+
+    _syncPositions();
+  }
+
+  void _onTick(Duration _) {
+    final stillMoving = _layout.step();
+    _syncPositions();
+    setState(() {});
+    if (!stillMoving) {
+      _ticker.stop();
+    }
+  }
+
+  void _syncPositions() {
+    final positions = _layout.positions;
+    for (var i = 0; i < _nodes.length; i++) {
+      _nodes[i].position = positions[i];
+    }
+    // Sync team node positions
+    final teamNodes = widget.teamNodes;
+    for (var i = 0; i < teamNodes.length; i++) {
+      teamNodes[i].position = positions[_teamNodeStartIndex + i];
+    }
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    final matrix = _transformController.value.clone()..invert();
+    final localPoint =
+        MatrixUtils.transformPoint(matrix, details.localPosition);
+
+    // Check team nodes first (rendered on top)
+    for (final teamNode in widget.teamNodes.reversed) {
+      if (teamNode.containsPoint(localPoint)) {
+        setState(() => _selectedNodeId = teamNode.id);
+        _showTeamOverlay(teamNode, details.globalPosition);
+        return;
+      }
+    }
+
+    // Check concept nodes
+    for (final node in _nodes.reversed) {
+      if (node.containsPoint(localPoint)) {
+        setState(() => _selectedNodeId = node.id);
+        _showOverlay(node, details.globalPosition);
+        return;
+      }
+    }
+
+    _removeOverlay();
+    setState(() => _selectedNodeId = null);
+  }
+
+  void _showOverlay(GraphNode node, Offset globalPosition) {
+    _removeOverlay();
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: globalPosition.dx + 12,
+        top: globalPosition.dy - 20,
+        child: Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: _NodePanel(node: node),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _showTeamOverlay(TeamNode teamNode, Offset globalPosition) {
+    _removeOverlay();
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: globalPosition.dx + 12,
+        top: globalPosition.dy - 20,
+        child: Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: _TeamNodePanel(teamNode: teamNode),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final graphSize = Size(_layout.width, _layout.height);
+
+    return GestureDetector(
+      onTapUp: _onTapUp,
+      child: InteractiveViewer(
+        transformationController: _transformController,
+        boundaryMargin: const EdgeInsets.all(200),
+        minScale: 0.3,
+        maxScale: 3.0,
+        child: CustomPaint(
+          size: graphSize,
+          painter: GraphPainter(
+            nodes: _nodes,
+            edges: _edges,
+            teamNodes: widget.teamNodes,
+            avatarCache: _avatarCache,
+            selectedNodeId: _selectedNodeId,
+          ),
+          foregroundPainter: _catastropheActive
+              ? CatastrophePainter(
+                  nodes: _nodes,
+                  edges: _edges,
+                  tier: widget.healthTier,
+                  animationProgress: _catastropheController.value,
+                )
+              : null,
+          child: _catastropheActive
+              ? CustomPaint(
+                  size: graphSize,
+                  painter: ParticlePainter(
+                    particles: _particleSystem.particles,
+                    edges: _edges,
+                    tier: widget.healthTier,
+                  ),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// Hover/tap card showing concept details.
+class _NodePanel extends StatelessWidget {
+  const _NodePanel({required this.node});
+
+  final GraphNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = masteryColors[node.masteryState] ?? Colors.grey;
+    final stateLabel = node.masteryState.name;
+
+    return Card(
+      elevation: 4,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 250),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    node.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (node.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                node.description,
+                style: const TextStyle(fontSize: 12),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  stateLabel[0].toUpperCase() + stateLabel.substring(1),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (node.freshness < 1.0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '${(node.freshness * 100).round()}% fresh',
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Hover/tap card showing team member info.
+class _TeamNodePanel extends StatelessWidget {
+  const _TeamNodePanel({required this.teamNode});
+
+  final TeamNode teamNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = teamNode.detailedSnapshot;
+    final healthPct = (teamNode.healthRatio * 100).round();
+    final healthColor =
+        Color.lerp(Colors.red, Colors.green, teamNode.healthRatio)!;
+
+    return Card(
+      elevation: 4,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 220),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundImage: teamNode.photoUrl != null
+                      ? NetworkImage(teamNode.photoUrl!)
+                      : null,
+                  child: teamNode.photoUrl == null
+                      ? Text(
+                          teamNode.displayName.isNotEmpty
+                              ? teamNode.displayName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(fontSize: 12),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    teamNode.displayName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$healthPct% health',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: healthColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${snapshot.summary.mastered} mastered, '
+              '${snapshot.summary.learning} learning',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            if (snapshot.summary.streak > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                '${snapshot.summary.streak}-day streak',
+                style: const TextStyle(fontSize: 10, color: Colors.amber),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

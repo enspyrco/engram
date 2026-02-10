@@ -3,12 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/dashboard_stats.dart';
 import '../../models/sync_status.dart';
+import '../../providers/catastrophe_provider.dart';
 import '../../providers/dashboard_stats_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
+import '../../providers/network_health_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/team_graph_provider.dart';
 import '../navigation_shell.dart';
 import '../widgets/mastery_bar.dart';
 import '../widgets/mind_map.dart';
+import '../widgets/network_health_indicator.dart';
+import '../widgets/repair_mission_card.dart';
 import '../widgets/stat_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -177,11 +182,20 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _DashboardContent extends ConsumerWidget {
+class _DashboardContent extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends ConsumerState<_DashboardContent> {
+  bool _showTeam = false;
+
+  @override
+  Widget build(BuildContext context) {
     final stats = ref.watch(dashboardStatsProvider);
     final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
+    final health = ref.watch(networkHealthProvider);
+    final catastrophe = ref.watch(catastropheProvider);
 
     return Column(
       children: [
@@ -224,13 +238,42 @@ class _DashboardContent extends ConsumerWidget {
                 masteredCount: stats.masteredCount,
               ),
               const SizedBox(height: 16),
+              NetworkHealthIndicator(health: health),
+              for (final mission in catastrophe.activeMissions)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: RepairMissionCard(mission: mission),
+                ),
+              const SizedBox(height: 16),
               _GraphStatusCard(stats: stats),
             ],
           ),
         ),
-        // Mind map fills remaining space
-        if (graph != null && graph.concepts.isNotEmpty)
-          Expanded(child: MindMap(graph: graph)),
+        // Team mode toggle + mind map
+        if (graph != null && graph.concepts.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.people, size: 16),
+                const SizedBox(width: 4),
+                const Text('Team', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                Switch(
+                  value: _showTeam,
+                  onChanged: (v) => setState(() => _showTeam = v),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: MindMap(
+              graph: graph,
+              teamNodes: _showTeam ? ref.watch(teamGraphProvider) : const [],
+              healthTier: health.tier,
+            ),
+          ),
+        ],
       ],
     );
   }

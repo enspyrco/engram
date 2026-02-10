@@ -1,8 +1,10 @@
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
+import 'package:engram/src/models/network_health.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
 import 'package:engram/src/providers/knowledge_graph_provider.dart';
+import 'package:engram/src/providers/network_health_provider.dart';
 import 'package:engram/src/ui/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,11 @@ void main() {
     return ProviderScope(
       overrides: [
         knowledgeGraphProvider.overrideWith(() => _PreloadedGraphNotifier(graph)),
+        // Override health to healthy so catastrophe animations don't block
+        // pumpAndSettle. These tests verify dashboard stats, not catastrophe UI.
+        networkHealthProvider.overrideWithValue(
+          const NetworkHealth(score: 1.0, tier: HealthTier.healthy),
+        ),
       ],
       child: const MaterialApp(home: DashboardScreen()),
     );
@@ -61,10 +68,7 @@ void main() {
       );
 
       await tester.pumpWidget(buildApp(graph));
-      // Use pump() instead of pumpAndSettle() because the MindMap's
-      // force-directed graph animation never settles.
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('2'), findsOneWidget); // concepts
       expect(find.text('1'), findsAtLeast(1)); // relationships or quiz items
@@ -92,8 +96,14 @@ void main() {
       );
 
       await tester.pumpWidget(buildApp(graph));
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Scroll down past the health indicator to reach Graph Status
+      await tester.scrollUntilVisible(
+        find.text('Graph Status'),
+        50,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       expect(find.text('Graph Status'), findsOneWidget);
       expect(find.text('Due for review'), findsOneWidget);
