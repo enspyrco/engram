@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- User data: only the owner can read/write ---
+    match /users/{userId} {
+
+      // Profile: owner reads/writes
+      match /profile {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Graph data (existing subcollections): owner only
+      match /data/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Friends list: owner reads/writes
+      match /friends/{friendId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // --- Wiki groups: any authenticated member can read members,
+    //     can only write their own membership doc ---
+    match /wikiGroups/{groupId}/members/{memberId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == memberId;
+    }
+
+    // --- Social: challenges ---
+    // Path matches code: social/challenges/items/{challengeId}
+    match /social/challenges/items/{challengeId} {
+      // Sender or receiver can read
+      allow read: if request.auth != null
+        && (resource.data.fromUid == request.auth.uid
+            || resource.data.toUid == request.auth.uid);
+      // Any authed user can create (fromUid must match)
+      allow create: if request.auth != null
+        && request.resource.data.fromUid == request.auth.uid;
+      // Receiver can only update status and score fields
+      allow update: if request.auth != null
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status', 'score']);
+    }
+
+    // --- Social: nudges ---
+    // Path matches code: social/nudges/items/{nudgeId}
+    match /social/nudges/items/{nudgeId} {
+      // Sender or receiver can read
+      allow read: if request.auth != null
+        && (resource.data.fromUid == request.auth.uid
+            || resource.data.toUid == request.auth.uid);
+      // Any authed user can create (fromUid must match)
+      allow create: if request.auth != null
+        && request.resource.data.fromUid == request.auth.uid;
+      // Receiver can only update status field
+      allow update: if request.auth != null
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status']);
+    }
+  }
+}
