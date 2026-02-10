@@ -19,6 +19,8 @@ class GraphPainter extends CustomPainter {
     this.teamNodes = const [],
     this.avatarCache,
     this.selectedNodeId,
+    this.guardianMap = const {},
+    this.currentUserUid,
   });
 
   final List<GraphNode> nodes;
@@ -26,6 +28,12 @@ class GraphPainter extends CustomPainter {
   final List<TeamNode> teamNodes;
   final TeamAvatarCache? avatarCache;
   final String? selectedNodeId;
+
+  /// Maps concept ID → guardian UID (if the concept's cluster has a guardian).
+  final Map<String, String> guardianMap;
+
+  /// Current user's UID, for highlighting their guarded nodes.
+  final String? currentUserUid;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -157,6 +165,49 @@ class GraphPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
+    );
+
+    // Guardian indicators
+    final guardianUid = guardianMap[node.id];
+    if (guardianUid != null) {
+      // Gold border ring for nodes guarded by the current user
+      if (guardianUid == currentUserUid) {
+        canvas.drawCircle(
+          node.position,
+          node.radius + 2,
+          Paint()
+            ..color = const Color(0xFFFFD700).withValues(alpha: 0.7)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0,
+        );
+      }
+
+      // Small shield badge at top-right of guarded nodes
+      _paintShieldBadge(canvas, node.position, node.radius);
+    }
+  }
+
+  void _paintShieldBadge(Canvas canvas, Offset center, double radius) {
+    final badgeCenter = Offset(
+      center.dx + radius * 0.7,
+      center.dy - radius * 0.7,
+    );
+    const badgeSize = 5.0;
+
+    final path = Path()
+      ..moveTo(badgeCenter.dx, badgeCenter.dy - badgeSize)
+      ..lineTo(badgeCenter.dx + badgeSize, badgeCenter.dy - badgeSize * 0.3)
+      ..lineTo(badgeCenter.dx + badgeSize * 0.7, badgeCenter.dy + badgeSize)
+      ..lineTo(badgeCenter.dx, badgeCenter.dy + badgeSize * 0.6)
+      ..lineTo(badgeCenter.dx - badgeSize * 0.7, badgeCenter.dy + badgeSize)
+      ..lineTo(badgeCenter.dx - badgeSize, badgeCenter.dy - badgeSize * 0.3)
+      ..close();
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFFFD700)
+        ..style = PaintingStyle.fill,
     );
   }
 
@@ -300,6 +351,8 @@ class GraphPainter extends CustomPainter {
     return oldDelegate.nodes != nodes ||
         oldDelegate.edges != edges ||
         oldDelegate.teamNodes != teamNodes ||
-        oldDelegate.selectedNodeId != selectedNodeId;
+        oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.guardianMap != guardianMap ||
+        oldDelegate.currentUserUid != currentUserUid;
   }
 }

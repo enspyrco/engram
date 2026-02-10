@@ -23,6 +23,8 @@ class ForceDirectedGraphWidget extends StatefulWidget {
     required this.graph,
     this.teamNodes = const [],
     this.healthTier = HealthTier.healthy,
+    this.guardianMap = const {},
+    this.currentUserUid,
     super.key,
   });
 
@@ -34,6 +36,12 @@ class ForceDirectedGraphWidget extends StatefulWidget {
 
   /// Current network health tier — drives catastrophe visual effects.
   final HealthTier healthTier;
+
+  /// Maps concept ID → guardian UID for shield badge rendering.
+  final Map<String, String> guardianMap;
+
+  /// Current user's UID — their guarded nodes get a gold ring.
+  final String? currentUserUid;
 
   @override
   State<ForceDirectedGraphWidget> createState() =>
@@ -301,6 +309,8 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
             teamNodes: widget.teamNodes,
             avatarCache: _avatarCache,
             selectedNodeId: _selectedNodeId,
+            guardianMap: widget.guardianMap,
+            currentUserUid: widget.currentUserUid,
           ),
           foregroundPainter: _catastropheActive
               ? CatastrophePainter(

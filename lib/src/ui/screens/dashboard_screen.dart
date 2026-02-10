@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/dashboard_stats.dart';
 import '../../models/sync_status.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/catastrophe_provider.dart';
 import '../../providers/dashboard_stats_provider.dart';
+import '../../providers/guardian_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/network_health_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -271,11 +273,27 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
               graph: graph,
               teamNodes: _showTeam ? ref.watch(teamGraphProvider) : const [],
               healthTier: health.tier,
+              guardianMap: _buildGuardianMap(ref),
+              currentUserUid: ref.watch(authStateProvider).valueOrNull?.uid,
             ),
           ),
         ],
       ],
     );
+  }
+
+  /// Builds a concept ID → guardian UID map from the guardian provider's clusters.
+  Map<String, String> _buildGuardianMap(WidgetRef ref) {
+    final guardianState = ref.watch(guardianProvider);
+    final map = <String, String>{};
+    for (final cluster in guardianState.clusters) {
+      if (cluster.guardianUid != null) {
+        for (final conceptId in cluster.conceptIds) {
+          map[conceptId] = cluster.guardianUid!;
+        }
+      }
+    }
+    return map;
   }
 }
 

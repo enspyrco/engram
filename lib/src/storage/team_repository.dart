@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/catastrophe_event.dart';
 import '../models/concept_cluster.dart';
+import '../models/glory_entry.dart';
 import '../models/network_health.dart';
 import '../models/repair_mission.dart';
+import '../models/team_goal.dart';
 
 /// Firestore operations for team network state: health snapshots,
 /// catastrophe events, concept clusters, and repair missions.
@@ -13,6 +15,8 @@ import '../models/repair_mission.dart';
 ///   wikiGroups/{hash}/events/{eventId}         — catastrophe history
 ///   wikiGroups/{hash}/clusters/{clusterId}     — cluster defs + guardian
 ///   wikiGroups/{hash}/missions/{missionId}     — repair missions
+///   wikiGroups/{hash}/goals/{goalId}           — team goals
+///   wikiGroups/{hash}/glory/{uid}              — glory board entries
 class TeamRepository {
   TeamRepository({
     required FirebaseFirestore firestore,
@@ -149,5 +153,94 @@ class TeamRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) => RepairMission.fromJson(doc.data()))
             .toList());
+  }
+
+  // --- Team Goals ---
+
+  /// Create or update a team goal.
+  Future<void> writeTeamGoal(TeamGoal goal) async {
+    await _groupDoc.collection('goals').doc(goal.id).set(goal.toJson());
+  }
+
+  /// Stream active (uncompleted) goals.
+  Stream<List<TeamGoal>> watchActiveGoals() {
+    return _groupDoc
+        .collection('goals')
+        .where('completedAt', isNull: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => TeamGoal.fromJson(doc.data()))
+            .toList());
+  }
+
+  /// Update a goal's contribution map for a specific user.
+  Future<void> updateGoalContribution(
+    String goalId,
+    String uid,
+    double amount,
+  ) async {
+    await _groupDoc.collection('goals').doc(goalId).update({
+      'contributions.$uid': FieldValue.increment(amount),
+    });
+  }
+
+  /// Mark a goal as completed.
+  Future<void> completeGoal(String goalId, String timestamp) async {
+    await _groupDoc
+        .collection('goals')
+        .doc(goalId)
+        .update({'completedAt': timestamp});
+  }
+
+  // --- Glory Board ---
+
+  /// Write or update a glory entry for a user.
+  Future<void> writeGloryEntry(GloryEntry entry) async {
+    await _groupDoc
+        .collection('glory')
+        .doc(entry.uid)
+        .set(entry.toJson());
+  }
+
+  /// Increment a specific point category for a user.
+  Future<void> addGloryPoints(
+    String uid, {
+    int guardianPoints = 0,
+    int missionPoints = 0,
+    int goalPoints = 0,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (guardianPoints != 0) {
+      updates['guardianPoints'] = FieldValue.increment(guardianPoints);
+    }
+    if (missionPoints != 0) {
+      updates['missionPoints'] = FieldValue.increment(missionPoints);
+    }
+    if (goalPoints != 0) {
+      updates['goalPoints'] = FieldValue.increment(goalPoints);
+    }
+    if (updates.isEmpty) return;
+
+    await _groupDoc.collection('glory').doc(uid).set(updates, SetOptions(merge: true));
+  }
+
+  /// Stream the full glory board (all members, sorted client-side).
+  Stream<List<GloryEntry>> watchGloryBoard() {
+    return _groupDoc.collection('glory').snapshots().map((snapshot) =>
+        snapshot.docs
+            .map((doc) => GloryEntry.fromJson(doc.data()))
+            .toList());
+  }
+
+  /// Stream a single user's glory entry.
+  Stream<GloryEntry?> watchGloryEntry(String uid) {
+    return _groupDoc
+        .collection('glory')
+        .doc(uid)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return GloryEntry.fromJson(doc.data()!);
+    });
   }
 }

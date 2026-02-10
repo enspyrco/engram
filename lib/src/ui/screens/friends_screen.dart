@@ -2,20 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/challenge.dart';
+import '../../models/concept_cluster.dart';
 import '../../models/friend.dart';
 import '../../models/nudge.dart';
+import '../../models/team_goal.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/catastrophe_provider.dart';
 import '../../providers/challenge_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../providers/glory_board_provider.dart';
+import '../../providers/guardian_provider.dart';
 import '../../providers/nudge_provider.dart';
+import '../../providers/team_goals_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../widgets/challenge_dialog.dart';
 import '../widgets/friend_card.dart';
+import '../widgets/glory_board.dart';
 import '../widgets/incoming_challenge_card.dart';
 import '../widgets/nudge_card.dart';
+import '../widgets/team_goal_card.dart';
 
-class FriendsScreen extends ConsumerWidget {
+class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
+
+  @override
+  ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
+}
+
+class _FriendsScreenState extends ConsumerState<FriendsScreen>
+    with TickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Social'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Friends'),
+            Tab(text: 'Team'),
+            Tab(text: 'Glory'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _FriendsTab(),
+          _TeamTab(),
+          _GloryTab(),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Friends Tab (original content) ---
+
+class _FriendsTab extends ConsumerWidget {
+  const _FriendsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,19 +82,16 @@ class FriendsScreen extends ConsumerWidget {
     final challengesAsync = ref.watch(challengeProvider);
     final nudgesAsync = ref.watch(nudgeProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Friends')),
-      body: friendsAsync.when(
-        data: (friends) => _buildContent(
-          context,
-          ref,
-          friends: friends,
-          challenges: challengesAsync.valueOrNull ?? [],
-          nudges: nudgesAsync.valueOrNull ?? [],
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+    return friendsAsync.when(
+      data: (friends) => _buildContent(
+        context,
+        ref,
+        friends: friends,
+        challenges: challengesAsync.valueOrNull ?? [],
+        nudges: nudgesAsync.valueOrNull ?? [],
       ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
@@ -103,8 +159,6 @@ class FriendsScreen extends ConsumerWidget {
               nudge: nudge,
               onReviewNow: () {
                 ref.read(nudgeProvider.notifier).markSeen(nudge.id);
-                // Navigate to quiz tab (index 1)
-                // The NavigationShell will handle the tab switch
               },
             ),
           ),
@@ -183,6 +237,274 @@ class FriendsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// --- Team Tab (guardians + goals + missions) ---
+
+class _TeamTab extends ConsumerWidget {
+  const _TeamTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final guardianState = ref.watch(guardianProvider);
+    final goalsAsync = ref.watch(teamGoalsProvider);
+    final catastropheState = ref.watch(catastropheProvider);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Guardian assignments
+        Text('Guardians', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        if (guardianState.clusters.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No clusters detected yet. Ingest more concepts to form clusters.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          )
+        else
+          for (final cluster in guardianState.clusters)
+            _GuardianClusterCard(
+              cluster: cluster,
+              isMyGuard: cluster.guardianUid == guardianState.currentUid,
+              onVolunteer: () => ref
+                  .read(guardianProvider.notifier)
+                  .volunteerAsGuardian('cluster_${guardianState.clusters.indexOf(cluster)}'),
+              onResign: () => ref
+                  .read(guardianProvider.notifier)
+                  .resignGuardian('cluster_${guardianState.clusters.indexOf(cluster)}'),
+            ),
+
+        const SizedBox(height: 16),
+
+        // Active goals
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Team Goals', style: Theme.of(context).textTheme.titleSmall),
+            IconButton(
+              icon: const Icon(Icons.add, size: 20),
+              onPressed: () => _showCreateGoalDialog(context, ref),
+              tooltip: 'Create goal',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        goalsAsync.when(
+          data: (goals) {
+            if (goals.isEmpty) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'No active goals. Create one to rally the team!',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: goals.map((g) => TeamGoalCard(goal: g)).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Error loading goals: $e'),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Active missions
+        Text('Active Missions', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        if (catastropheState.activeMissions.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No active repair missions. The network is holding steady!',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          )
+        else
+          for (final mission in catastropheState.activeMissions)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.build),
+                title: Text('Repair Mission: ${mission.conceptIds.length} concepts'),
+                subtitle: LinearProgressIndicator(value: mission.progress),
+                trailing: Text('${mission.remaining} left'),
+              ),
+            ),
+      ],
+    );
+  }
+
+  void _showCreateGoalDialog(BuildContext context, WidgetRef ref) {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    var selectedType = GoalType.clusterMastery;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Create Team Goal'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Master all CI/CD concepts',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<GoalType>(
+                  initialValue: selectedType,
+                  decoration: const InputDecoration(
+                    labelText: 'Goal Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: GoalType.values.map((t) {
+                    return DropdownMenuItem(
+                      value: t,
+                      child: Text(t.name),
+                    );
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setDialogState(() => selectedType = v);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (titleController.text.isEmpty) return;
+                final deadline = DateTime.now()
+                    .toUtc()
+                    .add(const Duration(days: 7))
+                    .toIso8601String();
+                await ref.read(teamGoalsProvider.notifier).createGoal(
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      type: selectedType,
+                      targetValue: 0.8,
+                      deadline: deadline,
+                    );
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuardianClusterCard extends StatelessWidget {
+  const _GuardianClusterCard({
+    required this.cluster,
+    required this.isMyGuard,
+    required this.onVolunteer,
+    required this.onResign,
+  });
+
+  final ConceptCluster cluster;
+  final bool isMyGuard;
+  final VoidCallback onVolunteer;
+  final VoidCallback onResign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          cluster.hasGuardian ? Icons.shield : Icons.shield_outlined,
+          color: cluster.hasGuardian ? const Color(0xFFFFD700) : null,
+        ),
+        title: Text(cluster.label),
+        subtitle: Text(
+          cluster.hasGuardian
+              ? (isMyGuard ? 'You are guardian' : 'Has guardian')
+              : 'No guardian',
+        ),
+        trailing: isMyGuard
+            ? TextButton(
+                onPressed: onResign,
+                child: const Text('Resign'),
+              )
+            : (!cluster.hasGuardian
+                ? FilledButton(
+                    onPressed: onVolunteer,
+                    child: const Text('Volunteer'),
+                  )
+                : null),
+      ),
+    );
+  }
+}
+
+// --- Glory Tab ---
+
+class _GloryTab extends ConsumerWidget {
+  const _GloryTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gloryAsync = ref.watch(gloryBoardProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Text(
+            "Who's Holding the Line",
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+        ),
+        Expanded(
+          child: gloryAsync.when(
+            data: (entries) => GloryBoard(entries: entries),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+        ),
+      ],
     );
   }
 }
