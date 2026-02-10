@@ -1,5 +1,7 @@
 import 'package:meta/meta.dart';
 
+import 'mastery_snapshot.dart';
+
 @immutable
 class DashboardStats {
   const DashboardStats({
@@ -31,4 +33,12 @@ class DashboardStats {
   final bool hasCycles;
 
   bool get isEmpty => conceptCount == 0;
+
+  MasterySnapshot toMasterySnapshot({int streak = 0}) => MasterySnapshot(
+        totalConcepts: conceptCount,
+        mastered: masteredCount,
+        learning: learningCount,
+        newCount: newCount,
+        streak: streak,
+      );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/settings_provider.dart';
 
@@ -153,20 +154,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               },
             ),
           const SizedBox(height: 24),
-          Text('Cloud Sync', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            title: const Text('Enable cloud sync'),
-            subtitle: const Text('Sync graph to Firestore for cross-device access'),
-            value: repo.getUseFirestore(),
-            onChanged: (value) async {
-              await repo.setUseFirestore(value);
-              // Trigger provider rebuild by invalidating settings
-              ref.invalidate(settingsProvider);
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 24),
           Text('Outline Sync', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           SwitchListTile(
@@ -185,6 +172,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: theme.textTheme.bodySmall,
             ),
           ),
+          const SizedBox(height: 32),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final auth = ref.read(firebaseAuthProvider);
+                await signOut(auth);
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

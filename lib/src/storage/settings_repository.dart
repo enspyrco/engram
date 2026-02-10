@@ -15,7 +15,6 @@ class SettingsRepository {
   static const _keyIngestedCollectionIds = 'ingested_collection_ids';
   static const _keyNotificationsEnabled = 'notifications_enabled';
   static const _keyReminderHour = 'reminder_hour';
-  static const _keyUseFirestore = 'use_firestore';
   static const _keyLastSessionDate = 'last_session_date';
   static const _keyCurrentStreak = 'current_streak';
   static const _keyLongestStreak = 'longest_streak';
@@ -82,13 +81,6 @@ class SettingsRepository {
 
   Future<void> setReminderHour(int value) =>
       _prefs.setInt(_keyReminderHour, value);
-
-  // --- Cloud sync settings ---
-
-  bool getUseFirestore() => _prefs.getBool(_keyUseFirestore) ?? false;
-
-  Future<void> setUseFirestore(bool value) =>
-      _prefs.setBool(_keyUseFirestore, value);
 
   // --- Session tracking ---
 
