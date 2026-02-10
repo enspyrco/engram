@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../engine/scheduler.dart';
@@ -103,7 +105,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       final teamRepo = ref.read(teamRepositoryProvider);
       final uid = ref.read(authStateProvider).valueOrNull?.uid;
       if (teamRepo != null && uid != null) {
-        teamRepo.addGloryPoints(uid, missionPoints: 1);
+        unawaited(teamRepo.addGloryPoints(uid, missionPoints: 1));
       }
     }
 
