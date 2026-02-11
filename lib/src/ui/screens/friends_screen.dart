@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../models/challenge.dart';
 import '../../models/concept_cluster.dart';
@@ -26,6 +27,8 @@ import '../widgets/incoming_challenge_card.dart';
 import '../widgets/nudge_card.dart';
 import '../widgets/relay_challenge_card.dart';
 import '../widgets/team_goal_card.dart';
+
+const _uuid = Uuid();
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -224,7 +227,7 @@ class _FriendsTab extends ConsumerWidget {
               if (user == null) return;
 
               final nudge = Nudge(
-                id: '${user.uid}_${friend.uid}_${DateTime.now().millisecondsSinceEpoch}',
+                id: 'nudge_${_uuid.v4()}',
                 fromUid: user.uid,
                 fromName: profile?.displayName ?? 'Someone',
                 toUid: friend.uid,

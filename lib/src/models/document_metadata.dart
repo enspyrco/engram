@@ -23,12 +23,13 @@ class DocumentMetadata {
   final String updatedAt;
   final String ingestedAt;
 
-  DocumentMetadata withUpdatedAt(String updatedAt) {
+  DocumentMetadata withUpdatedAt(String updatedAt, {DateTime? now}) {
+    final currentTime = now ?? DateTime.now().toUtc();
     return DocumentMetadata(
       documentId: documentId,
       title: title,
       updatedAt: updatedAt,
-      ingestedAt: DateTime.now().toUtc().toIso8601String(),
+      ingestedAt: currentTime.toIso8601String(),
     );
   }
 

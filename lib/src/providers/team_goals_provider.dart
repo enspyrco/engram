@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/team_goal.dart';
 import 'auth_provider.dart';
 import 'guardian_provider.dart';
+
+const _uuid = Uuid();
 
 /// Manages team goals — streams active goals from Firestore and provides
 /// CRUD operations for creating goals and recording contributions.
@@ -40,7 +43,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
 
     final now = DateTime.now().toUtc();
     final goal = TeamGoal(
-      id: 'goal_${now.millisecondsSinceEpoch}',
+      id: 'goal_${_uuid.v4()}',
       title: title,
       description: description,
       type: type,

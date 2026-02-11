@@ -23,7 +23,9 @@ final socialRepositoryProvider = Provider<SocialRepository?>((ref) {
 /// Normalizes a wiki URL for consistent hashing:
 /// lowercase, trim whitespace, remove trailing slash.
 String normalizeWikiUrl(String url) {
-  return url.trim().toLowerCase().replaceAll(RegExp(r'/+$'), '');
+  var normalized = url.trim().toLowerCase().replaceAll(RegExp(r'/+$'), '');
+  normalized = normalized.replaceFirst(RegExp(r'^https?://'), '');
+  return normalized;
 }
 
 /// SHA-256 hash of the normalized wiki URL, used as the wiki group key.

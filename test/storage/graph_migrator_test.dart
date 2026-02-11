@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
+import 'package:engram/src/models/relationship.dart';
 import 'package:engram/src/storage/firestore_graph_repository.dart';
 import 'package:engram/src/storage/graph_migrator.dart';
 import 'package:engram/src/storage/local_graph_repository.dart';
@@ -39,6 +40,38 @@ void main() {
       final loaded = await firestore.load();
       expect(loaded.concepts, hasLength(1));
       expect(loaded.concepts.first.id, 'c1');
+
+      tmpDir.deleteSync(recursive: true);
+    });
+
+    test('migrates graph with only relationships', () async {
+      final tmpDir = Directory.systemTemp.createTempSync('engram_migrate_');
+      final local = LocalGraphRepository(dataDir: tmpDir.path);
+      final firestore = FirestoreGraphRepository(
+        firestore: FakeFirebaseFirestore(),
+        userId: 'test-user',
+      );
+
+      final graph = KnowledgeGraph(
+        relationships: [
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'c1',
+            toConceptId: 'c2',
+            label: 'depends on',
+          ),
+        ],
+      );
+      await local.save(graph);
+
+      final migrator = GraphMigrator(source: local, destination: firestore);
+      final result = await migrator.migrate();
+
+      expect(result.relationships, hasLength(1));
+
+      final loaded = await firestore.load();
+      expect(loaded.relationships, hasLength(1));
+      expect(loaded.relationships.first.id, 'r1');
 
       tmpDir.deleteSync(recursive: true);
     });

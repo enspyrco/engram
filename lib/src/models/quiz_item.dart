@@ -20,7 +20,9 @@ class QuizItem {
     required String conceptId,
     required String question,
     required String answer,
+    DateTime? now,
   }) {
+    final currentTime = now ?? DateTime.now().toUtc();
     return QuizItem(
       id: id,
       conceptId: conceptId,
@@ -29,7 +31,7 @@ class QuizItem {
       easeFactor: 2.5,
       interval: 0,
       repetitions: 0,
-      nextReview: DateTime.now().toUtc().toIso8601String(),
+      nextReview: currentTime.toIso8601String(),
       lastReview: null,
     );
   }
@@ -63,7 +65,9 @@ class QuizItem {
     required int interval,
     required int repetitions,
     required String nextReview,
+    DateTime? now,
   }) {
+    final currentTime = now ?? DateTime.now().toUtc();
     return QuizItem(
       id: id,
       conceptId: conceptId,
@@ -73,7 +77,7 @@ class QuizItem {
       interval: interval,
       repetitions: repetitions,
       nextReview: nextReview,
-      lastReview: DateTime.now().toUtc().toIso8601String(),
+      lastReview: currentTime.toIso8601String(),
     );
   }
 

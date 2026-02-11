@@ -86,16 +86,16 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final effectiveInterval =
         inMission ? (result.interval * 1.5).round() : result.interval;
 
-    final nextReview = DateTime.now()
-        .toUtc()
-        .add(Duration(days: effectiveInterval))
-        .toIso8601String();
+    final now = DateTime.now().toUtc();
+    final nextReview =
+        now.add(Duration(days: effectiveInterval)).toIso8601String();
 
     final updated = item.withReview(
       easeFactor: result.easeFactor,
       interval: effectiveInterval,
       repetitions: result.repetitions,
       nextReview: nextReview,
+      now: now,
     );
 
     await ref.read(knowledgeGraphProvider.notifier).updateQuizItem(updated);

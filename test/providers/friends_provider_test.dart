@@ -317,6 +317,22 @@ void main() {
       expect(hash2, hash3);
     });
 
+    test('http and https produce the same hash', () {
+      final hash1 = hashWikiUrl('http://wiki.example.com');
+      final hash2 = hashWikiUrl('https://wiki.example.com');
+
+      expect(hash1, hash2);
+    });
+
+    test('http and https with trailing slash produce the same hash', () {
+      final hash1 = hashWikiUrl('http://wiki.example.com/');
+      final hash2 = hashWikiUrl('https://wiki.example.com/');
+      final hash3 = hashWikiUrl('https://Wiki.Example.com');
+
+      expect(hash1, hash2);
+      expect(hash2, hash3);
+    });
+
     test('different URLs produce different hashes', () {
       final hash1 = hashWikiUrl('https://wiki.alpha.com');
       final hash2 = hashWikiUrl('https://wiki.beta.com');

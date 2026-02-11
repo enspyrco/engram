@@ -74,6 +74,7 @@ class KnowledgeGraph {
     required String documentId,
     required String documentTitle,
     required String updatedAt,
+    DateTime? now,
   }) {
     // Remove old data from the same document
     final oldConceptIds = concepts
@@ -101,13 +102,14 @@ class KnowledgeGraph {
     ].lock;
 
     // Update or add document metadata
+    final currentTime = now ?? DateTime.now().toUtc();
     final existingIndex =
         documentMetadata.indexWhere((m) => m.documentId == documentId);
     final meta = DocumentMetadata(
       documentId: documentId,
       title: documentTitle,
       updatedAt: updatedAt,
-      ingestedAt: DateTime.now().toUtc().toIso8601String(),
+      ingestedAt: currentTime.toIso8601String(),
     );
     final newMetadata = existingIndex >= 0
         ? documentMetadata.replace(existingIndex, meta)

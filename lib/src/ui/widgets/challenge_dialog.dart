@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../models/challenge.dart';
 import '../../models/concept.dart';
@@ -8,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/challenge_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/user_profile_provider.dart';
+
+const _uuid = Uuid();
 
 /// Minimum SM-2 repetitions to consider a concept "mastered".
 const int kMasteryMinRepetitions = 3;
@@ -127,7 +130,7 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
       if (user == null) return;
 
       final challenge = Challenge(
-        id: '${user.uid}_${widget.friend.uid}_${DateTime.now().millisecondsSinceEpoch}',
+        id: 'challenge_${_uuid.v4()}',
         fromUid: user.uid,
         fromName: profile?.displayName ?? 'Someone',
         toUid: widget.friend.uid,
