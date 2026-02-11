@@ -145,9 +145,11 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     final teamRepo = ref.read(teamRepositoryProvider);
     if (user == null || teamRepo == null) return;
 
-    // Send nudge to the person who claimed the stalled leg
+    // Send nudge to the person who claimed the stalled leg.
+    // Use recipient UID in the nudge ID for idempotency — if multiple clients
+    // trigger the stall check, they produce the same document ID.
     final nudge = Nudge(
-      id: '${user.uid}_stall_${relay.id}_$legIndex',
+      id: 'stall_${relay.id}_$legIndex',
       fromUid: 'system',
       fromName: 'Relay System',
       toUid: leg.claimedByUid!,

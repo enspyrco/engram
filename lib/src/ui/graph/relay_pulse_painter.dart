@@ -43,13 +43,25 @@ class RelayPulsePainter extends CustomPainter {
     required this.pulses,
     required this.edges,
     required this.relayConceptIds,
-  });
+  }) : _edgeIndex = _buildEdgeIndex(edges);
 
   final List<RelayPulse> pulses;
   final List<GraphEdge> edges;
 
   /// Concept IDs that are part of an active relay — get a cyan ring highlight.
   final Set<String> relayConceptIds;
+
+  /// Pre-built index: "fromId:toId" → edge, for O(1) pulse→edge lookup.
+  final Map<String, GraphEdge> _edgeIndex;
+
+  static Map<String, GraphEdge> _buildEdgeIndex(List<GraphEdge> edges) {
+    final index = <String, GraphEdge>{};
+    for (final edge in edges) {
+      index['${edge.source.id}:${edge.target.id}'] = edge;
+      index['${edge.target.id}:${edge.source.id}'] = edge;
+    }
+    return index;
+  }
 
   static const _leadRadius = 5.0;
   static const _trailCount = 3;
@@ -140,18 +152,7 @@ class RelayPulsePainter extends CustomPainter {
   }
 
   GraphEdge? _findEdge(RelayPulse pulse) {
-    for (final edge in edges) {
-      if (edge.source.id == pulse.fromConceptId &&
-          edge.target.id == pulse.toConceptId) {
-        return edge;
-      }
-      // Also check reverse direction
-      if (edge.source.id == pulse.toConceptId &&
-          edge.target.id == pulse.fromConceptId) {
-        return edge;
-      }
-    }
-    return null;
+    return _edgeIndex['${pulse.fromConceptId}:${pulse.toConceptId}'];
   }
 
   @override
