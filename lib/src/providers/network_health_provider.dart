@@ -4,12 +4,14 @@ import '../engine/network_health_scorer.dart';
 import '../models/network_health.dart';
 import 'cluster_provider.dart';
 import 'knowledge_graph_provider.dart';
+import 'storm_provider.dart';
 
 /// Provides the current [NetworkHealth] derived from the knowledge graph.
 ///
 /// Recomputes whenever the graph changes. Pure derived state — no side effects,
 /// no Firestore writes. The [CatastropheNotifier] watches this and handles
-/// persistence and event generation.
+/// persistence and event generation. During active entropy storms, freshness
+/// decays at 2x speed via [freshnessDecayMultiplierProvider].
 final networkHealthProvider = Provider<NetworkHealth>((ref) {
   final graphAsync = ref.watch(knowledgeGraphProvider);
   final graph = graphAsync.valueOrNull;
@@ -17,5 +19,8 @@ final networkHealthProvider = Provider<NetworkHealth>((ref) {
     return const NetworkHealth(score: 1.0, tier: HealthTier.healthy);
   }
   final clusters = ref.watch(clusterProvider);
-  return NetworkHealthScorer(graph, clusters: clusters).score();
+  final decayMultiplier = ref.watch(freshnessDecayMultiplierProvider);
+  return NetworkHealthScorer(graph,
+          clusters: clusters, decayMultiplier: decayMultiplier)
+      .score();
 });

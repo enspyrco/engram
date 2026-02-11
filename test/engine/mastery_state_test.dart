@@ -223,6 +223,52 @@ void main() {
 
       expect(freshnessOf('c1', graph), 1.0);
     });
+
+    test('decayMultiplier 2.0 doubles effective decay', () {
+      final now = DateTime.utc(2025, 6, 15);
+      // 30 days ago: normal freshness ~0.65, with 2x should be ~0.30
+      final thirtyDaysAgo = DateTime.utc(2025, 5, 16).toIso8601String();
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+        ],
+        quizItems: [
+          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
+              easeFactor: 2.5, interval: 25, repetitions: 5,
+              nextReview: '2099-01-01T00:00:00.000Z',
+              lastReview: thirtyDaysAgo),
+        ],
+      );
+
+      final normal = freshnessOf('c1', graph, now: now);
+      final doubled = freshnessOf('c1', graph, now: now, decayMultiplier: 2.0);
+
+      expect(normal, closeTo(0.65, 0.02));
+      // 30 days * 2.0 = 60 effective days → hits the floor of 0.3
+      expect(doubled, closeTo(0.3, 0.02));
+      expect(doubled, lessThan(normal));
+    });
+
+    test('decayMultiplier 1.0 is default behavior', () {
+      final now = DateTime.utc(2025, 6, 15);
+      final review = DateTime.utc(2025, 5, 16).toIso8601String();
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+        ],
+        quizItems: [
+          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
+              easeFactor: 2.5, interval: 25, repetitions: 5,
+              nextReview: '2099-01-01T00:00:00.000Z',
+              lastReview: review),
+        ],
+      );
+
+      final defaultVal = freshnessOf('c1', graph, now: now);
+      final explicit = freshnessOf('c1', graph, now: now, decayMultiplier: 1.0);
+
+      expect(defaultVal, explicit);
+    });
   });
 
   test('masteryColors has all five states', () {

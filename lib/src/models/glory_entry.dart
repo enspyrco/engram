@@ -13,6 +13,8 @@ class GloryEntry {
     this.guardianPoints = 0,
     this.missionPoints = 0,
     this.goalPoints = 0,
+    this.relayPoints = 0,
+    this.stormPoints = 0,
   });
 
   factory GloryEntry.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,8 @@ class GloryEntry {
       guardianPoints: json['guardianPoints'] as int? ?? 0,
       missionPoints: json['missionPoints'] as int? ?? 0,
       goalPoints: json['goalPoints'] as int? ?? 0,
+      relayPoints: json['relayPoints'] as int? ?? 0,
+      stormPoints: json['stormPoints'] as int? ?? 0,
     );
   }
 
@@ -39,8 +43,15 @@ class GloryEntry {
   /// Points earned from contributing to team goals.
   final int goalPoints;
 
+  /// Points earned from completing relay challenge legs.
+  final int relayPoints;
+
+  /// Points earned from surviving entropy storms.
+  final int stormPoints;
+
   /// Sum of all point categories.
-  int get totalPoints => guardianPoints + missionPoints + goalPoints;
+  int get totalPoints =>
+      guardianPoints + missionPoints + goalPoints + relayPoints + stormPoints;
 
   GloryEntry withGuardianPoints(int points) => GloryEntry(
         uid: uid,
@@ -49,6 +60,8 @@ class GloryEntry {
         guardianPoints: points,
         missionPoints: missionPoints,
         goalPoints: goalPoints,
+        relayPoints: relayPoints,
+        stormPoints: stormPoints,
       );
 
   GloryEntry withMissionPoints(int points) => GloryEntry(
@@ -58,6 +71,8 @@ class GloryEntry {
         guardianPoints: guardianPoints,
         missionPoints: points,
         goalPoints: goalPoints,
+        relayPoints: relayPoints,
+        stormPoints: stormPoints,
       );
 
   GloryEntry withGoalPoints(int points) => GloryEntry(
@@ -67,6 +82,30 @@ class GloryEntry {
         guardianPoints: guardianPoints,
         missionPoints: missionPoints,
         goalPoints: points,
+        relayPoints: relayPoints,
+        stormPoints: stormPoints,
+      );
+
+  GloryEntry withRelayPoints(int points) => GloryEntry(
+        uid: uid,
+        displayName: displayName,
+        photoUrl: photoUrl,
+        guardianPoints: guardianPoints,
+        missionPoints: missionPoints,
+        goalPoints: goalPoints,
+        relayPoints: points,
+        stormPoints: stormPoints,
+      );
+
+  GloryEntry withStormPoints(int points) => GloryEntry(
+        uid: uid,
+        displayName: displayName,
+        photoUrl: photoUrl,
+        guardianPoints: guardianPoints,
+        missionPoints: missionPoints,
+        goalPoints: goalPoints,
+        relayPoints: relayPoints,
+        stormPoints: points,
       );
 
   Map<String, dynamic> toJson() => {
@@ -76,5 +115,7 @@ class GloryEntry {
         'guardianPoints': guardianPoints,
         'missionPoints': missionPoints,
         'goalPoints': goalPoints,
+        'relayPoints': relayPoints,
+        'stormPoints': stormPoints,
       };
 }

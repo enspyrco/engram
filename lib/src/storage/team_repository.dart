@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/catastrophe_event.dart';
 import '../models/concept_cluster.dart';
+import '../models/entropy_storm.dart';
 import '../models/glory_entry.dart';
 import '../models/network_health.dart';
+import '../models/relay_challenge.dart';
 import '../models/repair_mission.dart';
 import '../models/team_goal.dart';
 
@@ -17,6 +19,8 @@ import '../models/team_goal.dart';
 ///   wikiGroups/{hash}/missions/{missionId}     — repair missions
 ///   wikiGroups/{hash}/goals/{goalId}           — team goals
 ///   wikiGroups/{hash}/glory/{uid}              — glory board entries
+///   wikiGroups/{hash}/relays/{relayId}         — relay challenges
+///   wikiGroups/{hash}/storms/{stormId}         — entropy storms
 class TeamRepository {
   TeamRepository({
     required FirebaseFirestore firestore,
@@ -208,6 +212,8 @@ class TeamRepository {
     int guardianPoints = 0,
     int missionPoints = 0,
     int goalPoints = 0,
+    int relayPoints = 0,
+    int stormPoints = 0,
   }) async {
     final updates = <String, dynamic>{};
     if (guardianPoints != 0) {
@@ -218,6 +224,12 @@ class TeamRepository {
     }
     if (goalPoints != 0) {
       updates['goalPoints'] = FieldValue.increment(goalPoints);
+    }
+    if (relayPoints != 0) {
+      updates['relayPoints'] = FieldValue.increment(relayPoints);
+    }
+    if (stormPoints != 0) {
+      updates['stormPoints'] = FieldValue.increment(stormPoints);
     }
     if (updates.isEmpty) return;
 
@@ -241,6 +253,55 @@ class TeamRepository {
         .map((doc) {
       if (!doc.exists || doc.data() == null) return null;
       return GloryEntry.fromJson(doc.data()!);
+    });
+  }
+
+  // --- Relay Challenges ---
+
+  /// Create a new relay challenge.
+  Future<void> writeRelay(RelayChallenge relay) async {
+    await _groupDoc.collection('relays').doc(relay.id).set(relay.toJson());
+  }
+
+  /// Update a relay challenge (e.g., after claiming or completing a leg).
+  Future<void> updateRelay(RelayChallenge relay) async {
+    await _groupDoc.collection('relays').doc(relay.id).set(relay.toJson());
+  }
+
+  /// Stream active (uncompleted) relay challenges.
+  Stream<List<RelayChallenge>> watchActiveRelays() {
+    return _groupDoc
+        .collection('relays')
+        .where('completedAt', isNull: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => RelayChallenge.fromJson(doc.data()))
+            .toList());
+  }
+
+  // --- Entropy Storms ---
+
+  /// Create a new entropy storm.
+  Future<void> writeStorm(EntropyStorm storm) async {
+    await _groupDoc.collection('storms').doc(storm.id).set(storm.toJson());
+  }
+
+  /// Update a storm (e.g., status change, participant opt-in/out).
+  Future<void> updateStorm(EntropyStorm storm) async {
+    await _groupDoc.collection('storms').doc(storm.id).set(storm.toJson());
+  }
+
+  /// Stream the current active or scheduled storm (limit 1, newest first).
+  Stream<EntropyStorm?> watchActiveStorm() {
+    return _groupDoc
+        .collection('storms')
+        .where('status', whereIn: ['scheduled', 'active'])
+        .orderBy('scheduledStart')
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) return null;
+      return EntropyStorm.fromJson(snapshot.docs.first.data());
     });
   }
 }

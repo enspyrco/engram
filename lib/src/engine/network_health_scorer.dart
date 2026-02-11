@@ -16,13 +16,19 @@ import 'mastery_state.dart';
 /// graph — many other concepts depend on them, so their decay has outsized
 /// impact on the team's ability to learn.
 class NetworkHealthScorer {
-  NetworkHealthScorer(this._graph, {DateTime? now, List<ConceptCluster>? clusters})
-      : _now = now,
-        _clusters = clusters;
+  NetworkHealthScorer(
+    this._graph, {
+    DateTime? now,
+    List<ConceptCluster>? clusters,
+    double decayMultiplier = 1.0,
+  })  : _now = now,
+        _clusters = clusters,
+        _decayMultiplier = decayMultiplier;
 
   final KnowledgeGraph _graph;
   final DateTime? _now;
   final List<ConceptCluster>? _clusters;
+  final double _decayMultiplier;
 
   /// Minimum out-degree for a concept to be considered a critical path node.
   static const criticalPathThreshold = 2;
@@ -56,7 +62,8 @@ class NetworkHealthScorer {
         case MasteryState.due:
           break;
       }
-      freshnessSum += freshnessOf(concept.id, _graph, now: _now);
+      freshnessSum += freshnessOf(concept.id, _graph,
+          now: _now, decayMultiplier: _decayMultiplier);
     }
 
     final masteryRatio = masteredCount / total;
@@ -139,7 +146,8 @@ class NetworkHealthScorer {
           case MasteryState.due:
             break;
         }
-        freshness += freshnessOf(concept.id, _graph, now: _now);
+        freshness += freshnessOf(concept.id, _graph,
+            now: _now, decayMultiplier: _decayMultiplier);
       }
 
       final clusterScore =

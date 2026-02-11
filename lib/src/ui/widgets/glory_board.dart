@@ -123,24 +123,33 @@ class _GloryEntryTile extends StatelessWidget {
             ),
           ],
         ),
-        subtitle: Row(
+        subtitle: Wrap(
+          spacing: 8,
           children: [
             _PointBadge(
               icon: Icons.shield,
               count: entry.guardianPoints,
               label: 'Guard',
             ),
-            const SizedBox(width: 8),
             _PointBadge(
               icon: Icons.build,
               count: entry.missionPoints,
               label: 'Mission',
             ),
-            const SizedBox(width: 8),
             _PointBadge(
               icon: Icons.flag,
               count: entry.goalPoints,
               label: 'Goal',
+            ),
+            _PointBadge(
+              icon: Icons.sync,
+              count: entry.relayPoints,
+              label: 'Relay',
+            ),
+            _PointBadge(
+              icon: Icons.thunderstorm,
+              count: entry.stormPoints,
+              label: 'Storm',
             ),
           ],
         ),

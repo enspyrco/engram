@@ -55,11 +55,14 @@ MasteryState masteryStateOf(
 
 /// Compute freshness of a concept (1.0 = just reviewed, 0.3 = 60+ days ago).
 ///
-/// Returns 1.0 if no review dates are available.
+/// Returns 1.0 if no review dates are available. The optional
+/// [decayMultiplier] accelerates decay (e.g. 2.0 during entropy storms)
+/// without modifying SM-2 intervals — only the freshness *display* changes.
 double freshnessOf(
   String conceptId,
   KnowledgeGraph graph, {
   DateTime? now,
+  double decayMultiplier = 1.0,
 }) {
   final items = graph.quizItems.where((q) => q.conceptId == conceptId);
   final oldest = _oldestLastReview(items);
@@ -70,7 +73,8 @@ double freshnessOf(
   if (daysSince <= 0) return 1.0;
 
   // Linear decay from 1.0 to 0.3 over maxDecayDays
-  final t = math.min(daysSince / maxDecayDays, 1.0);
+  final effectiveDays = daysSince * decayMultiplier;
+  final t = math.min(effectiveDays / maxDecayDays, 1.0);
   return 1.0 - (0.7 * t);
 }
 
