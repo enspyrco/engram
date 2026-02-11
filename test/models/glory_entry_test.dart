@@ -11,6 +11,8 @@ void main() {
         guardianPoints: 10,
         missionPoints: 5,
         goalPoints: 3,
+        relayPoints: 7,
+        stormPoints: 4,
       );
 
       final json = entry.toJson();
@@ -22,6 +24,8 @@ void main() {
       expect(restored.guardianPoints, 10);
       expect(restored.missionPoints, 5);
       expect(restored.goalPoints, 3);
+      expect(restored.relayPoints, 7);
+      expect(restored.stormPoints, 4);
     });
 
     test('totalPoints sums all categories', () {
@@ -31,9 +35,11 @@ void main() {
         guardianPoints: 10,
         missionPoints: 5,
         goalPoints: 3,
+        relayPoints: 7,
+        stormPoints: 4,
       );
 
-      expect(entry.totalPoints, 18);
+      expect(entry.totalPoints, 29);
     });
 
     test('totalPoints is zero by default', () {
@@ -51,6 +57,8 @@ void main() {
       expect(entry.guardianPoints, 0);
       expect(entry.missionPoints, 0);
       expect(entry.goalPoints, 0);
+      expect(entry.relayPoints, 0);
+      expect(entry.stormPoints, 0);
     });
 
     test('withGuardianPoints creates new instance', () {
@@ -89,6 +97,48 @@ void main() {
       final updated = entry.withGoalPoints(8);
       expect(updated.goalPoints, 8);
       expect(entry.goalPoints, 2);
+    });
+
+    test('withRelayPoints creates new instance', () {
+      const entry = GloryEntry(
+        uid: 'user1',
+        displayName: 'Alice',
+        relayPoints: 3,
+      );
+
+      final updated = entry.withRelayPoints(12);
+      expect(updated.relayPoints, 12);
+      expect(entry.relayPoints, 3);
+    });
+
+    test('withStormPoints creates new instance', () {
+      const entry = GloryEntry(
+        uid: 'user1',
+        displayName: 'Alice',
+        stormPoints: 5,
+      );
+
+      final updated = entry.withStormPoints(10);
+      expect(updated.stormPoints, 10);
+      expect(entry.stormPoints, 5);
+    });
+
+    test('withRelayPoints preserves other fields', () {
+      const entry = GloryEntry(
+        uid: 'user1',
+        displayName: 'Alice',
+        guardianPoints: 10,
+        missionPoints: 5,
+        goalPoints: 3,
+        relayPoints: 7,
+        stormPoints: 4,
+      );
+
+      final updated = entry.withRelayPoints(20);
+      expect(updated.guardianPoints, 10);
+      expect(updated.missionPoints, 5);
+      expect(updated.goalPoints, 3);
+      expect(updated.stormPoints, 4);
     });
   });
 }

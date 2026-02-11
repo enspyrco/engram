@@ -13,13 +13,18 @@ import '../../providers/friends_provider.dart';
 import '../../providers/glory_board_provider.dart';
 import '../../providers/guardian_provider.dart';
 import '../../providers/nudge_provider.dart';
+import '../../providers/relay_provider.dart';
+import '../../providers/storm_provider.dart';
 import '../../providers/team_goals_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../widgets/challenge_dialog.dart';
+import '../widgets/create_relay_dialog.dart';
+import '../widgets/entropy_storm_card.dart';
 import '../widgets/friend_card.dart';
 import '../widgets/glory_board.dart';
 import '../widgets/incoming_challenge_card.dart';
 import '../widgets/nudge_card.dart';
+import '../widgets/relay_challenge_card.dart';
 import '../widgets/team_goal_card.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
@@ -251,6 +256,9 @@ class _TeamTab extends ConsumerWidget {
     final guardianState = ref.watch(guardianProvider);
     final goalsAsync = ref.watch(teamGoalsProvider);
     final catastropheState = ref.watch(catastropheProvider);
+    final relaysAsync = ref.watch(relayProvider);
+    final stormAsync = ref.watch(stormProvider);
+    final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -348,8 +356,133 @@ class _TeamTab extends ConsumerWidget {
                 trailing: Text('${mission.remaining} left'),
               ),
             ),
+
+        const SizedBox(height: 16),
+
+        // Relay Challenges
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Relay Challenges', style: Theme.of(context).textTheme.titleSmall),
+            IconButton(
+              icon: const Icon(Icons.add, size: 20),
+              onPressed: () => _showCreateRelayDialog(context),
+              tooltip: 'Create relay',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        relaysAsync.when(
+          data: (relays) {
+            if (relays.isEmpty) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Create a relay to challenge the team to master a concept chain!',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: relays
+                  .map((r) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RelayChallengeCard(
+                          relay: r,
+                          currentUid: currentUid,
+                          onClaimLeg: (legIndex) => ref
+                              .read(relayProvider.notifier)
+                              .claimLeg(r.id, legIndex),
+                        ),
+                      ))
+                  .toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Error loading relays: $e'),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Entropy Storm
+        Text('Entropy Storm', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        stormAsync.when(
+          data: (storm) {
+            if (storm == null) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        'No storm scheduled. Brave enough to start one?',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: () => _showScheduleStormDialog(context, ref),
+                        icon: const Icon(Icons.thunderstorm, size: 16),
+                        label: const Text('Schedule Storm'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return EntropyStormCard(
+              storm: storm,
+              currentUid: currentUid,
+              onOptIn: () => ref.read(stormProvider.notifier).optIn(),
+              onOptOut: () => ref.read(stormProvider.notifier).optOut(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Error loading storm: $e'),
+        ),
       ],
     );
+  }
+
+  void _showCreateRelayDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const CreateRelayDialog(),
+    );
+  }
+
+  Future<void> _showScheduleStormDialog(BuildContext context, WidgetRef ref) async {
+    // Default: start 24 hours from now
+    final defaultStart = DateTime.now().toUtc().add(const Duration(hours: 24));
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: defaultStart,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (date == null || !context.mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(defaultStart),
+    );
+    if (time == null) return;
+
+    final startTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    ).toUtc();
+    await ref.read(stormProvider.notifier).scheduleStorm(startTime);
   }
 
   void _showCreateGoalDialog(BuildContext context, WidgetRef ref) {

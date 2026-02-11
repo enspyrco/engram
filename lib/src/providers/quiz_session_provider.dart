@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../engine/scheduler.dart';
 import '../engine/sm2.dart';
 import '../engine/streak.dart';
+import '../models/quiz_item.dart';
 import '../models/quiz_session_state.dart';
 import '../models/session_mode.dart';
 import 'auth_provider.dart';
 import 'catastrophe_provider.dart';
 import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
+import 'relay_provider.dart';
 import 'settings_provider.dart';
 
 final quizSessionProvider =
@@ -109,6 +111,11 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       }
     }
 
+    // Check relay leg completion: if this concept is a claimed relay leg
+    // for the current user and all its quiz items are now mastered
+    // (interval >= 21), complete the leg.
+    _checkRelayLegCompletion(item.conceptId, updated);
+
     final newRatings = state.ratings.add(quality);
     final nextIndex = state.currentIndex + 1;
 
@@ -143,6 +150,40 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       repo.setCurrentStreak(update.currentStreak),
       repo.setLongestStreak(update.longestStreak),
     ]);
+  }
+
+  /// Check if a reviewed concept completes a relay leg.
+  void _checkRelayLegCompletion(String conceptId, QuizItem updatedItem) {
+    final uid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return;
+
+    final relays = ref.read(relayProvider).valueOrNull ?? [];
+    final graph = ref.read(knowledgeGraphProvider).valueOrNull;
+    if (graph == null) return;
+
+    for (final relay in relays) {
+      for (var i = 0; i < relay.legs.length; i++) {
+        final leg = relay.legs[i];
+        if (leg.conceptId != conceptId) continue;
+        if (leg.claimedByUid != uid) continue;
+        if (leg.completedAt != null) continue;
+
+        // Check if ALL quiz items for this concept are mastered
+        final conceptItems =
+            graph.quizItems.where((q) => q.conceptId == conceptId);
+        final allMastered = conceptItems.every((q) {
+          // Use the updated item's interval if this is the one we just reviewed
+          final interval = q.id == updatedItem.id ? updatedItem.interval : q.interval;
+          return interval >= 21;
+        });
+
+        if (allMastered) {
+          unawaited(
+            ref.read(relayProvider.notifier).completeLeg(relay.id, i),
+          );
+        }
+      }
+    }
   }
 
   void reset() {

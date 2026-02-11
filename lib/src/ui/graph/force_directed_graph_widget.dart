@@ -11,6 +11,8 @@ import 'graph_edge.dart';
 import 'graph_node.dart';
 import 'graph_painter.dart';
 import 'particle_system.dart';
+import 'relay_pulse_painter.dart';
+import 'storm_overlay_painter.dart';
 import 'team_avatar_cache.dart';
 import 'team_node.dart';
 
@@ -25,6 +27,9 @@ class ForceDirectedGraphWidget extends StatefulWidget {
     this.healthTier = HealthTier.healthy,
     this.guardianMap = const {},
     this.currentUserUid,
+    this.isStormActive = false,
+    this.relayPulses = const [],
+    this.relayConceptIds = const {},
     super.key,
   });
 
@@ -42,6 +47,15 @@ class ForceDirectedGraphWidget extends StatefulWidget {
 
   /// Current user's UID — their guarded nodes get a gold ring.
   final String? currentUserUid;
+
+  /// Whether an entropy storm is currently active (enables storm overlay).
+  final bool isStormActive;
+
+  /// Active relay pulses traveling along edges.
+  final List<RelayPulse> relayPulses;
+
+  /// Concept IDs in active relays — highlighted with cyan ring.
+  final Set<String> relayConceptIds;
 
   @override
   State<ForceDirectedGraphWidget> createState() =>
@@ -68,6 +82,10 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   final ParticleSystem _particleSystem = ParticleSystem();
   bool _catastropheActive = false;
 
+  // Storm visual system
+  late final AnimationController _stormController;
+  bool _stormActive = false;
+
   @override
   void initState() {
     super.initState();
@@ -79,7 +97,15 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       duration: const Duration(seconds: 3),
     )..addListener(_onCatastropheFrame);
 
+    _stormController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..addListener(() {
+        if (_stormActive) setState(() {});
+      });
+
     _initCatastropheEffects();
+    _initStormEffects();
   }
 
   @override
@@ -94,11 +120,15 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     if (oldWidget.healthTier != widget.healthTier) {
       _initCatastropheEffects();
     }
+    if (oldWidget.isStormActive != widget.isStormActive) {
+      _initStormEffects();
+    }
   }
 
   @override
   void dispose() {
     _removeOverlay();
+    _stormController.dispose();
     _catastropheController.dispose();
     _ticker.dispose();
     _transformController.dispose();
@@ -116,6 +146,17 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       _catastropheActive = true;
       _particleSystem.initialize(_edges, tier);
       _catastropheController.repeat();
+    }
+  }
+
+  void _initStormEffects() {
+    if (widget.isStormActive) {
+      _stormActive = true;
+      _stormController.repeat();
+    } else {
+      _stormActive = false;
+      _stormController.stop();
+      _stormController.reset();
     }
   }
 
@@ -294,6 +335,41 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   Widget build(BuildContext context) {
     final graphSize = Size(_layout.width, _layout.height);
 
+    // Build layered painters from bottom to top:
+    // 1. Base graph (GraphPainter)
+    // 2. Storm overlay (when storm active)
+    // 3. Catastrophe effects (when health tier > healthy)
+    // 4. Particles (when catastrophe active)
+    // 5. Relay pulses (when relays active)
+
+    Widget child = const SizedBox.shrink();
+
+    // Layer 5: Relay pulses (topmost)
+    if (widget.relayPulses.isNotEmpty) {
+      child = CustomPaint(
+        size: graphSize,
+        painter: RelayPulsePainter(
+          pulses: widget.relayPulses,
+          edges: _edges,
+          relayConceptIds: widget.relayConceptIds,
+        ),
+        child: child,
+      );
+    }
+
+    // Layer 4: Particles
+    if (_catastropheActive) {
+      child = CustomPaint(
+        size: graphSize,
+        painter: ParticlePainter(
+          particles: _particleSystem.particles,
+          edges: _edges,
+          tier: widget.healthTier,
+        ),
+        child: child,
+      );
+    }
+
     return GestureDetector(
       onTapUp: _onTapUp,
       child: InteractiveViewer(
@@ -320,16 +396,16 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
                   animationProgress: _catastropheController.value,
                 )
               : null,
-          child: _catastropheActive
+          child: _stormActive
               ? CustomPaint(
                   size: graphSize,
-                  painter: ParticlePainter(
-                    particles: _particleSystem.particles,
+                  painter: StormOverlayPainter(
                     edges: _edges,
-                    tier: widget.healthTier,
+                    animationProgress: _stormController.value,
                   ),
+                  child: child,
                 )
-              : null,
+              : child,
         ),
       ),
     );

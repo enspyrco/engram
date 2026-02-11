@@ -204,6 +204,36 @@ void main() {
       expect(health.clusterHealth, isNotEmpty);
     });
 
+    test('decayMultiplier lowers scores via faster freshness decay', () {
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(id: 'a', name: 'A', description: '', sourceDocumentId: 'd'),
+          Concept(id: 'b', name: 'B', description: '', sourceDocumentId: 'd'),
+        ],
+        quizItems: [
+          QuizItem(
+            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
+            easeFactor: 2.5, interval: 25, repetitions: 5,
+            nextReview: '2099-01-01', lastReview: recentReview,
+          ),
+          QuizItem(
+            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
+            easeFactor: 2.5, interval: 25, repetitions: 5,
+            nextReview: '2099-01-01', lastReview: recentReview,
+          ),
+        ],
+      );
+
+      final normalHealth = NetworkHealthScorer(graph, now: now).score();
+      final stormHealth =
+          NetworkHealthScorer(graph, now: now, decayMultiplier: 2.0).score();
+
+      // Storm should produce a lower score due to reduced freshness
+      expect(stormHealth.score, lessThanOrEqualTo(normalHealth.score));
+      expect(stormHealth.avgFreshness,
+          lessThanOrEqualTo(normalHealth.avgFreshness));
+    });
+
     test('NetworkHealth JSON round-trip', () {
       const health = NetworkHealth(
         score: 0.75,
