@@ -40,11 +40,15 @@ class RelayLeg {
   /// Last time a stall nudge was sent for this leg (6h debounce).
   final String? lastStallNudgeAt;
 
-  /// Computed status based on field state.
-  RelayLegStatus get status {
+  /// Computed status based on field state at the given time.
+  ///
+  /// Pure — depends only on the leg's fields and the supplied [now].
+  RelayLegStatus statusAt(DateTime now) {
     if (completedAt != null) return RelayLegStatus.completed;
     if (claimedAt != null) {
-      return isOverdue ? RelayLegStatus.stalled : RelayLegStatus.claimed;
+      return isOverdueAt(now)
+          ? RelayLegStatus.stalled
+          : RelayLegStatus.claimed;
     }
     return RelayLegStatus.unclaimed;
   }
@@ -55,13 +59,7 @@ class RelayLeg {
     return DateTime.parse(claimedAt!).add(const Duration(hours: 24));
   }
 
-  /// Whether the claim window has expired without completion.
-  bool get isOverdue {
-    if (claimedAt == null || completedAt != null) return false;
-    return DateTime.now().toUtc().isAfter(deadline!);
-  }
-
-  /// Check overdue against a specific time (for testability).
+  /// Whether the claim window has expired without completion at [now].
   bool isOverdueAt(DateTime now) {
     if (claimedAt == null || completedAt != null) return false;
     return now.isAfter(deadline!);
@@ -181,8 +179,9 @@ class RelayChallenge {
     return completedLegs / legs.length;
   }
 
-  /// Whether any leg is stalled (overdue).
-  bool get hasStall => legs.any((l) => l.status == RelayLegStatus.stalled);
+  /// Whether any leg is stalled (overdue) at the given time.
+  bool hasStallAt(DateTime now) =>
+      legs.any((l) => l.statusAt(now) == RelayLegStatus.stalled);
 
   RelayChallenge withLegClaimed(
     int legIndex, {

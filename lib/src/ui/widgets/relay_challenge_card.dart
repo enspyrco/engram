@@ -24,6 +24,7 @@ class RelayChallengeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final now = DateTime.now().toUtc();
 
     return Card(
       child: Padding(
@@ -65,7 +66,8 @@ class RelayChallengeCard extends StatelessWidget {
                 itemBuilder: (context, index) => _LegChip(
                   leg: relay.legs[index],
                   index: index,
-                  canClaim: _canClaim(index),
+                  now: now,
+                  canClaim: _canClaim(index, now),
                   onClaim: onClaimLeg != null ? () => onClaimLeg!(index) : null,
                 ),
               ),
@@ -89,9 +91,9 @@ class RelayChallengeCard extends StatelessWidget {
     );
   }
 
-  bool _canClaim(int index) {
+  bool _canClaim(int index, DateTime now) {
     final leg = relay.legs[index];
-    if (leg.status != RelayLegStatus.unclaimed) return false;
+    if (leg.statusAt(now) != RelayLegStatus.unclaimed) return false;
     if (index == 0) return true;
     return relay.legs[index - 1].completedAt != null;
   }
@@ -101,19 +103,22 @@ class _LegChip extends StatelessWidget {
   const _LegChip({
     required this.leg,
     required this.index,
+    required this.now,
     required this.canClaim,
     this.onClaim,
   });
 
   final RelayLeg leg;
   final int index;
+  final DateTime now;
   final bool canClaim;
   final VoidCallback? onClaim;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final (icon, color) = _statusVisuals();
+    final status = leg.statusAt(now);
+    final (icon, color) = _statusVisuals(status);
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 120),
@@ -141,9 +146,9 @@ class _LegChip extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          if (leg.status == RelayLegStatus.claimed)
+          if (status == RelayLegStatus.claimed)
             _CountdownText(leg: leg)
-          else if (leg.status == RelayLegStatus.stalled)
+          else if (status == RelayLegStatus.stalled)
             Text(
               'Stalled!',
               style: theme.textTheme.labelSmall?.copyWith(
@@ -176,8 +181,8 @@ class _LegChip extends StatelessWidget {
     );
   }
 
-  (IconData, Color) _statusVisuals() {
-    return switch (leg.status) {
+  (IconData, Color) _statusVisuals(RelayLegStatus status) {
+    return switch (status) {
       RelayLegStatus.unclaimed => (Icons.radio_button_unchecked, Colors.grey),
       RelayLegStatus.claimed => (Icons.timer, Colors.cyan),
       RelayLegStatus.completed => (Icons.check_circle, Colors.green),

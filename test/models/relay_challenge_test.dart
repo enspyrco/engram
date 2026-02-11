@@ -26,14 +26,15 @@ void main() {
       expect(restored.lastStallNudgeAt, '2025-06-15T11:00:00.000Z');
     });
 
-    test('status is unclaimed when no claim', () {
+    test('statusAt is unclaimed when no claim', () {
       const leg = RelayLeg(conceptId: 'c1', conceptName: 'Git');
-      expect(leg.status, RelayLegStatus.unclaimed);
+      final now = DateTime.utc(2025, 6, 15);
+      expect(leg.statusAt(now), RelayLegStatus.unclaimed);
     });
 
-    test('status is claimed when claimed and within deadline', () {
-      final recentClaim =
-          DateTime.now().toUtc().subtract(const Duration(hours: 1)).toIso8601String();
+    test('statusAt is claimed when claimed and within deadline', () {
+      final now = DateTime.utc(2025, 6, 15, 11);
+      final recentClaim = DateTime.utc(2025, 6, 15, 10).toIso8601String();
       final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
@@ -41,23 +42,23 @@ void main() {
         claimedByName: 'A',
         claimedAt: recentClaim,
       );
-      expect(leg.status, RelayLegStatus.claimed);
+      expect(leg.statusAt(now), RelayLegStatus.claimed);
     });
 
-    test('status is stalled when overdue', () {
-      final oldClaim =
-          DateTime.now().toUtc().subtract(const Duration(hours: 25)).toIso8601String();
+    test('statusAt is stalled when overdue', () {
+      final claimedAt = DateTime.utc(2025, 6, 14, 8).toIso8601String();
+      final now = DateTime.utc(2025, 6, 15, 10); // 26h later
       final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: oldClaim,
+        claimedAt: claimedAt,
       );
-      expect(leg.status, RelayLegStatus.stalled);
+      expect(leg.statusAt(now), RelayLegStatus.stalled);
     });
 
-    test('status is completed when completedAt set', () {
+    test('statusAt is completed when completedAt set', () {
       const leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
@@ -66,7 +67,8 @@ void main() {
         claimedAt: '2020-01-01T00:00:00.000Z',
         completedAt: '2020-01-01T12:00:00.000Z',
       );
-      expect(leg.status, RelayLegStatus.completed);
+      final now = DateTime.utc(2025, 6, 15);
+      expect(leg.statusAt(now), RelayLegStatus.completed);
     });
 
     test('deadline is 24 hours after claimedAt', () {
@@ -201,9 +203,10 @@ void main() {
       expect(updated.legs[0].completedAt, '2025-06-15T15:00:00.000Z');
     });
 
-    test('hasStall detects stalled legs', () {
+    test('hasStallAt detects stalled legs', () {
       // No stalls in the fixture (leg[0] unclaimed, leg[1] completed, leg[2] unclaimed)
-      expect(relay.hasStall, isFalse);
+      final now = DateTime.utc(2025, 6, 15);
+      expect(relay.hasStallAt(now), isFalse);
     });
 
     test('empty legs yields progress 1.0', () {

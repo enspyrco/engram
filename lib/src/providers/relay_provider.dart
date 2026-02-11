@@ -64,7 +64,8 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     if (relay == null) return;
 
     // Validate: leg must be unclaimed
-    if (relay.legs[legIndex].status != RelayLegStatus.unclaimed) return;
+    final now = DateTime.now().toUtc();
+    if (relay.legs[legIndex].statusAt(now) != RelayLegStatus.unclaimed) return;
 
     // Validate: prior leg must be completed (or this is the first leg)
     if (legIndex > 0 &&
@@ -72,12 +73,12 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
       return;
     }
 
-    final now = DateTime.now().toUtc().toIso8601String();
+    final nowStr = now.toIso8601String();
     final updated = relay.withLegClaimed(
       legIndex,
       uid: user.uid,
       displayName: profile?.displayName ?? 'Someone',
-      timestamp: now,
+      timestamp: nowStr,
     );
 
     await teamRepo.updateRelay(updated);
@@ -96,21 +97,22 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     final leg = relay.legs[legIndex];
     if (leg.completedAt != null) return; // already completed
 
-    final now = DateTime.now().toUtc().toIso8601String();
-    var updated = relay.withLegCompleted(legIndex, now);
+    final now = DateTime.now().toUtc();
+    final nowStr = now.toIso8601String();
+    var updated = relay.withLegCompleted(legIndex, nowStr);
 
     // Determine glory points
     var points = 3; // base per leg
 
     // Rescue bonus: completing a stalled leg
-    if (leg.status == RelayLegStatus.stalled) {
+    if (leg.statusAt(now) == RelayLegStatus.stalled) {
       points = 4;
     }
 
     // Check if this was the final leg
     final isLastLeg = updated.completedLegs == updated.legs.length;
     if (isLastLeg) {
-      updated = updated.withCompleted(now);
+      updated = updated.withCompleted(nowStr);
       points += 5; // bonus for completing the relay
     }
 

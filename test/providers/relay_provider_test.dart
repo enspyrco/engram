@@ -26,7 +26,8 @@ void main() {
       // Simulates the validation logic in RelayNotifier.claimLeg
       const legIndex = 0;
       final leg = relay.legs[legIndex];
-      expect(leg.status, RelayLegStatus.unclaimed);
+      final now = DateTime.utc(2025, 6, 15);
+      expect(leg.statusAt(now), RelayLegStatus.unclaimed);
 
       // No prior leg requirement for index 0
       final canClaim = legIndex == 0 ||
@@ -63,7 +64,8 @@ void main() {
         timestamp: '2025-06-15T10:00:00.000Z',
       );
 
-      expect(claimed.legs[0].status, isNot(RelayLegStatus.unclaimed));
+      final now = DateTime.utc(2025, 6, 15, 11); // 1h after claim
+      expect(claimed.legs[0].statusAt(now), isNot(RelayLegStatus.unclaimed));
     });
   });
 
@@ -74,18 +76,18 @@ void main() {
     });
 
     test('stalled leg rescue awards 4 points', () {
-      final oldClaim =
-          DateTime.now().toUtc().subtract(const Duration(hours: 25)).toIso8601String();
+      final claimedAt = DateTime.utc(2025, 6, 14, 8).toIso8601String();
+      final now = DateTime.utc(2025, 6, 15, 10); // 26h later
       final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: oldClaim,
+        claimedAt: claimedAt,
       );
 
-      expect(leg.status, RelayLegStatus.stalled);
-      final points = leg.status == RelayLegStatus.stalled ? 4 : 3;
+      expect(leg.statusAt(now), RelayLegStatus.stalled);
+      final points = leg.statusAt(now) == RelayLegStatus.stalled ? 4 : 3;
       expect(points, 4);
     });
 
