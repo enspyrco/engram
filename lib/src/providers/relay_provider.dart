@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/nudge.dart';
 import '../models/relay_challenge.dart';
@@ -8,6 +9,8 @@ import 'auth_provider.dart';
 import 'guardian_provider.dart';
 import 'nudge_provider.dart';
 import 'user_profile_provider.dart';
+
+const _uuid = Uuid();
 
 /// Manages relay challenges — streams active relays from Firestore and
 /// provides claim/complete/create operations.
@@ -42,7 +45,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
 
     final now = DateTime.now().toUtc();
     final relay = RelayChallenge(
-      id: 'relay_${now.millisecondsSinceEpoch}',
+      id: 'relay_${_uuid.v4()}',
       title: title,
       legs: legs,
       createdAt: now.toIso8601String(),

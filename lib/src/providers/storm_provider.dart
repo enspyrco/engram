@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/entropy_storm.dart';
 import 'auth_provider.dart';
 import 'guardian_provider.dart';
 import 'network_health_provider.dart';
+
+const _uuid = Uuid();
 
 /// Manages the current entropy storm — streams from Firestore and handles
 /// opt-in/out, status transitions, and health tracking.
@@ -42,7 +45,7 @@ class StormNotifier extends AsyncNotifier<EntropyStorm?> {
 
     final end = startTime.add(const Duration(hours: 48));
     final storm = EntropyStorm(
-      id: 'storm_${startTime.millisecondsSinceEpoch}',
+      id: 'storm_${_uuid.v4()}',
       scheduledStart: startTime.toUtc().toIso8601String(),
       scheduledEnd: end.toUtc().toIso8601String(),
       status: StormStatus.scheduled,

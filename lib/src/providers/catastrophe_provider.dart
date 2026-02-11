@@ -1,6 +1,7 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/catastrophe_event.dart';
 import '../models/network_health.dart';
@@ -8,6 +9,8 @@ import '../models/repair_mission.dart';
 import 'cluster_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'network_health_provider.dart';
+
+const _uuid = Uuid();
 
 /// Immutable snapshot of catastrophe system state.
 @immutable
@@ -137,7 +140,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
 
     // Create catastrophe event
     final event = CatastropheEvent(
-      id: 'catastrophe_${now.millisecondsSinceEpoch}',
+      id: 'catastrophe_${_uuid.v4()}',
       tier: transition.to,
       affectedConceptIds: _findAtRiskConceptIds(),
       createdAt: nowStr,
@@ -153,7 +156,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
       final missionConcepts = _findRepairTargets();
       if (missionConcepts.isNotEmpty) {
         final mission = RepairMission(
-          id: 'mission_${now.millisecondsSinceEpoch}',
+          id: 'mission_${_uuid.v4()}',
           conceptIds: missionConcepts,
           createdAt: nowStr,
           catastropheEventId: event.id,

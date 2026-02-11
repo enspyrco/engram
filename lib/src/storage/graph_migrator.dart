@@ -20,6 +20,7 @@ class GraphMigrator {
   Future<KnowledgeGraph> migrate() async {
     final graph = await _source.load();
     if (graph.concepts.isNotEmpty ||
+        graph.relationships.isNotEmpty ||
         graph.quizItems.isNotEmpty ||
         graph.documentMetadata.isNotEmpty) {
       await _destination.save(graph);
