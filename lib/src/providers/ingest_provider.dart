@@ -190,9 +190,9 @@ class IngestNotifier extends Notifier<IngestState> {
       final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
       if (currentGraph != null && skipped > 0) {
         final repo = ref.read(graphRepositoryProvider);
-        repo.save(currentGraph).catchError((e) {
+        unawaited(repo.save(currentGraph).catchError((e) {
           debugPrint('[Ingest] Backfill batch save failed: $e');
-        });
+        }));
       }
 
       // Record the collection ID for sync checks
