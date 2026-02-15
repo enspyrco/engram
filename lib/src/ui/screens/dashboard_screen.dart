@@ -3,18 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/dashboard_stats.dart';
 import '../../models/sync_status.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/catastrophe_provider.dart';
+import '../../providers/collection_filter_provider.dart';
 import '../../providers/dashboard_stats_provider.dart';
-import '../../providers/guardian_provider.dart';
+import '../../providers/filtered_graph_provider.dart';
 import '../../providers/graph_structure_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/network_health_provider.dart';
 import '../../providers/sync_provider.dart';
-import '../../providers/team_graph_provider.dart';
+import '../graph/static_graph_widget.dart';
 import '../navigation_shell.dart';
 import '../widgets/mastery_bar.dart';
-import '../widgets/mind_map.dart';
 import '../widgets/network_health_indicator.dart';
 import '../widgets/repair_mission_card.dart';
 import '../widgets/stat_card.dart';
@@ -56,7 +55,7 @@ class DashboardScreen extends ConsumerWidget {
                     ? Center(child: Text('Error: $error'))
                     : structure == null
                         ? const _EmptyState()
-                        : _DashboardContent(),
+                        : const _DashboardContent(),
           ),
         ],
       ),
@@ -187,116 +186,211 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _DashboardContent extends ConsumerStatefulWidget {
+/// Full-screen graph with collection chips and compact stats overlay.
+class _DashboardContent extends ConsumerWidget {
+  const _DashboardContent();
+
   @override
-  ConsumerState<_DashboardContent> createState() => _DashboardContentState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final graph = ref.watch(filteredGraphProvider);
+    final stats = ref.watch(dashboardStatsProvider);
+
+    return Stack(
+      children: [
+        // Full-screen static graph
+        Positioned.fill(
+          child: graph != null
+              ? StaticGraphWidget(graph: graph)
+              : const Center(child: Text('No concepts to display')),
+        ),
+        // Collection filter chips at top
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _CollectionChipBar(),
+        ),
+        // Compact stats bar at bottom
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: _CompactStatsBar(stats: stats),
+        ),
+      ],
+    );
+  }
 }
 
-class _DashboardContentState extends ConsumerState<_DashboardContent> {
-  bool _showTeam = false;
+/// Horizontal scroll of collection filter chips.
+class _CollectionChipBar extends ConsumerWidget {
+  const _CollectionChipBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final collections = ref.watch(availableCollectionsProvider);
+    final selected = ref.watch(selectedCollectionIdProvider);
+
+    if (collections.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            FilterChip(
+              label: const Text('All'),
+              selected: selected == null,
+              onSelected: (_) =>
+                  ref.read(selectedCollectionIdProvider.notifier).state = null,
+            ),
+            const SizedBox(width: 8),
+            for (final col in collections) ...[
+              FilterChip(
+                label: Text(col.name),
+                selected: selected == col.id,
+                onSelected: (_) =>
+                    ref.read(selectedCollectionIdProvider.notifier).state =
+                        selected == col.id ? null : col.id,
+              ),
+              const SizedBox(width: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Semi-transparent stats bar at the bottom of the dashboard.
+class _CompactStatsBar extends StatelessWidget {
+  const _CompactStatsBar({required this.stats});
+
+  final DashboardStats stats;
 
   @override
   Widget build(BuildContext context) {
-    final stats = ref.watch(dashboardStatsProvider);
-    final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
-    final health = ref.watch(networkHealthProvider);
-    final catastrophe = ref.watch(catastropheProvider);
+    final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        // Scrollable stats section
-        SizedBox(
-          height: 280,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatCard(
-                    label: 'Documents',
-                    value: '${stats.documentCount}',
-                    icon: Icons.description,
-                  ),
-                  StatCard(
-                    label: 'Concepts',
-                    value: '${stats.conceptCount}',
-                    icon: Icons.lightbulb,
-                  ),
-                  StatCard(
-                    label: 'Relationships',
-                    value: '${stats.relationshipCount}',
-                    icon: Icons.share,
-                  ),
-                  StatCard(
-                    label: 'Quiz Items',
-                    value: '${stats.quizItemCount}',
-                    icon: Icons.quiz,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              MasteryBar(
-                newCount: stats.newCount,
-                learningCount: stats.learningCount,
-                masteredCount: stats.masteredCount,
-              ),
-              const SizedBox(height: 16),
-              NetworkHealthIndicator(health: health),
-              for (final mission in catastrophe.activeMissions)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: RepairMissionCard(mission: mission),
-                ),
-              const SizedBox(height: 16),
-              _GraphStatusCard(stats: stats),
-            ],
-          ),
-        ),
-        // Team mode toggle + mind map
-        if (graph != null) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Icon(Icons.people, size: 16),
-                const SizedBox(width: 4),
-                const Text('Team', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 4),
-                Switch(
-                  value: _showTeam,
-                  onChanged: (v) => setState(() => _showTeam = v),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: MindMap(
-              graph: graph,
-              teamNodes: _showTeam ? ref.watch(teamGraphProvider) : const [],
-              healthTier: health.tier,
-              guardianMap: _buildGuardianMap(ref),
-              currentUserUid: ref.watch(authStateProvider).valueOrNull?.uid,
-            ),
+    return Container(
+      color: theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _statChip(Icons.lightbulb, '${stats.conceptCount}'),
+          const SizedBox(width: 16),
+          _statChip(Icons.check_circle, '${stats.masteredCount}'),
+          const SizedBox(width: 16),
+          _statChip(Icons.schedule, '${stats.dueCount}'),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.info_outline, size: 20),
+            tooltip: 'Full stats',
+            onPressed: () => _showStatsSheet(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _statChip(IconData icon, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 4),
+        Text(value, style: const TextStyle(fontSize: 13)),
       ],
     );
   }
 
-  /// Builds a concept ID → guardian UID map from the guardian provider's clusters.
-  Map<String, String> _buildGuardianMap(WidgetRef ref) {
-    final guardianState = ref.watch(guardianProvider);
-    final map = <String, String>{};
-    for (final cluster in guardianState.clusters) {
-      if (cluster.guardianUid != null) {
-        for (final conceptId in cluster.conceptIds) {
-          map[conceptId] = cluster.guardianUid!;
-        }
-      }
-    }
-    return map;
+  void _showStatsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => _StatsBottomSheet(stats: stats),
+    );
+  }
+}
+
+/// Bottom sheet with the full stats, mastery bar, health, and graph status.
+class _StatsBottomSheet extends ConsumerWidget {
+  const _StatsBottomSheet({required this.stats});
+
+  final DashboardStats stats;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final health = ref.watch(networkHealthProvider);
+    final catastrophe = ref.watch(catastropheProvider);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StatCard(
+                  label: 'Documents',
+                  value: '${stats.documentCount}',
+                  icon: Icons.description,
+                ),
+                StatCard(
+                  label: 'Concepts',
+                  value: '${stats.conceptCount}',
+                  icon: Icons.lightbulb,
+                ),
+                StatCard(
+                  label: 'Relationships',
+                  value: '${stats.relationshipCount}',
+                  icon: Icons.share,
+                ),
+                StatCard(
+                  label: 'Quiz Items',
+                  value: '${stats.quizItemCount}',
+                  icon: Icons.quiz,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            MasteryBar(
+              newCount: stats.newCount,
+              learningCount: stats.learningCount,
+              masteredCount: stats.masteredCount,
+            ),
+            const SizedBox(height: 16),
+            NetworkHealthIndicator(health: health),
+            for (final mission in catastrophe.activeMissions)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: RepairMissionCard(mission: mission),
+              ),
+            const SizedBox(height: 16),
+            _GraphStatusCard(stats: stats),
+          ],
+        );
+      },
+    );
   }
 }
 
