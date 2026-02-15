@@ -23,18 +23,18 @@ class StormNotifier extends AsyncNotifier<EntropyStorm?> {
 
     final subscription = teamRepo.watchActiveStorm().listen((storm) {
       state = AsyncData(storm);
-      if (storm != null) _checkStormTransitions(storm);
+      if (storm != null) {
+        _checkStormTransitions(storm);
+        _syncDecayMultiplier(storm);
+      } else {
+        _setDecayMultiplier(1.0);
+      }
     });
     ref.onDispose(subscription.cancel);
 
-    // Track health during active storm
-    ref.listen(networkHealthProvider, (previous, next) {
-      final storm = state.valueOrNull;
-      if (storm == null || !storm.isActive) return;
-      _trackHealth(storm, next.score);
-    });
-
-    return await teamRepo.watchActiveStorm().first;
+    final initial = await teamRepo.watchActiveStorm().first;
+    if (initial != null) _syncDecayMultiplier(initial);
+    return initial;
   }
 
   /// Schedule a new entropy storm.
@@ -80,6 +80,14 @@ class StormNotifier extends AsyncNotifier<EntropyStorm?> {
     await teamRepo.updateStorm(updated);
   }
 
+  void _syncDecayMultiplier(EntropyStorm storm) {
+    _setDecayMultiplier(storm.isActive ? 2.0 : 1.0);
+  }
+
+  void _setDecayMultiplier(double value) {
+    ref.read(freshnessDecayMultiplierProvider.notifier).state = value;
+  }
+
   /// Check if storm should transition between scheduled → active → survived/failed.
   void _checkStormTransitions(EntropyStorm storm) {
     final now = DateTime.now().toUtc();
@@ -100,23 +108,21 @@ class StormNotifier extends AsyncNotifier<EntropyStorm?> {
     }
   }
 
-  /// Track lowest health during active storm.
-  void _trackHealth(EntropyStorm storm, double currentHealth) {
-    final teamRepo = ref.read(teamRepositoryProvider);
-    if (teamRepo == null) return;
-
-    if (storm.lowestHealth == null || currentHealth < storm.lowestHealth!) {
-      unawaited(teamRepo.updateStorm(storm.withLowestHealth(currentHealth)));
-    }
-  }
-
   /// Resolve a storm: survived if health stayed above threshold, failed otherwise.
+  /// Uses the current health score as the final reading for storms that haven't
+  /// tracked lowest health in real-time.
   void _resolveStorm(EntropyStorm storm) {
     final teamRepo = ref.read(teamRepositoryProvider);
     if (teamRepo == null) return;
 
-    final survived = storm.lowestHealth != null &&
-        storm.lowestHealth! >= storm.healthThreshold;
+    // Read current health as a snapshot — no dependency edge needed.
+    final currentHealth = ref.read(networkHealthProvider).score;
+    final lowestHealth = storm.lowestHealth == null
+        ? currentHealth
+        : (currentHealth < storm.lowestHealth!
+            ? currentHealth
+            : storm.lowestHealth!);
+    final survived = lowestHealth >= storm.healthThreshold;
 
     final finalStatus =
         survived ? StormStatus.survived : StormStatus.failed;
@@ -140,6 +146,9 @@ final isStormActiveProvider = Provider<bool>((ref) {
 });
 
 /// Freshness decay multiplier: 2.0 during active storms, 1.0 otherwise.
-final freshnessDecayMultiplierProvider = Provider<double>((ref) {
-  return ref.watch(isStormActiveProvider) ? 2.0 : 1.0;
-});
+///
+/// Managed as a [StateProvider] rather than derived from [stormProvider] to
+/// avoid a circular dependency: networkHealthProvider → freshnessDecay →
+/// stormProvider → ref.listen(networkHealthProvider).
+/// [StormNotifier] sets this imperatively on storm transitions.
+final freshnessDecayMultiplierProvider = StateProvider<double>((ref) => 1.0);

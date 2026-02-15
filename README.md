@@ -5,7 +5,7 @@ A Flutter app that reads an [Outline](https://www.getoutline.com/) wiki, uses th
 ## Features
 
 - **Knowledge extraction** — Point at an Outline wiki collection, Claude extracts concepts, relationships, and quiz questions automatically
-- **Spaced repetition** — SM-2 algorithm schedules reviews at optimal intervals
+- **Spaced repetition** — SM-2 algorithm schedules reviews at optimal intervals, with optional collection-scoped quiz sessions
 - **Mind map visualization** — Force-directed graph with mastery coloring (grey > red > amber > green), glow effects on mastered nodes
 - **Cooperative game** — Guardian system for concept clusters, team goals, glory board leaderboard, repair missions with bonus scoring
 - **Social** — Wiki-URL-based friend discovery, challenges (test a friend on your mastered cards), nudges (remind about overdue reviews)

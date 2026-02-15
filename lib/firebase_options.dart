@@ -29,28 +29,33 @@ class DefaultFirebaseOptions {
   // `flutterfire configure`. The CLI will overwrite this entire file.
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR-API-KEY',
-    appId: 'YOUR-APP-ID',
-    messagingSenderId: 'YOUR-SENDER-ID',
-    projectId: 'YOUR-PROJECT-ID',
-    storageBucket: 'YOUR-BUCKET',
+    apiKey: 'AIzaSyCleynG97H14xwoeQPyBkYakkuIC1wGcq4',
+    appId: '1:593793808284:android:bc2683e1816b61f2b0ba59',
+    messagingSenderId: '593793808284',
+    projectId: 'engram-26a3a',
+    storageBucket: 'engram-26a3a.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR-API-KEY',
-    appId: 'YOUR-APP-ID',
-    messagingSenderId: 'YOUR-SENDER-ID',
-    projectId: 'YOUR-PROJECT-ID',
-    storageBucket: 'YOUR-BUCKET',
-    iosBundleId: 'com.example.engram',
+    apiKey: 'AIzaSyBTkhmUcpNCLT6JrJOOIC3RV8t7x-lRiLs',
+    appId: '1:593793808284:ios:8c647ab5e614a11db0ba59',
+    messagingSenderId: '593793808284',
+    projectId: 'engram-26a3a',
+    storageBucket: 'engram-26a3a.firebasestorage.app',
+    androidClientId: '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
+    iosClientId: '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
+    iosBundleId: 'co.enspyr.engram',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'YOUR-API-KEY',
-    appId: 'YOUR-APP-ID',
-    messagingSenderId: 'YOUR-SENDER-ID',
-    projectId: 'YOUR-PROJECT-ID',
-    storageBucket: 'YOUR-BUCKET',
-    iosBundleId: 'com.example.engram',
+    apiKey: 'AIzaSyBTkhmUcpNCLT6JrJOOIC3RV8t7x-lRiLs',
+    appId: '1:593793808284:ios:8c647ab5e614a11db0ba59',
+    messagingSenderId: '593793808284',
+    projectId: 'engram-26a3a',
+    storageBucket: 'engram-26a3a.firebasestorage.app',
+    androidClientId: '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
+    iosClientId: '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
+    iosBundleId: 'co.enspyr.engram',
   );
+
 }

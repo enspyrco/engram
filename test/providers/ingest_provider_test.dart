@@ -220,13 +220,38 @@ class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
     required String documentId,
     required String documentTitle,
     required String updatedAt,
+    String? collectionId,
+    String? collectionName,
   }) async {
     _graph = _graph.withNewExtraction(
       result,
       documentId: documentId,
       documentTitle: documentTitle,
       updatedAt: updatedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
     );
     state = AsyncData(_graph);
+  }
+
+  @override
+  Future<void> staggeredIngestExtraction(
+    ExtractionResult result, {
+    required String documentId,
+    required String documentTitle,
+    required String updatedAt,
+    String? collectionId,
+    String? collectionName,
+    Duration delay = const Duration(milliseconds: 250),
+  }) async {
+    // Skip staggering in tests — just merge immediately.
+    await ingestExtraction(
+      result,
+      documentId: documentId,
+      documentTitle: documentTitle,
+      updatedAt: updatedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
+    );
   }
 }

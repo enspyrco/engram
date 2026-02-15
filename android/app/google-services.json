@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "593793808284",
+    "project_id": "engram-26a3a",
+    "storage_bucket": "engram-26a3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:593793808284:android:bc2683e1816b61f2b0ba59",
+        "android_client_info": {
+          "package_name": "com.engram.engram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.engram.engram",
+            "certificate_hash": "87f20b5916c54a08596a30d4a754f6c98a2ca1d8"
+          }
+        },
+        {
+          "client_id": "593793808284-16rv5b8t2cuq2eaei96m7dnpcd8qulmh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCleynG97H14xwoeQPyBkYakkuIC1wGcq4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "593793808284-16rv5b8t2cuq2eaei96m7dnpcd8qulmh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "co.enspyr.engram"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

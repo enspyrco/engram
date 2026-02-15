@@ -218,7 +218,7 @@ class ExtractionService {
     final response = await _client.createMessage(
       request: CreateMessageRequest(
         model: Model.modelId(_model),
-        maxTokens: 4096,
+        maxTokens: 16384,
         system: const CreateMessageRequestSystem.text(_systemPrompt),
         tools: [_extractionTool],
         toolChoice: const ToolChoice(

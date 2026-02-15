@@ -75,6 +75,8 @@ class KnowledgeGraph {
     required String documentTitle,
     required String updatedAt,
     DateTime? now,
+    String? collectionId,
+    String? collectionName,
   }) {
     // Remove old data from the same document
     final oldConceptIds = concepts
@@ -101,15 +103,20 @@ class KnowledgeGraph {
       ...result.quizItems,
     ].lock;
 
-    // Update or add document metadata
+    // Update or add document metadata — preserve existing collection info
+    // if new values are not supplied (e.g. during sync re-ingestion).
     final currentTime = now ?? DateTime.now().toUtc();
     final existingIndex =
         documentMetadata.indexWhere((m) => m.documentId == documentId);
+    final existing =
+        existingIndex >= 0 ? documentMetadata[existingIndex] : null;
     final meta = DocumentMetadata(
       documentId: documentId,
       title: documentTitle,
       updatedAt: updatedAt,
       ingestedAt: currentTime.toIso8601String(),
+      collectionId: collectionId ?? existing?.collectionId,
+      collectionName: collectionName ?? existing?.collectionName,
     );
     final newMetadata = existingIndex >= 0
         ? documentMetadata.replace(existingIndex, meta)
@@ -120,6 +127,34 @@ class KnowledgeGraph {
       relationships: newRelationships,
       quizItems: newQuizItems,
       documentMetadata: newMetadata,
+    );
+  }
+
+  /// Backfill collection info on an existing document's metadata.
+  /// Returns `this` unchanged if the document is not found or already has
+  /// collection info.
+  KnowledgeGraph withDocumentCollectionInfo(
+    String documentId, {
+    required String collectionId,
+    required String collectionName,
+  }) {
+    final idx = documentMetadata.indexWhere((m) => m.documentId == documentId);
+    if (idx < 0) return this;
+    final existing = documentMetadata[idx];
+    if (existing.collectionId != null) return this;
+    final updated = DocumentMetadata(
+      documentId: existing.documentId,
+      title: existing.title,
+      updatedAt: existing.updatedAt,
+      ingestedAt: existing.ingestedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
+    );
+    return KnowledgeGraph._raw(
+      concepts: concepts,
+      relationships: relationships,
+      quizItems: quizItems,
+      documentMetadata: documentMetadata.replace(idx, updated),
     );
   }
 

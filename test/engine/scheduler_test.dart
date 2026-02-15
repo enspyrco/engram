@@ -1,5 +1,6 @@
 import 'package:engram/src/engine/scheduler.dart';
 import 'package:engram/src/models/concept.dart';
+import 'package:engram/src/models/document_metadata.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
@@ -204,6 +205,149 @@ void main() {
 
       // Both should appear — "is a type of" is not a dependency
       expect(due.length, 2);
+    });
+  });
+
+  group('scheduleDueItems (collection filter)', () {
+    test('filters to items from selected collection', () {
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'a',
+            name: 'a',
+            description: 'desc',
+            sourceDocumentId: 'doc1',
+          ),
+          Concept(
+            id: 'b',
+            name: 'b',
+            description: 'desc',
+            sourceDocumentId: 'doc2',
+          ),
+        ],
+        quizItems: [
+          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z'),
+          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z'),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc1',
+            title: 'Doc 1',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-x',
+            collectionName: 'X',
+          ),
+          DocumentMetadata(
+            documentId: 'doc2',
+            title: 'Doc 2',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-y',
+            collectionName: 'Y',
+          ),
+        ],
+      );
+
+      final due = scheduleDueItems(graph, now: now, collectionId: 'col-x');
+
+      expect(due.length, 1);
+      expect(due.first.id, 'q1');
+    });
+
+    test('null collectionId returns all due items', () {
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'a',
+            name: 'a',
+            description: 'desc',
+            sourceDocumentId: 'doc1',
+          ),
+          Concept(
+            id: 'b',
+            name: 'b',
+            description: 'desc',
+            sourceDocumentId: 'doc2',
+          ),
+        ],
+        quizItems: [
+          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z'),
+          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z'),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc1',
+            title: 'Doc 1',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-x',
+            collectionName: 'X',
+          ),
+          DocumentMetadata(
+            documentId: 'doc2',
+            title: 'Doc 2',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-y',
+            collectionName: 'Y',
+          ),
+        ],
+      );
+
+      final due = scheduleDueItems(graph, now: now);
+
+      expect(due.length, 2);
+    });
+
+    test('collection filter respects graph-wide unlocking', () {
+      // Concept b (col-x) depends on concept a (col-y).
+      // a is not mastered → b is locked.
+      // Filtering to col-x should return nothing even though b is due.
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'a',
+            name: 'a',
+            description: 'desc',
+            sourceDocumentId: 'doc-y',
+          ),
+          Concept(
+            id: 'b',
+            name: 'b',
+            description: 'desc',
+            sourceDocumentId: 'doc-x',
+          ),
+        ],
+        relationships: [_dep('b', 'a')],
+        quizItems: [
+          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc-y',
+            title: 'Doc Y',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-y',
+            collectionName: 'Y',
+          ),
+          DocumentMetadata(
+            documentId: 'doc-x',
+            title: 'Doc X',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-x',
+            collectionName: 'X',
+          ),
+        ],
+      );
+
+      final due = scheduleDueItems(graph, now: now, collectionId: 'col-x');
+
+      // b is locked (a not mastered), so nothing from col-x is due
+      expect(due, isEmpty);
     });
   });
 }

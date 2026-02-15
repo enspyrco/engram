@@ -31,8 +31,14 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     final newGraph = current.withUpdatedQuizItem(updated);
     state = AsyncData(newGraph);
 
-    final repo = ref.read(graphRepositoryProvider);
-    await repo.updateQuizItem(newGraph, updated);
+    // Storage is best-effort — in-memory state is already correct.
+    try {
+      final repo = ref.read(graphRepositoryProvider);
+      await repo.updateQuizItem(newGraph, updated);
+    } catch (_) {
+      // Swallow storage errors so callers using unawaited() don't leak
+      // uncaught futures.
+    }
   }
 
   Future<void> ingestExtraction(
@@ -40,15 +46,18 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     required String documentId,
     required String documentTitle,
     required String updatedAt,
+    String? collectionId,
+    String? collectionName,
   }) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    final current = await future;
 
     final newGraph = current.withNewExtraction(
       result,
       documentId: documentId,
       documentTitle: documentTitle,
       updatedAt: updatedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
     );
     state = AsyncData(newGraph);
 
@@ -56,13 +65,78 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     await repo.save(newGraph);
   }
 
+  /// Like [ingestExtraction] but reveals concepts one at a time with delays,
+  /// so the force-directed graph animates each arrival.
+  Future<void> staggeredIngestExtraction(
+    ExtractionResult result, {
+    required String documentId,
+    required String documentTitle,
+    required String updatedAt,
+    String? collectionId,
+    String? collectionName,
+    Duration delay = const Duration(milliseconds: 250),
+  }) async {
+    final current = await future;
+
+    // Step 1: Clear old concepts from this document (graph shrinks)
+    final cleared = current.withNewExtraction(
+      const ExtractionResult(
+        concepts: [],
+        relationships: [],
+        quizItems: [],
+      ),
+      documentId: documentId,
+      documentTitle: documentTitle,
+      updatedAt: updatedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
+    );
+    state = AsyncData(cleared);
+    await Future.delayed(delay);
+
+    // Step 2: Add concepts one by one — each triggers a graph rebuild
+    for (var i = 0; i < result.concepts.length; i++) {
+      final revealedConcepts = result.concepts.sublist(0, i + 1);
+      final revealedIds = revealedConcepts.map((c) => c.id).toSet();
+
+      final partial = ExtractionResult(
+        concepts: revealedConcepts,
+        relationships: result.relationships
+            .where((r) =>
+                revealedIds.contains(r.fromConceptId) &&
+                revealedIds.contains(r.toConceptId))
+            .toList(),
+        quizItems: result.quizItems
+            .where((q) => revealedIds.contains(q.conceptId))
+            .toList(),
+      );
+
+      final graph = cleared.withNewExtraction(
+        partial,
+        documentId: documentId,
+        documentTitle: documentTitle,
+        updatedAt: updatedAt,
+        collectionId: collectionId,
+        collectionName: collectionName,
+      );
+      state = AsyncData(graph);
+      await Future.delayed(delay);
+    }
+
+    // Step 3: Persist the final state
+    final finalGraph = state.valueOrNull;
+    if (finalGraph != null) {
+      final repo = ref.read(graphRepositoryProvider);
+      await repo.save(finalGraph);
+    }
+  }
+
   Future<void> splitConcept({
     required List<Concept> children,
     required List<Relationship> childRelationships,
     required List<QuizItem> childQuizItems,
   }) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    final current = await future;
 
     final newGraph = current.withConceptSplit(
       children: children,
@@ -72,7 +146,33 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     state = AsyncData(newGraph);
 
     final repo = ref.read(graphRepositoryProvider);
-    await repo.save(newGraph);
+    await repo.saveSplitData(
+      graph: newGraph,
+      concepts: children,
+      relationships: childRelationships,
+      quizItems: childQuizItems,
+    );
+  }
+
+  void backfillCollectionInfo(
+    String documentId, {
+    required String collectionId,
+    required String collectionName,
+  }) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final newGraph = current.withDocumentCollectionInfo(
+      documentId,
+      collectionId: collectionId,
+      collectionName: collectionName,
+    );
+    if (identical(newGraph, current)) return;
+    state = AsyncData(newGraph);
+
+    // Fire-and-forget — in-memory state is already correct.
+    final repo = ref.read(graphRepositoryProvider);
+    repo.save(newGraph).catchError((_) {});
   }
 
   void setGraph(KnowledgeGraph graph) {

@@ -374,6 +374,90 @@ void main() {
       expect(updated.quizItems.length, 2);
     });
 
+    test('withNewExtraction stores collection info on metadata', () {
+      final graph = KnowledgeGraph();
+
+      final result = ExtractionResult(
+        concepts: [
+          Concept(
+            id: 'c1',
+            name: 'C1',
+            description: 'Desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
+        ],
+      );
+
+      final updated = graph.withNewExtraction(
+        result,
+        documentId: 'doc-1',
+        documentTitle: 'Doc 1',
+        updatedAt: '2025-01-01',
+        collectionId: 'col-1',
+        collectionName: 'Engineering',
+      );
+
+      expect(updated.documentMetadata.first.collectionId, 'col-1');
+      expect(updated.documentMetadata.first.collectionName, 'Engineering');
+    });
+
+    test('withNewExtraction preserves collection info on re-ingestion', () {
+      final initial = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c1',
+            name: 'Old',
+            description: 'Old desc',
+            sourceDocumentId: 'doc-1',
+          ),
+        ],
+        documentMetadata: const [
+          DocumentMetadata(
+            documentId: 'doc-1',
+            title: 'Doc 1',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-1',
+            collectionName: 'Engineering',
+          ),
+        ],
+      );
+
+      final result = ExtractionResult(
+        concepts: [
+          Concept(
+            id: 'c2',
+            name: 'New',
+            description: 'New desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [],
+      );
+
+      // Re-ingest without supplying collection info (e.g. sync)
+      final updated = initial.withNewExtraction(
+        result,
+        documentId: 'doc-1',
+        documentTitle: 'Doc 1',
+        updatedAt: '2025-01-02',
+      );
+
+      // Collection info should be preserved from the existing metadata
+      expect(updated.documentMetadata.first.collectionId, 'col-1');
+      expect(updated.documentMetadata.first.collectionName, 'Engineering');
+    });
+
     test('withUpdatedQuizItem replaces the right item', () {
       final graph = KnowledgeGraph(
         quizItems: [

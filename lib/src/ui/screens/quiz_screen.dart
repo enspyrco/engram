@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz_item.dart';
 import '../../models/quiz_session_state.dart';
 import '../../models/session_mode.dart';
+import '../../providers/collection_filter_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/quiz_session_provider.dart';
 import '../../providers/split_concept_provider.dart';
@@ -30,8 +31,11 @@ class QuizScreen extends ConsumerWidget {
             hasItems: hasItems,
             isComeback: session.isComeback,
             daysSinceLastSession: session.daysSinceLastSession,
-            onStart: (mode) =>
-                ref.read(quizSessionProvider.notifier).startSession(mode: mode),
+            onStart: (mode, collectionId) =>
+                ref.read(quizSessionProvider.notifier).startSession(
+                      mode: mode,
+                      collectionId: collectionId,
+                    ),
           ),
         QuizPhase.question => _QuestionView(session: session),
         QuizPhase.revealed => _RevealedView(session: session),
@@ -44,7 +48,7 @@ class QuizScreen extends ConsumerWidget {
   }
 }
 
-class _IdleView extends StatelessWidget {
+class _IdleView extends ConsumerWidget {
   const _IdleView({
     required this.hasItems,
     required this.isComeback,
@@ -55,10 +59,10 @@ class _IdleView extends StatelessWidget {
   final bool hasItems;
   final bool isComeback;
   final int? daysSinceLastSession;
-  final void Function(SessionMode mode) onStart;
+  final void Function(SessionMode mode, String? collectionId) onStart;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     if (!hasItems) {
@@ -77,10 +81,29 @@ class _IdleView extends StatelessWidget {
       );
     }
 
+    final collections = ref.watch(availableCollectionsProvider);
+    final selectedId = ref.watch(selectedCollectionIdProvider);
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (collections.isNotEmpty) ...[
+            DropdownButton<String?>(
+              value: selectedId,
+              onChanged: (value) =>
+                  ref.read(selectedCollectionIdProvider.notifier).state = value,
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All collections'),
+                ),
+                for (final c in collections)
+                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           if (isComeback && daysSinceLastSession != null) ...[
             Icon(Icons.waving_hand, size: 48,
                 color: theme.colorScheme.primary),
@@ -96,25 +119,25 @@ class _IdleView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () => onStart(SessionMode.quick),
+              onPressed: () => onStart(SessionMode.quick, selectedId),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Refresher'),
             ),
           ] else ...[
             FilledButton.icon(
-              onPressed: () => onStart(SessionMode.full),
+              onPressed: () => onStart(SessionMode.full, selectedId),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Full Session'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(SessionMode.quick),
+              onPressed: () => onStart(SessionMode.quick, selectedId),
               icon: const Icon(Icons.bolt),
               label: const Text('Quick (5 min)'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(SessionMode.allDue),
+              onPressed: () => onStart(SessionMode.allDue, selectedId),
               icon: const Icon(Icons.all_inclusive),
               label: const Text('All Due'),
             ),

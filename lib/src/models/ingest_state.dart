@@ -13,6 +13,7 @@ class IngestState {
     this.extractedCount = 0,
     this.skippedCount = 0,
     this.currentDocumentTitle = '',
+    this.statusMessage = '',
     this.errorMessage = '',
   });
 
@@ -24,6 +25,7 @@ class IngestState {
   final int extractedCount;
   final int skippedCount;
   final String currentDocumentTitle;
+  final String statusMessage;
   final String errorMessage;
 
   double get progress =>
@@ -38,6 +40,7 @@ class IngestState {
     int? extractedCount,
     int? skippedCount,
     String? currentDocumentTitle,
+    String? statusMessage,
     String? errorMessage,
   }) {
     return IngestState(
@@ -51,6 +54,7 @@ class IngestState {
       extractedCount: extractedCount ?? this.extractedCount,
       skippedCount: skippedCount ?? this.skippedCount,
       currentDocumentTitle: currentDocumentTitle ?? this.currentDocumentTitle,
+      statusMessage: statusMessage ?? this.statusMessage,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
