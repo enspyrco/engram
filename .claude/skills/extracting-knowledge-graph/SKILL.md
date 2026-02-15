@@ -13,7 +13,7 @@ description: >
 
 ## Purpose
 
-Transform unstructured wiki/document content into a structured knowledge graph consisting of **concepts**, **relationships**, and **quiz items** suitable for spaced repetition learning via SM-2.
+Transform unstructured wiki/document content into a structured knowledge graph consisting of **concepts**, **relationships**, and **quiz items** with FSRS-ready difficulty predictions for spaced repetition learning. See `references/scheduling-constraints.md` for scheduling details.
 
 ## When to Use
 
