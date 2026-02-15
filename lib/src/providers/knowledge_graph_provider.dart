@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/concept.dart';
@@ -35,9 +36,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     try {
       final repo = ref.read(graphRepositoryProvider);
       await repo.updateQuizItem(newGraph, updated);
-    } catch (_) {
+    } catch (e) {
       // Swallow storage errors so callers using unawaited() don't leak
-      // uncaught futures.
+      // uncaught futures. Log so failures are visible during debugging.
+      debugPrint('[KnowledgeGraph] Storage error in updateQuizItem: $e');
     }
   }
 
@@ -65,8 +67,9 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     await repo.save(newGraph);
   }
 
-  /// Like [ingestExtraction] but reveals concepts one at a time with delays,
-  /// so the force-directed graph animates each arrival.
+  /// Like [ingestExtraction] but reveals concepts in small batches with
+  /// delays, so the force-directed graph animates arrivals without O(N²)
+  /// graph rebuilds.
   Future<void> staggeredIngestExtraction(
     ExtractionResult result, {
     required String documentId,
@@ -75,6 +78,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     String? collectionId,
     String? collectionName,
     Duration delay = const Duration(milliseconds: 250),
+    int batchSize = 3,
   }) async {
     final current = await future;
 
@@ -94,9 +98,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     state = AsyncData(cleared);
     await Future.delayed(delay);
 
-    // Step 2: Add concepts one by one — each triggers a graph rebuild
-    for (var i = 0; i < result.concepts.length; i++) {
-      final revealedConcepts = result.concepts.sublist(0, i + 1);
+    // Step 2: Add concepts in batches — each batch triggers one graph rebuild
+    for (var i = 0; i < result.concepts.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, result.concepts.length);
+      final revealedConcepts = result.concepts.sublist(0, end);
       final revealedIds = revealedConcepts.map((c) => c.id).toSet();
 
       final partial = ExtractionResult(
@@ -154,10 +159,14 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     );
   }
 
+  /// Update in-memory metadata with collection info for a document.
+  /// When [skipPersist] is true, the caller is responsible for batching the
+  /// save (e.g. after a loop of backfills).
   void backfillCollectionInfo(
     String documentId, {
     required String collectionId,
     required String collectionName,
+    bool skipPersist = false,
   }) {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -170,9 +179,13 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     if (identical(newGraph, current)) return;
     state = AsyncData(newGraph);
 
+    if (skipPersist) return;
+
     // Fire-and-forget — in-memory state is already correct.
     final repo = ref.read(graphRepositoryProvider);
-    repo.save(newGraph).catchError((_) {});
+    repo.save(newGraph).catchError((e) {
+      debugPrint('[KnowledgeGraph] Storage error in backfillCollectionInfo: $e');
+    });
   }
 
   void setGraph(KnowledgeGraph graph) {

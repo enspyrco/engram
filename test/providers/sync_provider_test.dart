@@ -432,6 +432,7 @@ class _PreloadedGraphNotifier extends KnowledgeGraphNotifier {
     String? collectionId,
     String? collectionName,
     Duration delay = const Duration(milliseconds: 250),
+    int batchSize = 3,
   }) async {
     await ingestExtraction(
       result,

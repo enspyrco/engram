@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/ingest_state.dart';
+import 'graph_store_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
@@ -93,14 +94,15 @@ class IngestNotifier extends Notifier<IngestState> {
         if (!forceReExtract &&
             existing != null &&
             existing.updatedAt == updatedAt) {
-          // Backfill collection info on pre-existing documents that lack it.
+          // Collect documents that need collection info backfill — we'll
+          // batch-save after the loop to avoid N separate Firestore writes.
           if (existing.collectionId == null) {
             graphNotifier.backfillCollectionInfo(
               docId,
               collectionId: collectionId,
               collectionName: collectionName ?? '',
+              skipPersist: true,
             );
-            graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;
           }
           debugPrint('[Ingest] Skipping "$docTitle" (unchanged)');
           skipped++;
@@ -181,6 +183,16 @@ class IngestNotifier extends Notifier<IngestState> {
           extractedCount: extracted,
           statusMessage: '${result.concepts.length} concepts extracted',
         );
+      }
+
+      // Batch-persist any backfilled collection info (single save instead
+      // of N individual writes).
+      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
+      if (currentGraph != null && skipped > 0) {
+        final repo = ref.read(graphRepositoryProvider);
+        repo.save(currentGraph).catchError((e) {
+          debugPrint('[Ingest] Backfill batch save failed: $e');
+        });
       }
 
       // Record the collection ID for sync checks

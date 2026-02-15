@@ -243,6 +243,7 @@ class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
     String? collectionId,
     String? collectionName,
     Duration delay = const Duration(milliseconds: 250),
+    int batchSize = 3,
   }) async {
     // Skip staggering in tests — just merge immediately.
     await ingestExtraction(
