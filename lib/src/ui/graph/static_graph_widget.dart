@@ -54,6 +54,13 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
   }
 
   void _computeLayout() {
+    // Preserve settled positions so incremental updates during ingestion
+    // don't cause the entire graph to jump.
+    final oldPositions = <String, Offset>{};
+    for (final node in _nodes) {
+      oldPositions[node.id] = node.position;
+    }
+
     final graph = widget.graph;
     if (graph.concepts.isEmpty) {
       _nodes = const [];
@@ -92,12 +99,21 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
       layoutEdges.add((srcIdx, tgtIdx));
     }
 
+    // Seed known positions from the previous layout so only new nodes get
+    // random placement. Existing nodes shift gently to accommodate newcomers.
+    final initialPositions = List<Offset?>.generate(
+      nodes.length,
+      (i) => oldPositions[nodes[i].id],
+    );
+    final hasOldPositions = initialPositions.any((p) => p != null);
+
     // Run layout to convergence synchronously. Fine for current graph sizes
     // (10-40 concepts). For 200+ nodes, move to compute() Isolate — see #55.
     final layout = ForceDirectedLayout(
       nodeCount: nodes.length,
       edges: layoutEdges,
       seed: 42,
+      initialPositions: hasOldPositions ? initialPositions : null,
     );
     while (layout.step()) {}
 

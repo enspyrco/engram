@@ -15,10 +15,24 @@ class ForceDirectedLayout {
     this.height = 600.0,
     this.settledThreshold = 0.1,
     int? seed,
+    List<Offset?>? initialPositions,
   }) {
     _k = math.sqrt((width * height) / math.max(nodeCount, 1));
-    _temperature = math.min(width, height) / 4;
-    _positions = _randomPositions(seed);
+    _positions = _initPositions(seed, initialPositions);
+
+    // When seeded with existing positions, scale temperature by the fraction
+    // of new nodes so settled nodes shift gently instead of flying around.
+    final fullTemp = math.min(width, height) / 4;
+    if (initialPositions == null) {
+      _temperature = fullTemp;
+    } else {
+      final newCount = initialPositions.where((p) => p == null).length +
+          math.max(0, nodeCount - initialPositions.length);
+      final fraction = nodeCount > 0 ? newCount / nodeCount : 1.0;
+      _temperature = fraction >= 1.0
+          ? fullTemp
+          : math.max(fullTemp * fraction, fullTemp * 0.15);
+    }
   }
 
   final int nodeCount;
@@ -104,10 +118,13 @@ class ForceDirectedLayout {
     _temperature = 0.0;
   }
 
-  List<Offset> _randomPositions(int? seed) {
+  List<Offset> _initPositions(int? seed, List<Offset?>? initial) {
     final rng = math.Random(seed);
     const margin = 30.0;
-    return List.generate(nodeCount, (_) {
+    return List.generate(nodeCount, (i) {
+      final provided =
+          (initial != null && i < initial.length) ? initial[i] : null;
+      if (provided != null) return provided;
       return Offset(
         margin + rng.nextDouble() * (width - 2 * margin),
         margin + rng.nextDouble() * (height - 2 * margin),

@@ -1,12 +1,12 @@
 # Engram
 
-A Flutter app that reads an [Outline](https://www.getoutline.com/) wiki, uses the Claude API to extract a knowledge graph (concepts, relationships, and quiz items), and teaches it back via SM-2 spaced repetition. A visual mind map "lights up" as you learn.
+A Flutter app that reads an [Outline](https://www.getoutline.com/) wiki, uses the Claude API to extract a knowledge graph (concepts, relationships, and quiz items), and teaches it back via SM-2 spaced repetition. A visual knowledge graph "lights up" as you learn.
 
 ## Features
 
 - **Knowledge extraction** — Point at an Outline wiki collection, Claude extracts concepts, relationships, and quiz questions automatically
 - **Spaced repetition** — SM-2 algorithm schedules reviews at optimal intervals, with optional collection-scoped quiz sessions
-- **Mind map visualization** — Force-directed graph with mastery coloring (grey > red > amber > green), glow effects on mastered nodes
+- **Knowledge graph visualization** — Force-directed graph with mastery coloring (grey > red > amber > green), glow effects on mastered nodes
 - **Cooperative game** — Guardian system for concept clusters, team goals, glory board leaderboard, repair missions with bonus scoring
 - **Social** — Wiki-URL-based friend discovery, challenges (test a friend on your mastered cards), nudges (remind about overdue reviews)
 - **Network health** — Composite health scoring with catastrophe tiers (healthy > brownout > cascade > fracture > collapse)

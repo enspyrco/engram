@@ -65,7 +65,7 @@ class ForceDirectedGraphWidget extends StatefulWidget {
 class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     with TickerProviderStateMixin {
   late ForceDirectedLayout _layout;
-  late List<GraphNode> _nodes;
+  List<GraphNode> _nodes = [];
   late List<GraphEdge> _edges;
   late Ticker _ticker;
 
@@ -167,6 +167,12 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   }
 
   void _buildGraph() {
+    // Preserve settled positions so incremental updates don't reset the layout.
+    final oldPositions = <String, Offset>{};
+    for (final node in _nodes) {
+      oldPositions[node.id] = node.position;
+    }
+
     final graph = widget.graph;
     final analyzer = GraphAnalyzer(graph);
 
@@ -234,11 +240,20 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       }
     }
 
-    // Initialize layout with total node count (concepts + team members)
+    // Seed the layout with old positions for existing nodes so the graph
+    // settles incrementally instead of jumping on every update.
+    final totalCount = _nodes.length + teamNodes.length;
+    final initialPositions = List<Offset?>.generate(totalCount, (i) {
+      if (i < _nodes.length) return oldPositions[_nodes[i].id];
+      return null; // team nodes get fresh random positions
+    });
+    final hasOldPositions = initialPositions.any((p) => p != null);
+
     _layout = ForceDirectedLayout(
-      nodeCount: _nodes.length + teamNodes.length,
+      nodeCount: totalCount,
       edges: layoutEdges,
       seed: 42,
+      initialPositions: hasOldPositions ? initialPositions : null,
     );
 
     _syncPositions();
