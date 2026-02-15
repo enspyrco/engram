@@ -97,6 +97,26 @@ class FirestoreGraphRepository extends GraphRepository {
   }
 
   @override
+  Future<void> saveSplitData({
+    required KnowledgeGraph graph,
+    required List<Concept> concepts,
+    required List<Relationship> relationships,
+    required List<QuizItem> quizItems,
+  }) async {
+    final batch = _firestore.batch();
+    for (final concept in concepts) {
+      batch.set(_concepts.doc(concept.id), concept.toJson());
+    }
+    for (final rel in relationships) {
+      batch.set(_relationships.doc(rel.id), rel.toJson());
+    }
+    for (final item in quizItems) {
+      batch.set(_quizItems.doc(item.id), item.toJson());
+    }
+    await batch.commit();
+  }
+
+  @override
   Stream<KnowledgeGraph> watch() {
     // Combine four snapshot streams into one reactive KnowledgeGraph.
     // Re-emit whenever any subcollection changes.

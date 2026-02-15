@@ -7,6 +7,8 @@ class DocumentMetadata {
     required this.title,
     required this.updatedAt,
     required this.ingestedAt,
+    this.collectionId,
+    this.collectionName,
   });
 
   factory DocumentMetadata.fromJson(Map<String, dynamic> json) {
@@ -15,6 +17,8 @@ class DocumentMetadata {
       title: json['title'] as String,
       updatedAt: json['updatedAt'] as String,
       ingestedAt: json['ingestedAt'] as String,
+      collectionId: json['collectionId'] as String?,
+      collectionName: json['collectionName'] as String?,
     );
   }
 
@@ -22,6 +26,8 @@ class DocumentMetadata {
   final String title;
   final String updatedAt;
   final String ingestedAt;
+  final String? collectionId;
+  final String? collectionName;
 
   DocumentMetadata withUpdatedAt(String updatedAt, {DateTime? now}) {
     final currentTime = now ?? DateTime.now().toUtc();
@@ -30,6 +36,8 @@ class DocumentMetadata {
       title: title,
       updatedAt: updatedAt,
       ingestedAt: currentTime.toIso8601String(),
+      collectionId: collectionId,
+      collectionName: collectionName,
     );
   }
 
@@ -38,6 +46,8 @@ class DocumentMetadata {
         'title': title,
         'updatedAt': updatedAt,
         'ingestedAt': ingestedAt,
+        if (collectionId != null) 'collectionId': collectionId,
+        if (collectionName != null) 'collectionName': collectionName,
       };
 
   @override

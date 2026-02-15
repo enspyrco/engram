@@ -7,3 +7,4 @@ doc/api/
 *.iml
 .DS_Store
 .env
+.flutter-plugins-dependencies

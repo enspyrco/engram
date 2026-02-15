@@ -7,10 +7,14 @@ const maxSessionSize = 20;
 /// Returns quiz items that are due for review from unlocked concepts,
 /// sorted with foundational concepts first, then oldest-due,
 /// capped at [maxItems] (defaults to [maxSessionSize], pass `null` for no cap).
+///
+/// When [collectionId] is set, only items from concepts belonging to
+/// documents in that collection are included. Unlocking remains graph-wide.
 List<QuizItem> scheduleDueItems(
   KnowledgeGraph graph, {
   DateTime? now,
   int? maxItems = maxSessionSize,
+  String? collectionId,
 }) {
   final currentTime = now ?? DateTime.now().toUtc();
   final analyzer = GraphAnalyzer(graph);
@@ -18,9 +22,27 @@ List<QuizItem> scheduleDueItems(
   final unlockedIds = analyzer.unlockedConcepts.toSet();
   final foundationalIds = analyzer.foundationalConcepts.toSet();
 
+  // Build collection-scoped concept filter when a collection is selected.
+  Set<String>? collectionConceptIds;
+  if (collectionId != null) {
+    final collectionDocIds = graph.documentMetadata
+        .where((m) => m.collectionId == collectionId)
+        .map((m) => m.documentId)
+        .toSet();
+    collectionConceptIds = graph.concepts
+        .where((c) => collectionDocIds.contains(c.sourceDocumentId))
+        .map((c) => c.id)
+        .toSet();
+  }
+
   final due = graph.quizItems.where((item) {
     // Only include items from unlocked concepts
     if (!unlockedIds.contains(item.conceptId)) return false;
+    // Filter by collection when set
+    if (collectionConceptIds != null &&
+        !collectionConceptIds.contains(item.conceptId)) {
+      return false;
+    }
     final nextReview = DateTime.parse(item.nextReview);
     return !nextReview.isAfter(currentTime);
   }).toList();

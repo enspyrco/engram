@@ -24,7 +24,10 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
   @override
   QuizSessionState build() => QuizSessionState();
 
-  void startSession({SessionMode mode = SessionMode.full}) {
+  void startSession({
+    SessionMode mode = SessionMode.full,
+    String? collectionId,
+  }) {
     final graph = ref.read(knowledgeGraphProvider).valueOrNull;
     if (graph == null) return;
 
@@ -40,7 +43,11 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final effectiveMode = isComeback ? SessionMode.quick : mode;
     final maxItems = effectiveMode.maxItems;
 
-    final dueItems = scheduleDueItems(graph, maxItems: maxItems);
+    final dueItems = scheduleDueItems(
+      graph,
+      maxItems: maxItems,
+      collectionId: collectionId,
+    );
     if (dueItems.isEmpty) {
       state = QuizSessionState(
         phase: QuizPhase.summary,
@@ -98,10 +105,33 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       now: now,
     );
 
-    await ref.read(knowledgeGraphProvider.notifier).updateQuizItem(updated);
+    // Advance the session state first — the UI must never block on I/O.
+    final newRatings = state.ratings.add(quality);
+    final nextIndex = state.currentIndex + 1;
 
-    // Record mission progress and award glory points (fire-and-forget to
-    // avoid blocking the quiz flow with a network round-trip).
+    if (nextIndex >= state.items.length) {
+      state = state.copyWith(
+        phase: QuizPhase.summary,
+        currentIndex: nextIndex,
+        ratings: newRatings,
+      );
+      // Persist streak after UI update
+      unawaited(_persistStreak());
+    } else {
+      state = state.copyWith(
+        phase: QuizPhase.question,
+        currentIndex: nextIndex,
+        ratings: newRatings,
+      );
+    }
+
+    // Persist the review (fire-and-forget — in-memory graph state is
+    // updated first inside updateQuizItem).
+    unawaited(
+      ref.read(knowledgeGraphProvider.notifier).updateQuizItem(updated),
+    );
+
+    // Record mission progress and award glory points.
     if (inMission) {
       ref.read(catastropheProvider.notifier).recordMissionReview(item.conceptId);
       final teamRepo = ref.read(teamRepositoryProvider);
@@ -111,30 +141,8 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       }
     }
 
-    // Check relay leg completion: if this concept is a claimed relay leg
-    // for the current user and all its quiz items are now mastered
-    // (interval >= 21), complete the leg.
+    // Check relay leg completion.
     _checkRelayLegCompletion(item.conceptId, updated);
-
-    final newRatings = state.ratings.add(quality);
-    final nextIndex = state.currentIndex + 1;
-
-    if (nextIndex >= state.items.length) {
-      // Session complete — persist streak
-      await _persistStreak();
-
-      state = state.copyWith(
-        phase: QuizPhase.summary,
-        currentIndex: nextIndex,
-        ratings: newRatings,
-      );
-    } else {
-      state = state.copyWith(
-        phase: QuizPhase.question,
-        currentIndex: nextIndex,
-        ratings: newRatings,
-      );
-    }
   }
 
   Future<void> _persistStreak() async {

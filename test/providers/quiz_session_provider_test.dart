@@ -64,7 +64,7 @@ void main() {
     SharedPreferences.setMockInitialValues(prefsValues);
     final prefs = await SharedPreferences.getInstance();
 
-    return ProviderContainer(
+    final container = ProviderContainer(
       overrides: [
         settingsProvider
             .overrideWith(() => _FakeSettingsNotifier(tempDir.path)),
@@ -72,6 +72,8 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
+    addTearDown(container.dispose);
+    return container;
   }
 
   group('QuizSessionNotifier', () {

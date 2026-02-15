@@ -1,6 +1,10 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/ingest_state.dart';
+import 'graph_store_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
@@ -35,7 +39,7 @@ class IngestNotifier extends Notifier<IngestState> {
     );
   }
 
-  Future<void> startIngestion() async {
+  Future<void> startIngestion({bool forceReExtract = false}) async {
     final collection = state.selectedCollection;
     if (collection == null) return;
 
@@ -52,12 +56,25 @@ class IngestNotifier extends Notifier<IngestState> {
       final graphNotifier = ref.read(knowledgeGraphProvider.notifier);
 
       final collectionId = collection['id'] as String;
+      final collectionName = collection['name'] as String?;
+      state = state.copyWith(statusMessage: 'Listing documents...');
+      debugPrint('[Ingest] Listing documents for collection $collectionId');
       final documents = await client.listDocuments(collectionId);
+      debugPrint('[Ingest] Found ${documents.length} documents');
 
-      state = state.copyWith(totalDocuments: documents.length);
+      state = state.copyWith(
+        totalDocuments: documents.length,
+        statusMessage: 'Loading existing graph...',
+      );
 
-      final initialGraph = ref.read(knowledgeGraphProvider).valueOrNull;
-      if (initialGraph == null) return;
+      debugPrint('[Ingest] Loading existing graph from storage...');
+      final initialGraph = await ref.read(knowledgeGraphProvider.future)
+          .timeout(const Duration(seconds: 30),
+              onTimeout: () => throw TimeoutException(
+                  'Loading graph from storage timed out after 30s'));
+      debugPrint('[Ingest] Graph loaded: '
+          '${initialGraph.concepts.length} concepts, '
+          '${initialGraph.quizItems.length} quiz items');
 
       var graph = initialGraph;
       var extracted = 0;
@@ -70,53 +87,112 @@ class IngestNotifier extends Notifier<IngestState> {
 
         state = state.copyWith(currentDocumentTitle: docTitle);
 
-        // Skip unchanged documents
+        // Skip unchanged documents (unless force re-extract is enabled)
         final existing = graph.documentMetadata
             .where((m) => m.documentId == docId)
             .firstOrNull;
-        if (existing != null && existing.updatedAt == updatedAt) {
+        if (!forceReExtract &&
+            existing != null &&
+            existing.updatedAt == updatedAt) {
+          // Collect documents that need collection info backfill — we'll
+          // batch-save after the loop to avoid N separate Firestore writes.
+          if (existing.collectionId == null) {
+            graphNotifier.backfillCollectionInfo(
+              docId,
+              collectionId: collectionId,
+              collectionName: collectionName ?? '',
+              skipPersist: true,
+            );
+          }
+          debugPrint('[Ingest] Skipping "$docTitle" (unchanged)');
           skipped++;
           state = state.copyWith(
             processedDocuments: extracted + skipped,
             skippedCount: skipped,
+            statusMessage: 'Skipped (unchanged)',
           );
           continue;
         }
 
         // Fetch full document
+        state = state.copyWith(statusMessage: 'Fetching from Outline...');
+        debugPrint('[Ingest] Fetching "$docTitle" from Outline...');
         final fullDoc = await client.getDocument(docId);
         final content = fullDoc['text'] as String? ?? '';
+        debugPrint('[Ingest] Got ${content.length} chars for "$docTitle"');
 
         if (content.trim().isEmpty) {
+          debugPrint('[Ingest] Skipping "$docTitle" (empty content)');
           skipped++;
           state = state.copyWith(
             processedDocuments: extracted + skipped,
             skippedCount: skipped,
+            statusMessage: 'Skipped (empty document)',
           );
           continue;
         }
 
-        // Extract knowledge
+        // Extract knowledge via Claude API
+        state = state.copyWith(
+          statusMessage: 'Extracting knowledge (${content.length} chars)...',
+        );
+        debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
+            '(${content.length} chars)...');
+        final stopwatch = Stopwatch()..start();
         final result = await extraction.extract(
           documentTitle: docTitle,
           documentContent: content,
           existingConceptIds: graph.concepts.map((c) => c.id).toList(),
-        );
+        ).timeout(const Duration(minutes: 3),
+            onTimeout: () => throw TimeoutException(
+                'Claude extraction timed out after 3 min for "$docTitle"'));
+        debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
+            '${result.concepts.length} concepts, '
+            '${result.relationships.length} relationships, '
+            '${result.quizItems.length} quiz items');
 
-        // Merge into graph
-        await graphNotifier.ingestExtraction(
-          result,
-          documentId: docId,
-          documentTitle: docTitle,
-          updatedAt: updatedAt,
+        // Merge into graph — staggered for live mind map animation
+        state = state.copyWith(
+          statusMessage: 'Adding ${result.concepts.length} concepts...',
         );
+        debugPrint('[Ingest] Adding concepts to graph...');
+        try {
+          await graphNotifier.staggeredIngestExtraction(
+            result,
+            documentId: docId,
+            documentTitle: docTitle,
+            updatedAt: updatedAt,
+            collectionId: collectionId,
+            collectionName: collectionName,
+          ).timeout(const Duration(minutes: 2),
+              onTimeout: () => throw TimeoutException(
+                  'Staggered ingestion timed out after 2 min'));
+          debugPrint('[Ingest] Saved successfully');
+        } on TimeoutException {
+          debugPrint('[Ingest] Storage save timed out — '
+              'data is in memory, will retry on next save');
+          state = state.copyWith(
+            statusMessage: 'Save timed out (data kept in memory)',
+          );
+        }
 
         graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;
         extracted++;
         state = state.copyWith(
           processedDocuments: extracted + skipped,
           extractedCount: extracted,
+          statusMessage: '${result.concepts.length} concepts extracted',
         );
+      }
+
+      // Batch-persist any backfilled collection info (single save instead
+      // of N individual writes).
+      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
+      if (currentGraph != null && skipped > 0) {
+        final repo = ref.read(graphRepositoryProvider);
+        unawaited(repo.save(currentGraph).catchError((e) {
+          debugPrint('[Ingest] Backfill batch save failed: $e');
+        }));
       }
 
       // Record the collection ID for sync checks

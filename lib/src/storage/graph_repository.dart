@@ -1,5 +1,7 @@
+import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
+import '../models/relationship.dart';
 
 /// Abstract storage interface for the knowledge graph.
 ///
@@ -13,6 +15,17 @@ abstract class GraphRepository {
   /// Update a single quiz item. Local impl delegates to [save];
   /// Firestore impl writes a single subcollection document.
   Future<void> updateQuizItem(KnowledgeGraph graph, QuizItem item) async {
+    await save(graph);
+  }
+
+  /// Additive save for split operations — writes only the new entities.
+  /// Local impl delegates to [save]; Firestore impl writes individual docs.
+  Future<void> saveSplitData({
+    required KnowledgeGraph graph,
+    required List<Concept> concepts,
+    required List<Relationship> relationships,
+    required List<QuizItem> quizItems,
+  }) async {
     await save(graph);
   }
 
