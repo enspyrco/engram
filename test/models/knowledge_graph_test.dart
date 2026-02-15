@@ -123,6 +123,180 @@ void main() {
       expect(restored.nextReview, item.nextReview);
     });
 
+    test('newCard without predictedDifficulty has null FSRS fields', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+      );
+
+      expect(item.difficulty, isNull);
+      expect(item.stability, isNull);
+      expect(item.fsrsState, isNull);
+      expect(item.lapses, isNull);
+    });
+
+    test('newCard with predictedDifficulty sets difficulty', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+        predictedDifficulty: 6.0,
+      );
+
+      expect(item.difficulty, 6.0);
+      expect(item.stability, isNull);
+      expect(item.fsrsState, isNull);
+      expect(item.lapses, isNull);
+    });
+
+    test('fromJson/toJson round-trips with FSRS fields', () {
+      const item = QuizItem(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+        easeFactor: 2.5,
+        interval: 6,
+        repetitions: 2,
+        nextReview: '2025-01-10T00:00:00.000Z',
+        lastReview: '2025-01-04T00:00:00.000Z',
+        difficulty: 5.5,
+        stability: 12.3,
+        fsrsState: 2,
+        lapses: 1,
+      );
+
+      final json = item.toJson();
+      final restored = QuizItem.fromJson(json);
+
+      expect(restored.difficulty, 5.5);
+      expect(restored.stability, 12.3);
+      expect(restored.fsrsState, 2);
+      expect(restored.lapses, 1);
+    });
+
+    test('fromJson handles missing FSRS fields (backward compat)', () {
+      final json = {
+        'id': 'q1',
+        'conceptId': 'c1',
+        'question': 'What is X?',
+        'answer': 'X is Y.',
+        'easeFactor': 2.5,
+        'interval': 0,
+        'repetitions': 0,
+        'nextReview': '2025-01-01T00:00:00.000Z',
+        'lastReview': null,
+      };
+
+      final item = QuizItem.fromJson(json);
+
+      expect(item.difficulty, isNull);
+      expect(item.stability, isNull);
+      expect(item.fsrsState, isNull);
+      expect(item.lapses, isNull);
+    });
+
+    test('toJson omits null FSRS fields', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+      );
+
+      final json = item.toJson();
+
+      expect(json.containsKey('difficulty'), isFalse);
+      expect(json.containsKey('stability'), isFalse);
+      expect(json.containsKey('fsrsState'), isFalse);
+      expect(json.containsKey('lapses'), isFalse);
+    });
+
+    test('toJson includes non-null FSRS fields', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+        predictedDifficulty: 6.0,
+      );
+
+      final json = item.toJson();
+
+      expect(json['difficulty'], 6.0);
+      expect(json.containsKey('stability'), isFalse);
+    });
+
+    test('withFsrsReview updates FSRS fields and preserves SM-2 fields', () {
+      final item = QuizItem.newCard(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+        predictedDifficulty: 5.0,
+      );
+
+      final updated = item.withFsrsReview(
+        difficulty: 4.8,
+        stability: 10.5,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: '2025-01-11T00:00:00.000Z',
+      );
+
+      // FSRS fields updated
+      expect(updated.difficulty, 4.8);
+      expect(updated.stability, 10.5);
+      expect(updated.fsrsState, 2);
+      expect(updated.lapses, 0);
+      expect(updated.interval, 10);
+      expect(updated.nextReview, '2025-01-11T00:00:00.000Z');
+      expect(updated.lastReview, isNotNull);
+
+      // SM-2 fields preserved
+      expect(updated.easeFactor, 2.5);
+      expect(updated.repetitions, 0);
+
+      // Original unchanged
+      expect(item.difficulty, 5.0);
+      expect(item.interval, 0);
+    });
+
+    test('withReview preserves FSRS fields', () {
+      const item = QuizItem(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'What is X?',
+        answer: 'X is Y.',
+        easeFactor: 2.5,
+        interval: 0,
+        repetitions: 0,
+        nextReview: '2025-01-01T00:00:00.000Z',
+        lastReview: null,
+        difficulty: 6.0,
+        stability: 3.26,
+        fsrsState: 1,
+        lapses: 0,
+      );
+
+      final updated = item.withReview(
+        easeFactor: 2.6,
+        interval: 1,
+        repetitions: 1,
+        nextReview: '2025-01-02T00:00:00.000Z',
+      );
+
+      // FSRS fields preserved
+      expect(updated.difficulty, 6.0);
+      expect(updated.stability, 3.26);
+      expect(updated.fsrsState, 1);
+      expect(updated.lapses, 0);
+    });
+
     test('withReview updates SM-2 state', () {
       final item = QuizItem.newCard(
         id: 'q1',

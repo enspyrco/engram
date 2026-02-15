@@ -138,9 +138,10 @@ Alternative: [`fsrs-rs-dart`](https://github.com/open-spaced-repetition/fsrs-rs-
 2. **Add `difficulty` field to `QuizItem`** (nullable, defaults to null for existing cards)
 3. **Update extraction tool schema** — add `predictedDifficulty` (1-10) to quiz item output
 4. **Update extraction system prompt** — add difficulty prediction guidelines
-5. **Update extraction skill** — rename `references/sm2-constraints.md` to `references/scheduling-constraints.md`, add FSRS content
-6. **Write FSRS engine** — pure function mirroring SM-2 pattern, consuming `fsrs` package
-7. **Tests**: Existing SM-2 tests continue passing; new FSRS tests for difficulty-informed scheduling
+5. **Write FSRS engine** — pure function mirroring SM-2 pattern, consuming `fsrs` package
+6. **Tests**: Existing SM-2 tests continue passing; new FSRS tests for difficulty-informed scheduling
+
+> **Note:** The extraction skill's `references/sm2-constraints.md` was already renamed to `references/scheduling-constraints.md` and updated with FSRS content in PR #52.
 
 ### Phase 2: Dual-mode scheduling
 

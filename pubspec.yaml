@@ -25,6 +25,7 @@ dependencies:
   sign_in_with_apple: ^6.1.0
   crypto: ^3.0.3
   fast_immutable_collections: ^11.0.0
+  fsrs: ^2.0.1
   graphs: ^2.3.2
   uuid: ^4.5.1
 

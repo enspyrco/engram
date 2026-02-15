@@ -141,7 +141,11 @@ Used when splitting a parent concept into sub-concepts.
               "properties": {
                 "id": { "type": "string" },
                 "question": { "type": "string" },
-                "answer": { "type": "string" }
+                "answer": { "type": "string" },
+                "predictedDifficulty": {
+                  "type": "number",
+                  "description": "Claude's estimate of item difficulty (1-10). Sub-concepts split from a high-difficulty parent should each be 4-6. Used as FSRS initial D₀."
+                }
               }
             }
           }

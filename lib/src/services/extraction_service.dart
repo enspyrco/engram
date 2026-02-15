@@ -19,6 +19,10 @@ Guidelines:
 - For prerequisite relationships (concept A requires understanding concept B first), use the label "depends on". Reserve other labels like "is a type of", "enables", "related to" for non-prerequisite relationships.
 - Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- For each quiz item, predict its difficulty on a 1-10 scale:
+  1-3 = pure fact recall, single prerequisite or none
+  4-6 = explain a mechanism or process, 2-3 prerequisites
+  7-10 = synthesize across multiple concepts, abstract reasoning
 ''';
 
 const _toolName = 'extract_knowledge';
@@ -113,6 +117,11 @@ const _extractionTool = Tool.custom(
               'type': 'string',
               'description': 'The expected answer (1-3 sentences)',
             },
+            'predictedDifficulty': {
+              'type': 'number',
+              'description':
+                  'Predicted difficulty (1-10). 1=single fact recall, 5=mechanism, 10=synthesis across concepts. Used as FSRS initial D₀.',
+            },
           },
         },
       },
@@ -129,6 +138,7 @@ Guidelines:
 - Sub-concept IDs must extend the parent ID (e.g. parent "docker-compose" → children "docker-compose-services", "docker-compose-volumes").
 - Create 1-2 quiz items per sub-concept that test understanding of that specific aspect.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- Sub-concept items should have difficulty in the 4-6 range, as they decompose complex concepts into manageable pieces.
 ''';
 
 const _splitToolName = 'suggest_sub_concepts';
@@ -179,6 +189,11 @@ const _splitTool = Tool.custom(
                   'answer': {
                     'type': 'string',
                     'description': 'The expected answer (1-3 sentences)',
+                  },
+                  'predictedDifficulty': {
+                    'type': 'number',
+                    'description':
+                        'Predicted difficulty (1-10). Sub-concept items should target 4-6.',
                   },
                 },
               },
@@ -346,6 +361,8 @@ class ExtractionService {
           conceptId: conceptId,
           question: qMap['question'] as String,
           answer: qMap['answer'] as String,
+          predictedDifficulty:
+              (qMap['predictedDifficulty'] as num?)?.toDouble(),
         );
       }).toList();
 
@@ -416,6 +433,7 @@ class ExtractionService {
         conceptId: conceptId,
         question: map['question'] as String,
         answer: map['answer'] as String,
+        predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
       ));
     }
 
