@@ -1,5 +1,20 @@
 import 'package:fsrs/fsrs.dart' as fsrs;
 
+/// Index of initial stability for "good" rating in FSRS default parameters.
+const _goodInitialStabilityIndex = 2;
+
+/// Cached scheduler for the default desired retention (0.9).
+/// Avoids re-validating 21 parameters on every [reviewFsrs] call.
+final _defaultScheduler = fsrs.Scheduler(
+  desiredRetention: 0.9,
+  enableFuzzing: false,
+  learningSteps: const [],
+  relearningSteps: const [],
+);
+
+/// Cached scheduler for [fsrsRetrievability] (only needs default params).
+final _retrievabilityScheduler = fsrs.Scheduler();
+
 /// FSRS rating for a quiz review (4-point scale).
 ///
 /// Maps to SM-2's 0-5 scale in Phase 2:
@@ -71,15 +86,15 @@ FsrsResult reviewFsrs({
 }) {
   final currentTime = now ?? DateTime.now().toUtc();
 
-  final scheduler = fsrs.Scheduler(
-    desiredRetention: desiredRetention,
-    enableFuzzing: false,
-    // Empty steps: cards graduate to review state immediately.
-    // QuizItem uses day-based intervals; minute-based learning steps
-    // can be added in Phase 2 if needed.
-    learningSteps: const [],
-    relearningSteps: const [],
-  );
+  // Use cached scheduler for the common case; allocate only for custom retention.
+  final scheduler = desiredRetention == 0.9
+      ? _defaultScheduler
+      : fsrs.Scheduler(
+          desiredRetention: desiredRetention,
+          enableFuzzing: false,
+          learningSteps: const [],
+          relearningSteps: const [],
+        );
 
   final card = fsrs.Card(
     cardId: 0,
@@ -131,7 +146,7 @@ FsrsResult initializeFsrsCard({
       : 5.0;
 
   // Use "good" initial stability from FSRS default parameters
-  final stability = fsrs.defaultParameters[2];
+  final stability = fsrs.defaultParameters[_goodInitialStabilityIndex];
 
   return FsrsResult(
     difficulty: difficulty,
@@ -157,7 +172,6 @@ double fsrsRetrievability({
 
   final currentTime = now ?? DateTime.now().toUtc();
 
-  final scheduler = fsrs.Scheduler();
   final card = fsrs.Card(
     cardId: 0,
     state: fsrs.State.fromValue(fsrsState),
@@ -167,5 +181,8 @@ double fsrsRetrievability({
     due: currentTime,
   );
 
-  return scheduler.getCardRetrievability(card, currentDateTime: currentTime);
+  return _retrievabilityScheduler.getCardRetrievability(
+    card,
+    currentDateTime: currentTime,
+  );
 }
