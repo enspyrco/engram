@@ -1,10 +1,10 @@
 # Engram
 
-Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via SM-2 spaced repetition. Visual mind map that "lights up" as you learn.
+Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via spaced repetition (migrating from SM-2 to FSRS — see `docs/FSRS_MIGRATION.md`). Visual mind map that "lights up" as you learn.
 
 ## Architecture
 - **Models**: Immutable data classes with `fromJson`/`toJson` and `withXxx()` update methods
-- **SM-2 Engine**: Pure function, no class state. Scheduling state lives on `QuizItem`. `scheduleDueItems` supports optional `collectionId` filter — unlocking remains graph-wide, only item selection is scoped
+- **Scheduling Engine**: Currently SM-2 (pure function, no class state), migrating to FSRS (`fsrs` pub package). FSRS closes the extraction↔scheduling loop: Claude predicts quiz item difficulty at extraction time, FSRS uses it as initial D₀. See `docs/FSRS_MIGRATION.md`. Scheduling state lives on `QuizItem`. `scheduleDueItems` supports optional `collectionId` filter — unlocking remains graph-wide, only item selection is scoped
 - **Graph Analyzer**: Dependency-aware concept unlocking, topological sort, cycle detection
 - **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`); `SettingsRepository` — API keys via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
@@ -48,6 +48,7 @@ When starting a new session, remind the user about these architectural decisions
 - `docs/GRAPH_STATE_MANAGEMENT.md` — Analysis of graph-based state management options. Decision: stay with Riverpod, normalize incrementally. Split `graphStructureProvider` from quiz item state to avoid wasted recomputation.
 - `docs/LOCAL_FIRST.md` — Local-first architecture plan. Decision: migrate to Drift/SQLite as primary storage, Firestore as sync peer. Device is source of truth; server handles compute, sync, and social coordination.
 - `docs/CRDT_SYNC_ARCHITECTURE.md` — CRDT sync design for local-first. Knowledge graph operations map naturally to G-Set, LWW-Register, and G-Counter CRDTs. Cooperative game features are accidentally CRDT-native.
+- `docs/FSRS_MIGRATION.md` — Migration from SM-2 to FSRS. Key insight: FSRS has a Difficulty parameter that is a property of the card (not the learner), so Claude can predict it at extraction time — closing the loop between extraction and scheduling that SM-2 forced open. Also enables per-concept `desired_retention` based on graph position, solves SM-2 ease hell via mean reversion, and gives cooperative game mechanics (guardians, repair missions) a principled scheduling foundation.
 
 ## Open Investigations
 
@@ -76,6 +77,9 @@ The knowledge graph should surface connections across disciplines (e.g., "thermo
 
 ### Local-first migration
 Migrate from Firestore-primary to Drift/SQLite local-primary with CRDT sync. See `docs/LOCAL_FIRST.md` and `docs/CRDT_SYNC_ARCHITECTURE.md`. This is a multi-phase migration: dual-write → local-primary reads → CRDT sync → Firestore optional.
+
+### FSRS migration (extraction↔scheduling closed loop)
+Investigated Feb 15, 2026. Decision: migrate from SM-2 to FSRS. The key insight is that FSRS's Difficulty parameter is a property of the card itself — Claude can predict it at extraction time, closing a loop SM-2 forced open. Also enables per-concept `desired_retention` based on graph position (hub=0.95, leaf=0.85, guardian=0.97), solves ease hell via mean reversion, and replaces crude `1.5x interval` game mechanic hack with principled retention targets. Pure Dart `fsrs` package (v2.0.1, 160/160 pub points) available on pub.dev. 4-phase migration plan in `docs/FSRS_MIGRATION.md`. An `extracting-knowledge-graph` skill was created in `.claude/skills/` encoding the full extraction workflow — it will be updated with FSRS difficulty prediction guidelines.
 
 ### Feeding mastery back into Outline
 Could concept mastery data flow back into the wiki? e.g., tagging pages as "well-understood by 80% of the team" or surfacing knowledge gaps ("nobody has mastered the CI/CD section"). Would need Outline API write access and a clear UX for what "team mastery" means.
@@ -117,15 +121,20 @@ Current state: All Synaptic Web phases complete. Tech debt sweep (#45, #46) merg
 - ✓ Phase 4b — relay challenges, entropy storms (#44)
 - ✓ Tech debt sweep — #13, #27, #31, #6 model methods (#45, #46)
 - ✓ Collection-scoped quiz sessions — `DocumentMetadata` collection fields, scheduler filter, quiz screen dropdown
+- ✓ Extraction knowledge graph skill — `.claude/skills/extracting-knowledge-graph/` encodes the full extraction workflow (prompts, tool schemas, relationship taxonomy, scheduling constraints) as a portable agent skill with progressive disclosure
+- ✓ Outline wiki updated — `kb.xdeca.com` (was `wiki.xdeca.com`), `.env` updated with new URL and API key. `OutlineClient` still read-only; collection/document creation done via direct API calls
+- ✓ Agent Skills course ingested — 11-video Anthropic course on agent skills ingested into Outline collection "Agent Skills with Anthropic". Catalyst for extraction skill and FSRS migration insight
 
 ### In progress
 - **First test run** — app launches on macOS, Firebase configured (project: `engram-26a3a`), debugging Apple Sign-In entitlements. macOS entitlements updated (`DebugProfile.entitlements` + `Release.entitlements`) with `com.apple.developer.applesignin` and `network.client`. Bundle ID changed to `co.enspyr.engram` — flutterfire may need reconfiguration if macOS pbxproj still shows old `com.engram.engram`. The `main.dart` Firebase init may need `Firebase.apps.isEmpty` guard if `GoogleService-Info.plist` triggers native auto-init.
 
 ### Next up
-1. **#47** — `clockProvider` for all provider-level DateTime.now() calls
-2. **#38** — Typed relationships (enhances mind map and extraction quality)
-3. **#40** — Local-first Drift/SQLite migration
+1. **FSRS Phase 1** — Add `fsrs` package, `difficulty` field on `QuizItem`, update extraction tool schema + system prompt for difficulty prediction, write FSRS engine (see `docs/FSRS_MIGRATION.md`)
+2. **#47** — `clockProvider` for all provider-level DateTime.now() calls
+3. **#38** — Typed relationships (enhances mind map and extraction quality; relationship types also inform FSRS difficulty prediction)
 
 ### Longer-term
-4. **#41** — CRDT sync layer (depends on #40)
-5. **#39** — Concept embeddings (depends on #38 for relationship types, benefits from #40 for local storage)
+4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
+5. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
+6. **#41** — CRDT sync layer (depends on #40; FSRS state needs LWW-Register per field)
+7. **#39** — Concept embeddings (depends on #38; embedding similarity could predict confusion-based difficulty for FSRS)
