@@ -38,7 +38,7 @@ class QuizItem {
       repetitions: 0,
       nextReview: currentTime.toIso8601String(),
       lastReview: null,
-      difficulty: predictedDifficulty,
+      difficulty: predictedDifficulty?.clamp(1.0, 10.0),
     );
   }
 

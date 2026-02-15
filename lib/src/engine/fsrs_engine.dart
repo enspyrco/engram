@@ -1,5 +1,9 @@
 import 'package:fsrs/fsrs.dart' as fsrs;
 
+/// Index of initial stability for a "good" first rating in FSRS default
+/// parameters (~3.26 days). Part of the FSRS-5 spec parameter layout.
+const _goodInitialStabilityIndex = 2;
+
 /// FSRS rating for a quiz review (4-point scale).
 ///
 /// Maps to SM-2's 0-5 scale in Phase 2:
@@ -131,7 +135,7 @@ FsrsResult initializeFsrsCard({
       : 5.0;
 
   // Use "good" initial stability from FSRS default parameters
-  final stability = fsrs.defaultParameters[2];
+  final stability = fsrs.defaultParameters[_goodInitialStabilityIndex];
 
   return FsrsResult(
     difficulty: difficulty,
