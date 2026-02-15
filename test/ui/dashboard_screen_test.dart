@@ -33,7 +33,7 @@ void main() {
       expect(find.text('No knowledge graph yet'), findsOneWidget);
     });
 
-    testWidgets('shows stats when graph has data', (tester) async {
+    testWidgets('shows compact stats bar when graph has data', (tester) async {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(
@@ -70,12 +70,14 @@ void main() {
       await tester.pumpWidget(buildApp(graph));
       await tester.pumpAndSettle();
 
-      expect(find.text('2'), findsOneWidget); // concepts
-      expect(find.text('1'), findsAtLeast(1)); // relationships or quiz items
-      expect(find.text('Mastery'), findsOneWidget);
+      // Compact stats bar shows concept count (2) in the bottom bar
+      expect(find.text('2'), findsOneWidget); // concept count
+      // Info button is visible for opening full stats
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
     });
 
-    testWidgets('shows graph status section', (tester) async {
+    testWidgets('info button opens bottom sheet with full stats',
+        (tester) async {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(
@@ -98,16 +100,22 @@ void main() {
       await tester.pumpWidget(buildApp(graph));
       await tester.pumpAndSettle();
 
-      // Scroll down past the health indicator to reach Graph Status
+      // Tap info button to open bottom sheet
+      await tester.tap(find.byIcon(Icons.info_outline));
+      await tester.pumpAndSettle();
+
+      // Stat cards near top of bottom sheet should be visible immediately
+      expect(find.text('Documents'), findsOneWidget);
+      expect(find.text('Concepts'), findsOneWidget);
+
+      // Scroll down within the bottom sheet to find Graph Status
       await tester.scrollUntilVisible(
         find.text('Graph Status'),
         50,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find.byType(Scrollable).last,
       );
-
       expect(find.text('Graph Status'), findsOneWidget);
       expect(find.text('Due for review'), findsOneWidget);
-      expect(find.text('Foundational'), findsOneWidget);
     });
   });
 }
