@@ -213,6 +213,10 @@ class ForceDirectedLayout {
   /// random sequence for later nodes diverges from a cold-start layout. This is
   /// intentional — strict seed-determinism only matters for the null case
   /// (first build / tests).
+  ///
+  /// The margin here keeps initial random spawns inside the visible canvas.
+  /// This is tighter than the runtime safety boundary ([-w, 2w]) because
+  /// spawning near the edge would waste early simulation steps.
   List<Offset> _initPositions(int? seed, List<Offset?>? initial) {
     final rng = math.Random(seed);
     const margin = 30.0;

@@ -330,11 +330,9 @@ void main() {
         const Offset(400, 300),
         const Offset(500, 400),
       ]);
-      // Re-trigger simulation to apply safety net
-      final positions = layout.positions;
 
-      // Even before stepping, positions are as set. After a step the
-      // safety net clamps to [-width, 2*width] x [-height, 2*height].
+      // After a step the safety net clamps to [-width, 2*width] x
+      // [-height, 2*height] (symmetric 1x padding around the canvas).
       layout.step();
 
       for (final pos in layout.positions) {
@@ -343,6 +341,44 @@ void main() {
         expect(pos.dy, greaterThanOrEqualTo(-600.0));
         expect(pos.dy, lessThanOrEqualTo(1200.0));
       }
+    });
+  });
+
+  group('Centering force skip with pinned nodes', () {
+    test('centering force skipped when pinned nodes exist', () {
+      // Place pinned nodes off-center — centering must NOT shift them
+      const pin0 = Offset(100, 100);
+      const pin1 = Offset(200, 100);
+
+      final layout = makeLayout(
+        nodeCount: 4,
+        edges: [(0, 1), (1, 2), (2, 3)],
+        initialPositions: [pin0, pin1, null, null],
+        pinnedNodes: {0, 1},
+      );
+      runToSettled(layout);
+
+      // Pinned positions preserved (centering didn't shift them)
+      expect(layout.positions[0], pin0);
+      expect(layout.positions[1], pin1);
+
+      // Centroid is NOT necessarily near canvas center — that's correct,
+      // because centering bails out entirely when any node is pinned
+      var cx = 0.0;
+      var cy = 0.0;
+      for (final pos in layout.positions) {
+        cx += pos.dx;
+        cy += pos.dy;
+      }
+      cx /= layout.nodeCount;
+      cy /= layout.nodeCount;
+
+      // Centroid won't be perfectly centered — pinned nodes anchor the
+      // layout off-center and centering force doesn't fight them
+      final distFromCenter =
+          (Offset(cx, cy) - const Offset(400.0, 300.0)).distance;
+      expect(distFromCenter, greaterThan(10.0),
+          reason: 'centroid should NOT be perfectly centered with off-center pins');
     });
   });
 
