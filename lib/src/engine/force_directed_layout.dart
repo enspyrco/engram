@@ -21,6 +21,7 @@ class ForceDirectedLayout {
   }) {
     _pinnedNodes = pinnedNodes ?? {};
     _k = math.sqrt((width * height) / math.max(nodeCount, 1));
+    _degrees = _computeDegrees();
     _positions = _initPositions(seed, initialPositions);
     _velocities = List<Offset>.filled(nodeCount, Offset.zero);
 
@@ -59,6 +60,7 @@ class ForceDirectedLayout {
   late List<Offset> _positions;
   late List<Offset> _velocities;
   late Set<int> _pinnedNodes;
+  late List<int> _degrees;
 
   /// Current node positions, indexed by node index.
   List<Offset> get positions => List.unmodifiable(_positions);
@@ -71,6 +73,9 @@ class ForceDirectedLayout {
 
   /// Current per-node velocities.
   List<Offset> get velocities => List.unmodifiable(_velocities);
+
+  /// Per-node edge count (degree). Higher-degree nodes are hubs.
+  List<int> get degrees => List.unmodifiable(_degrees);
 
   /// Maximum velocity magnitude across all nodes (useful for debug overlay).
   double get maxVelocity {
@@ -110,14 +115,24 @@ class ForceDirectedLayout {
       }
     }
 
-    // Attractive forces along edges
+    // Attractive forces along edges (degree-biased: spokes move more, hubs
+    // stay stable). Each endpoint absorbs force proportional to the OTHER
+    // node's degree, so high-degree hubs barely budge.
     for (final (src, tgt) in edges) {
       final delta = _positions[tgt] - _positions[src];
       final dist = math.max(delta.distance, 0.01);
       final force = (dist * dist) / _k;
       final normalized = delta / dist;
-      forces[src] = forces[src] + normalized * force;
-      forces[tgt] = forces[tgt] - normalized * force;
+      final totalDegree = _degrees[src] + _degrees[tgt];
+      if (totalDegree == 0) {
+        forces[src] = forces[src] + normalized * force;
+        forces[tgt] = forces[tgt] - normalized * force;
+      } else {
+        final srcBias = _degrees[tgt] / totalDegree;
+        final tgtBias = _degrees[src] / totalDegree;
+        forces[src] = forces[src] + normalized * (force * srcBias);
+        forces[tgt] = forces[tgt] - normalized * (force * tgtBias);
+      }
     }
 
     // Velocity integration (pinned nodes stay fixed)
@@ -206,6 +221,16 @@ class ForceDirectedLayout {
         _velocities[i] = Offset.zero;
       }
     }
+  }
+
+  /// Count edges per node. Isolated nodes have degree 0.
+  List<int> _computeDegrees() {
+    final deg = List<int>.filled(nodeCount, 0);
+    for (final (src, tgt) in edges) {
+      deg[src]++;
+      deg[tgt]++;
+    }
+    return deg;
   }
 
   /// Build initial positions, using [initial] where non-null and filling the

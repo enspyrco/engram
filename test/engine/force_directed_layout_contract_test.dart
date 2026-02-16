@@ -275,6 +275,70 @@ void main() {
     });
   });
 
+  group('Degree-based link bias', () {
+    test('hub moves less than spokes in star topology', () {
+      // Star: node 0 is hub connected to 4 spokes
+      final layout = makeLayout(
+        nodeCount: 5,
+        edges: [(0, 1), (0, 2), (0, 3), (0, 4)],
+      );
+      final hubStart = layout.positions[0];
+      final spokeStarts = [
+        layout.positions[1],
+        layout.positions[2],
+        layout.positions[3],
+        layout.positions[4],
+      ];
+      runToSettled(layout);
+
+      final hubDisplacement = (layout.positions[0] - hubStart).distance;
+      final avgSpokeDisplacement = [
+        (layout.positions[1] - spokeStarts[0]).distance,
+        (layout.positions[2] - spokeStarts[1]).distance,
+        (layout.positions[3] - spokeStarts[2]).distance,
+        (layout.positions[4] - spokeStarts[3]).distance,
+      ].reduce((a, b) => a + b) / 4;
+
+      expect(hubDisplacement, lessThan(avgSpokeDisplacement),
+          reason: 'hub (degree 4) should move less than spokes (degree 1)');
+    });
+
+    test('degrees getter reflects edge count', () {
+      // Star: hub has degree 4, spokes have degree 1
+      final layout = makeLayout(
+        nodeCount: 5,
+        edges: [(0, 1), (0, 2), (0, 3), (0, 4)],
+      );
+      expect(layout.degrees[0], 4);
+      for (var i = 1; i <= 4; i++) {
+        expect(layout.degrees[i], 1);
+      }
+    });
+
+    test('chain topology has symmetric degrees', () {
+      // Chain: 0-1-2-3-4 → endpoints degree 1, internal nodes degree 2
+      final layout = makeLayout(
+        nodeCount: 5,
+        edges: [(0, 1), (1, 2), (2, 3), (3, 4)],
+      );
+      expect(layout.degrees[0], 1);
+      expect(layout.degrees[1], 2);
+      expect(layout.degrees[2], 2);
+      expect(layout.degrees[3], 2);
+      expect(layout.degrees[4], 1);
+    });
+
+    test('isolated nodes have degree 0', () {
+      final layout = makeLayout(
+        nodeCount: 3,
+        edges: [(0, 1)],
+      );
+      expect(layout.degrees[0], 1);
+      expect(layout.degrees[1], 1);
+      expect(layout.degrees[2], 0);
+    });
+  });
+
   group('Centering and bounds', () {
     test('settled centroid near canvas center', () {
       final layout = makeLayout(
