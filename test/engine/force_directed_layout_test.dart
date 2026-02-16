@@ -184,7 +184,7 @@ void main() {
 
       while (layout.step()) {}
 
-      const margin = 20.0; // default safetyMargin
+      const margin = 30.0; // matches engine hard clamp margin
       for (final pos in layout.positions) {
         expect(pos.dx, greaterThanOrEqualTo(margin));
         expect(pos.dx, lessThanOrEqualTo(400 - margin));
