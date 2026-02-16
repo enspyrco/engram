@@ -30,10 +30,19 @@ class ForceDirectedGraphWidget extends StatefulWidget {
     this.isStormActive = false,
     this.relayPulses = const [],
     this.relayConceptIds = const {},
+    this.onDebugTick,
+    this.layoutWidth,
+    this.layoutHeight,
     super.key,
   });
 
   final KnowledgeGraph graph;
+
+  /// Layout canvas width. When null, defaults to 800.
+  final double? layoutWidth;
+
+  /// Layout canvas height. When null, defaults to 600.
+  final double? layoutHeight;
 
   /// Team member nodes to render alongside concepts. Each team node is
   /// connected to its mastered concepts with weaker spring forces.
@@ -56,6 +65,11 @@ class ForceDirectedGraphWidget extends StatefulWidget {
 
   /// Concept IDs in active relays — highlighted with cyan ring.
   final Set<String> relayConceptIds;
+
+  /// Optional callback fired each animation tick with layout debug info.
+  /// Used by GraphLabScreen to display temperature, pinned count, etc.
+  final void Function(double temperature, int pinnedCount, int totalCount,
+      bool isSettled)? onDebugTick;
 
   @override
   State<ForceDirectedGraphWidget> createState() =>
@@ -112,7 +126,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   void didUpdateWidget(ForceDirectedGraphWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.graph != widget.graph ||
-        oldWidget.teamNodes != widget.teamNodes) {
+        oldWidget.teamNodes != widget.teamNodes ||
+        oldWidget.layoutWidth != widget.layoutWidth ||
+        oldWidget.layoutHeight != widget.layoutHeight) {
       _removeOverlay();
       _buildGraph();
       if (!_ticker.isActive) _ticker.start();
@@ -257,6 +273,8 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     _layout = ForceDirectedLayout(
       nodeCount: totalCount,
       edges: layoutEdges,
+      width: widget.layoutWidth ?? 800.0,
+      height: widget.layoutHeight ?? 600.0,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
       pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
@@ -272,6 +290,12 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     if (!stillMoving) {
       _ticker.stop();
     }
+    widget.onDebugTick?.call(
+      _layout.temperature,
+      _layout.pinnedCount,
+      _layout.nodeCount,
+      !stillMoving,
+    );
   }
 
   void _syncPositions() {
