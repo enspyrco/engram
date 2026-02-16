@@ -14,6 +14,7 @@ class ForceDirectedLayout {
     this.width = 800.0,
     this.height = 600.0,
     this.settledThreshold = 0.05,
+    this.velocityDecay = 0.4,
     int? seed,
     List<Offset?>? initialPositions,
     Set<int>? pinnedNodes,
@@ -21,6 +22,7 @@ class ForceDirectedLayout {
     _pinnedNodes = pinnedNodes ?? {};
     _k = math.sqrt((width * height) / math.max(nodeCount, 1));
     _positions = _initPositions(seed, initialPositions);
+    _velocities = List<Offset>.filled(nodeCount, Offset.zero);
 
     // When seeded with existing positions, scale temperature by the fraction
     // of new nodes so settled nodes shift gently instead of flying around.
@@ -35,6 +37,7 @@ class ForceDirectedLayout {
           ? fullTemp
           : math.max(fullTemp * fraction, fullTemp * 0.15);
     }
+    _initialTemperature = _temperature;
   }
 
   final int nodeCount;
@@ -46,9 +49,15 @@ class ForceDirectedLayout {
   final double height;
   final double settledThreshold;
 
+  /// Friction coefficient: each step, velocity is multiplied by
+  /// `(1 - velocityDecay)`. Higher values = more friction = faster stopping.
+  final double velocityDecay;
+
   late double _k;
   late double _temperature;
+  late double _initialTemperature;
   late List<Offset> _positions;
+  late List<Offset> _velocities;
   late Set<int> _pinnedNodes;
 
   /// Current node positions, indexed by node index.
@@ -60,16 +69,34 @@ class ForceDirectedLayout {
   /// Number of nodes that are pinned (immovable anchors).
   int get pinnedCount => _pinnedNodes.length;
 
+  /// Current per-node velocities.
+  List<Offset> get velocities => List.unmodifiable(_velocities);
+
+  /// Maximum velocity magnitude across all nodes (useful for debug overlay).
+  double get maxVelocity {
+    var max = 0.0;
+    for (final v in _velocities) {
+      final mag = v.distance;
+      if (mag > max) max = mag;
+    }
+    return max;
+  }
+
   /// Whether the simulation has converged.
   bool get isSettled => _temperature < settledThreshold;
 
   /// Advance the simulation by one step.
   ///
+  /// Uses velocity-based physics (d3-force style): forces are scaled by alpha
+  /// and accumulated into per-node velocity vectors. Velocity decays each step
+  /// via [velocityDecay], producing smooth motion with momentum and coasting.
+  ///
   /// Returns `true` if still moving, `false` if settled.
   bool step() {
     if (isSettled) return false;
 
-    final displacements = List<Offset>.filled(nodeCount, Offset.zero);
+    final alpha = _temperature / _initialTemperature;
+    final forces = List<Offset>.filled(nodeCount, Offset.zero);
 
     // Repulsive forces between all node pairs
     for (var i = 0; i < nodeCount; i++) {
@@ -78,8 +105,8 @@ class ForceDirectedLayout {
         final dist = math.max(delta.distance, 0.01);
         final force = (_k * _k) / dist;
         final normalized = delta / dist;
-        displacements[i] = displacements[i] + normalized * force;
-        displacements[j] = displacements[j] - normalized * force;
+        forces[i] = forces[i] + normalized * force;
+        forces[j] = forces[j] - normalized * force;
       }
     }
 
@@ -89,26 +116,42 @@ class ForceDirectedLayout {
       final dist = math.max(delta.distance, 0.01);
       final force = (dist * dist) / _k;
       final normalized = delta / dist;
-      displacements[src] = displacements[src] + normalized * force;
-      displacements[tgt] = displacements[tgt] - normalized * force;
+      forces[src] = forces[src] + normalized * force;
+      forces[tgt] = forces[tgt] - normalized * force;
     }
 
-    // Apply capped displacement (pinned nodes stay fixed)
+    // Velocity integration (pinned nodes stay fixed)
+    const margin = 30.0;
+    final decay = 1.0 - velocityDecay;
     for (var i = 0; i < nodeCount; i++) {
-      if (_pinnedNodes.contains(i)) continue;
-      final disp = displacements[i];
-      final dist = math.max(disp.distance, 0.01);
-      final capped = math.min(dist, _temperature);
-      final normalized = disp / dist;
-      var newPos = _positions[i] + normalized * capped;
+      if (_pinnedNodes.contains(i)) {
+        _velocities[i] = Offset.zero;
+        continue;
+      }
 
-      // Keep nodes within bounds (with margin)
-      const margin = 30.0;
-      newPos = Offset(
-        newPos.dx.clamp(margin, width - margin),
-        newPos.dy.clamp(margin, height - margin),
-      );
-      _positions[i] = newPos;
+      // Accumulate force scaled by alpha, then apply friction
+      _velocities[i] = (_velocities[i] + forces[i] * alpha) * decay;
+
+      // Cap velocity magnitude at temperature (prevents explosion from
+      // strong FR forces while preserving coasting once forces diminish)
+      final speed = _velocities[i].distance;
+      if (speed > _temperature) {
+        _velocities[i] *= _temperature / speed;
+      }
+
+      // Apply velocity to position
+      final newPos = _positions[i] + _velocities[i];
+
+      // Clamp to bounds and zero velocity at walls
+      final clampedX = newPos.dx.clamp(margin, width - margin);
+      final clampedY = newPos.dy.clamp(margin, height - margin);
+      if (clampedX != newPos.dx) {
+        _velocities[i] = Offset(0, _velocities[i].dy);
+      }
+      if (clampedY != newPos.dy) {
+        _velocities[i] = Offset(_velocities[i].dx, 0);
+      }
+      _positions[i] = Offset(clampedX, clampedY);
     }
 
     // Cool down
@@ -121,11 +164,13 @@ class ForceDirectedLayout {
   void setPositions(List<Offset> positions) {
     assert(positions.length == nodeCount);
     _positions = List.of(positions);
+    _velocities = List<Offset>.filled(nodeCount, Offset.zero);
   }
 
   /// Force the layout to settle immediately.
   void settle() {
     _temperature = 0.0;
+    _velocities = List<Offset>.filled(nodeCount, Offset.zero);
   }
 
   /// Build initial positions, using [initial] where non-null and filling the
