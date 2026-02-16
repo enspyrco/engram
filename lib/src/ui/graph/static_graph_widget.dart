@@ -100,12 +100,16 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
     }
 
     // Seed known positions from the previous layout so only new nodes get
-    // random placement. Existing nodes shift gently to accommodate newcomers.
+    // random placement. Pinned nodes are immovable — only new nodes settle.
     final initialPositions = List<Offset?>.generate(
       nodes.length,
       (i) => oldPositions[nodes[i].id],
     );
     final hasOldPositions = initialPositions.any((p) => p != null);
+    final pinnedIndices = <int>{
+      for (var i = 0; i < nodes.length; i++)
+        if (oldPositions.containsKey(nodes[i].id)) i,
+    };
 
     // Run layout to convergence synchronously. Fine for current graph sizes
     // (10-40 concepts). For 200+ nodes, move to compute() Isolate — see #55.
@@ -114,6 +118,7 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
       edges: layoutEdges,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
+      pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
     );
     while (layout.step()) {}
 

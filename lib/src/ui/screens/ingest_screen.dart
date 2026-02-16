@@ -5,7 +5,7 @@ import '../../models/ingest_state.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../graph/static_graph_widget.dart';
+import '../graph/force_directed_graph_widget.dart';
 
 class IngestScreen extends ConsumerWidget {
   const IngestScreen({super.key});
@@ -146,7 +146,7 @@ class _ProgressView extends ConsumerWidget {
       children: [
         // Live graph — grows as concepts are extracted
         if (graph != null && graph.concepts.isNotEmpty)
-          Expanded(child: StaticGraphWidget(graph: graph))
+          Expanded(child: ForceDirectedGraphWidget(graph: graph))
         else
           const Expanded(child: SizedBox.shrink()),
         // Progress info at the bottom

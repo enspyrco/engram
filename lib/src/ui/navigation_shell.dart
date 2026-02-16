@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 import '../providers/sync_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/friends_screen.dart';
+import 'screens/graph_lab_screen.dart';
 import 'screens/ingest_screen.dart';
 import 'screens/quiz_screen.dart';
 import 'screens/settings_screen.dart';
@@ -26,6 +27,7 @@ class NavigationShellState extends ConsumerState<NavigationShell>
   int _selectedIndex = 0;
 
   static const _screens = <Widget>[
+    GraphLabScreen(),
     DashboardScreen(),
     QuizScreen(),
     IngestScreen(),
@@ -97,6 +99,11 @@ class NavigationShellState extends ConsumerState<NavigationShell>
           setState(() => _selectedIndex = index);
         },
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.science_outlined),
+            selectedIcon: Icon(Icons.science),
+            label: 'Graph Lab',
+          ),
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),

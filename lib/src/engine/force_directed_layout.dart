@@ -13,16 +13,18 @@ class ForceDirectedLayout {
     required this.edges,
     this.width = 800.0,
     this.height = 600.0,
-    this.settledThreshold = 0.1,
+    this.settledThreshold = 0.05,
     int? seed,
     List<Offset?>? initialPositions,
+    Set<int>? pinnedNodes,
   }) {
+    _pinnedNodes = pinnedNodes ?? {};
     _k = math.sqrt((width * height) / math.max(nodeCount, 1));
     _positions = _initPositions(seed, initialPositions);
 
     // When seeded with existing positions, scale temperature by the fraction
     // of new nodes so settled nodes shift gently instead of flying around.
-    final fullTemp = math.min(width, height) / 4;
+    final fullTemp = math.min(width, height) / 6;
     if (initialPositions == null) {
       _temperature = fullTemp;
     } else {
@@ -47,9 +49,16 @@ class ForceDirectedLayout {
   late double _k;
   late double _temperature;
   late List<Offset> _positions;
+  late Set<int> _pinnedNodes;
 
   /// Current node positions, indexed by node index.
   List<Offset> get positions => List.unmodifiable(_positions);
+
+  /// Current simulation temperature (drives max displacement per step).
+  double get temperature => _temperature;
+
+  /// Number of nodes that are pinned (immovable anchors).
+  int get pinnedCount => _pinnedNodes.length;
 
   /// Whether the simulation has converged.
   bool get isSettled => _temperature < settledThreshold;
@@ -84,8 +93,9 @@ class ForceDirectedLayout {
       displacements[tgt] = displacements[tgt] - normalized * force;
     }
 
-    // Apply capped displacement
+    // Apply capped displacement (pinned nodes stay fixed)
     for (var i = 0; i < nodeCount; i++) {
+      if (_pinnedNodes.contains(i)) continue;
       final disp = displacements[i];
       final dist = math.max(disp.distance, 0.01);
       final capped = math.min(dist, _temperature);
@@ -102,7 +112,7 @@ class ForceDirectedLayout {
     }
 
     // Cool down
-    _temperature *= 0.95;
+    _temperature *= 0.97;
 
     return !isSettled;
   }
