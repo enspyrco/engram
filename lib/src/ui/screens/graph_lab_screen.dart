@@ -77,12 +77,12 @@ final _testGraph = KnowledgeGraph(
   ],
   relationships: [
     // Dependency edges (affect unlock status)
-    Relationship(id: 'r1', fromConceptId: 'b', toConceptId: 'a', label: 'depends on'),
-    Relationship(id: 'r2', fromConceptId: 'd', toConceptId: 'c', label: 'depends on'),
+    const Relationship(id: 'r1', fromConceptId: 'b', toConceptId: 'a', label: 'depends on'),
+    const Relationship(id: 'r2', fromConceptId: 'd', toConceptId: 'c', label: 'depends on'),
     // Non-dependency edges (visual connections only)
-    Relationship(id: 'r3', fromConceptId: 'c', toConceptId: 'a', label: 'relates to'),
-    Relationship(id: 'r4', fromConceptId: 'e', toConceptId: 'a', label: 'relates to'),
-    Relationship(id: 'r5', fromConceptId: 'f', toConceptId: 'e', label: 'relates to'),
+    const Relationship(id: 'r3', fromConceptId: 'c', toConceptId: 'a', label: 'relates to'),
+    const Relationship(id: 'r4', fromConceptId: 'e', toConceptId: 'a', label: 'relates to'),
+    const Relationship(id: 'r5', fromConceptId: 'f', toConceptId: 'e', label: 'relates to'),
   ],
   quizItems: [
     // A → mastered: interval ≥ 21, recent review

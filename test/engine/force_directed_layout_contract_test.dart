@@ -174,7 +174,7 @@ void main() {
         ],
       );
 
-      final fullTemp = 100.0; // min(800, 600) / 6
+      const fullTemp = 100.0; // min(800, 600) / 6
       expect(layout.temperature, closeTo(fullTemp * 0.15, 0.001));
     });
   });
