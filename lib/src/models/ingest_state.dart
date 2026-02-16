@@ -15,6 +15,7 @@ class IngestState {
     this.currentDocumentTitle = '',
     this.statusMessage = '',
     this.errorMessage = '',
+    this.sessionConceptIds = const {},
   });
 
   final IngestPhase phase;
@@ -27,6 +28,10 @@ class IngestState {
   final String currentDocumentTitle;
   final String statusMessage;
   final String errorMessage;
+
+  /// Concept IDs extracted during this ingestion session. Used to filter the
+  /// live graph visualization to only show newly extracted nodes.
+  final Set<String> sessionConceptIds;
 
   double get progress =>
       totalDocuments > 0 ? processedDocuments / totalDocuments : 0;
@@ -42,6 +47,7 @@ class IngestState {
     String? currentDocumentTitle,
     String? statusMessage,
     String? errorMessage,
+    Set<String>? sessionConceptIds,
   }) {
     return IngestState(
       phase: phase ?? this.phase,
@@ -56,6 +62,7 @@ class IngestState {
       currentDocumentTitle: currentDocumentTitle ?? this.currentDocumentTitle,
       statusMessage: statusMessage ?? this.statusMessage,
       errorMessage: errorMessage ?? this.errorMessage,
+      sessionConceptIds: sessionConceptIds ?? this.sessionConceptIds,
     );
   }
 }

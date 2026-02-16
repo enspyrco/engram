@@ -48,6 +48,7 @@ class IngestNotifier extends Notifier<IngestState> {
       extractedCount: 0,
       skippedCount: 0,
       processedDocuments: 0,
+      sessionConceptIds: {},
     );
 
     try {
@@ -151,9 +152,15 @@ class IngestNotifier extends Notifier<IngestState> {
             '${result.relationships.length} relationships, '
             '${result.quizItems.length} quiz items');
 
-        // Merge into graph — staggered for live knowledge graph animation
+        // Merge into graph — staggered for live knowledge graph animation.
+        // Register session concept IDs first so the live graph filter can
+        // show nodes as they appear during staggered ingestion.
         state = state.copyWith(
           statusMessage: 'Adding ${result.concepts.length} concepts...',
+          sessionConceptIds: {
+            ...state.sessionConceptIds,
+            ...result.concepts.map((c) => c.id),
+          },
         );
         debugPrint('[Ingest] Adding concepts to graph...');
         try {
