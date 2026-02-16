@@ -15,6 +15,7 @@ class ForceDirectedLayout {
     this.height = 600.0,
     this.settledThreshold = 0.05,
     this.velocityDecay = 0.4,
+    this.edgeDamping = 0.3,
     int? seed,
     List<Offset?>? initialPositions,
     Set<int>? pinnedNodes,
@@ -52,6 +53,11 @@ class ForceDirectedLayout {
   /// Friction coefficient: each step, velocity is multiplied by
   /// `(1 - velocityDecay)`. Higher values = more friction = faster stopping.
   final double velocityDecay;
+
+  /// Edge spring damping coefficient. Opposes relative velocity between
+  /// connected nodes along the edge direction, like springs submerged in
+  /// water. Prevents oscillation without slowing global motion. `0.0` disables.
+  final double edgeDamping;
 
   late double _k;
   late double _temperature;
@@ -97,6 +103,7 @@ class ForceDirectedLayout {
 
     final alpha = _temperature / _initialTemperature;
     final forces = List<Offset>.filled(nodeCount, Offset.zero);
+    const margin = 30.0;
 
     // Repulsive forces between all node pairs
     for (var i = 0; i < nodeCount; i++) {
@@ -110,18 +117,31 @@ class ForceDirectedLayout {
       }
     }
 
-    // Attractive forces along edges
+    // Attractive forces along edges, with viscous damping.
+    // The damping term opposes relative velocity along the edge direction,
+    // like springs submerged in water — prevents oscillation without slowing
+    // global motion.
     for (final (src, tgt) in edges) {
       final delta = _positions[tgt] - _positions[src];
       final dist = math.max(delta.distance, 0.01);
-      final force = (dist * dist) / _k;
       final normalized = delta / dist;
+
+      // Spring force (FR attractive: dist^2 / k)
+      var force = (dist * dist) / _k;
+
+      // Damping: oppose relative velocity projected onto edge direction
+      if (edgeDamping > 0) {
+        final relVel = _velocities[tgt] - _velocities[src];
+        final relSpeed =
+            relVel.dx * normalized.dx + relVel.dy * normalized.dy;
+        force -= edgeDamping * _k * relSpeed;
+      }
+
       forces[src] = forces[src] + normalized * force;
       forces[tgt] = forces[tgt] - normalized * force;
     }
 
     // Velocity integration (pinned nodes stay fixed)
-    const margin = 30.0;
     final decay = 1.0 - velocityDecay;
     for (var i = 0; i < nodeCount; i++) {
       if (_pinnedNodes.contains(i)) {
