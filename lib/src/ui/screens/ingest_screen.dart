@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/ingest_state.dart';
+import '../../models/knowledge_graph.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -140,7 +141,22 @@ class _ProgressView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
+    final fullGraph = ref.watch(knowledgeGraphProvider).valueOrNull;
+    final sessionIds = state.sessionConceptIds;
+
+    // Filter to only show concepts extracted in this session.
+    final graph = fullGraph != null && sessionIds.isNotEmpty
+        ? KnowledgeGraph(
+            concepts: fullGraph.concepts
+                .where((c) => sessionIds.contains(c.id))
+                .toList(),
+            relationships: fullGraph.relationships
+                .where((r) =>
+                    sessionIds.contains(r.fromConceptId) &&
+                    sessionIds.contains(r.toConceptId))
+                .toList(),
+          )
+        : null;
 
     return Column(
       children: [
