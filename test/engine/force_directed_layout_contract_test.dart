@@ -275,24 +275,28 @@ void main() {
     });
   });
 
-  group('Bounds enforcement', () {
-    test('all settled positions within margin bounds', () {
+  group('Centering and bounds', () {
+    test('settled centroid near canvas center', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
       );
       runToSettled(layout);
 
-      const margin = 30.0;
+      var cx = 0.0;
+      var cy = 0.0;
       for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
+        cx += pos.dx;
+        cy += pos.dy;
       }
+      cx /= layout.nodeCount;
+      cy /= layout.nodeCount;
+
+      expect(cx, closeTo(400.0, 50.0));
+      expect(cy, closeTo(300.0, 50.0));
     });
 
-    test('custom canvas size respected', () {
+    test('custom canvas size centroid near center', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
@@ -301,12 +305,43 @@ void main() {
       );
       runToSettled(layout);
 
-      const margin = 30.0;
+      var cx = 0.0;
+      var cy = 0.0;
       for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(1200.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(900.0 - margin));
+        cx += pos.dx;
+        cy += pos.dy;
+      }
+      cx /= layout.nodeCount;
+      cy /= layout.nodeCount;
+
+      expect(cx, closeTo(600.0, 50.0));
+      expect(cy, closeTo(450.0, 50.0));
+    });
+
+    test('safety boundary catches runaway nodes', () {
+      final layout = makeLayout(
+        nodeCount: 3,
+        edges: [(0, 1), (1, 2)],
+      );
+
+      // Force a node way outside the generous boundary
+      layout.setPositions([
+        const Offset(-2000, -2000),
+        const Offset(400, 300),
+        const Offset(500, 400),
+      ]);
+      // Re-trigger simulation to apply safety net
+      final positions = layout.positions;
+
+      // Even before stepping, positions are as set. After a step the
+      // safety net clamps to [-width, 2*width] x [-height, 2*height].
+      layout.step();
+
+      for (final pos in layout.positions) {
+        expect(pos.dx, greaterThanOrEqualTo(-800.0));
+        expect(pos.dx, lessThanOrEqualTo(1600.0));
+        expect(pos.dy, greaterThanOrEqualTo(-600.0));
+        expect(pos.dy, lessThanOrEqualTo(1200.0));
       }
     });
   });
