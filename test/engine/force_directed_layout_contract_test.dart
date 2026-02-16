@@ -13,6 +13,7 @@ ForceDirectedLayout makeLayout({
   int seed = 42,
   List<Offset?>? initialPositions,
   Set<int>? pinnedNodes,
+  double edgeDamping = 0.3,
 }) {
   return ForceDirectedLayout(
     nodeCount: nodeCount,
@@ -22,6 +23,7 @@ ForceDirectedLayout makeLayout({
     seed: seed,
     initialPositions: initialPositions,
     pinnedNodes: pinnedNodes,
+    edgeDamping: edgeDamping,
   );
 }
 
@@ -307,6 +309,63 @@ void main() {
         expect(pos.dx, lessThanOrEqualTo(1200.0 - margin));
         expect(pos.dy, greaterThanOrEqualTo(margin));
         expect(pos.dy, lessThanOrEqualTo(900.0 - margin));
+      }
+    });
+  });
+
+  group('Edge damping', () {
+    test('damped layout produces different positions than undamped', () {
+      final damped = makeLayout(edgeDamping: 0.3);
+      runToSettled(damped);
+
+      final undamped = makeLayout(edgeDamping: 0.0);
+      runToSettled(undamped);
+
+      var anyDifferent = false;
+      for (var i = 0; i < damped.positions.length; i++) {
+        if ((damped.positions[i] - undamped.positions[i]).distance > 0.1) {
+          anyDifferent = true;
+          break;
+        }
+      }
+      expect(anyDifferent, isTrue);
+    });
+
+    test('edgeDamping: 0.0 disables damping', () {
+      // With damping disabled, layout should match pure FR behavior.
+      // Just verify it still converges and stays in bounds.
+      final layout = makeLayout(
+        nodeCount: 6,
+        edges: List.generate(5, (i) => (i, i + 1)),
+        edgeDamping: 0.0,
+      );
+      runToSettled(layout);
+
+      expect(layout.isSettled, isTrue);
+      const margin = 30.0;
+      for (final pos in layout.positions) {
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
+      }
+    });
+
+    test('damped layout still converges within bounds', () {
+      final layout = makeLayout(
+        nodeCount: 10,
+        edges: List.generate(9, (i) => (i, i + 1)),
+        edgeDamping: 0.3,
+      );
+      runToSettled(layout);
+
+      expect(layout.isSettled, isTrue);
+      const margin = 30.0;
+      for (final pos in layout.positions) {
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
       }
     });
   });

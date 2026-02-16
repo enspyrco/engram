@@ -184,11 +184,12 @@ void main() {
 
       while (layout.step()) {}
 
+      const margin = 30.0; // matches engine hard clamp margin
       for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(0));
-        expect(pos.dx, lessThanOrEqualTo(400));
-        expect(pos.dy, greaterThanOrEqualTo(0));
-        expect(pos.dy, lessThanOrEqualTo(300));
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(400 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(300 - margin));
       }
     });
   });
