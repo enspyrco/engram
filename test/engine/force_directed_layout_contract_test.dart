@@ -275,28 +275,24 @@ void main() {
     });
   });
 
-  group('Centering and bounds', () {
-    test('settled centroid near canvas center', () {
+  group('Bounds enforcement', () {
+    test('all settled positions within margin bounds', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
       );
       runToSettled(layout);
 
-      var cx = 0.0;
-      var cy = 0.0;
+      const margin = 30.0;
       for (final pos in layout.positions) {
-        cx += pos.dx;
-        cy += pos.dy;
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
       }
-      cx /= layout.nodeCount;
-      cy /= layout.nodeCount;
-
-      expect(cx, closeTo(400.0, 50.0));
-      expect(cy, closeTo(300.0, 50.0));
     });
 
-    test('custom canvas size centroid near center', () {
+    test('custom canvas size respected', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
@@ -305,80 +301,13 @@ void main() {
       );
       runToSettled(layout);
 
-      var cx = 0.0;
-      var cy = 0.0;
+      const margin = 30.0;
       for (final pos in layout.positions) {
-        cx += pos.dx;
-        cy += pos.dy;
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(1200.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(900.0 - margin));
       }
-      cx /= layout.nodeCount;
-      cy /= layout.nodeCount;
-
-      expect(cx, closeTo(600.0, 50.0));
-      expect(cy, closeTo(450.0, 50.0));
-    });
-
-    test('safety boundary catches runaway nodes', () {
-      final layout = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
-
-      // Force a node way outside the generous boundary
-      layout.setPositions([
-        const Offset(-2000, -2000),
-        const Offset(400, 300),
-        const Offset(500, 400),
-      ]);
-
-      // After a step the safety net clamps to [-width, 2*width] x
-      // [-height, 2*height] (symmetric 1x padding around the canvas).
-      layout.step();
-
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(-800.0));
-        expect(pos.dx, lessThanOrEqualTo(1600.0));
-        expect(pos.dy, greaterThanOrEqualTo(-600.0));
-        expect(pos.dy, lessThanOrEqualTo(1200.0));
-      }
-    });
-  });
-
-  group('Centering force skip with pinned nodes', () {
-    test('centering force skipped when pinned nodes exist', () {
-      // Place pinned nodes off-center — centering must NOT shift them
-      const pin0 = Offset(100, 100);
-      const pin1 = Offset(200, 100);
-
-      final layout = makeLayout(
-        nodeCount: 4,
-        edges: [(0, 1), (1, 2), (2, 3)],
-        initialPositions: [pin0, pin1, null, null],
-        pinnedNodes: {0, 1},
-      );
-      runToSettled(layout);
-
-      // Pinned positions preserved (centering didn't shift them)
-      expect(layout.positions[0], pin0);
-      expect(layout.positions[1], pin1);
-
-      // Centroid is NOT necessarily near canvas center — that's correct,
-      // because centering bails out entirely when any node is pinned
-      var cx = 0.0;
-      var cy = 0.0;
-      for (final pos in layout.positions) {
-        cx += pos.dx;
-        cy += pos.dy;
-      }
-      cx /= layout.nodeCount;
-      cy /= layout.nodeCount;
-
-      // Centroid won't be perfectly centered — pinned nodes anchor the
-      // layout off-center and centering force doesn't fight them
-      final distFromCenter =
-          (Offset(cx, cy) - const Offset(400.0, 300.0)).distance;
-      expect(distFromCenter, greaterThan(10.0),
-          reason: 'centroid should NOT be perfectly centered with off-center pins');
     });
   });
 

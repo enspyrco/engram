@@ -121,6 +121,7 @@ class ForceDirectedLayout {
     }
 
     // Velocity integration (pinned nodes stay fixed)
+    const margin = 30.0;
     final decay = 1.0 - velocityDecay;
     for (var i = 0; i < nodeCount; i++) {
       if (_pinnedNodes.contains(i)) {
@@ -139,11 +140,19 @@ class ForceDirectedLayout {
       }
 
       // Apply velocity to position
-      _positions[i] = _positions[i] + _velocities[i];
-    }
+      final newPos = _positions[i] + _velocities[i];
 
-    _applyCenteringForce();
-    _applyBoundarySafetyNet();
+      // Clamp to bounds and zero velocity at walls
+      final clampedX = newPos.dx.clamp(margin, width - margin);
+      final clampedY = newPos.dy.clamp(margin, height - margin);
+      if (clampedX != newPos.dx) {
+        _velocities[i] = Offset(0, _velocities[i].dy);
+      }
+      if (clampedY != newPos.dy) {
+        _velocities[i] = Offset(_velocities[i].dx, 0);
+      }
+      _positions[i] = Offset(clampedX, clampedY);
+    }
 
     // Cool down
     _temperature *= 0.97;
@@ -164,59 +173,11 @@ class ForceDirectedLayout {
     _velocities = List<Offset>.filled(nodeCount, Offset.zero);
   }
 
-  /// Translate all unpinned nodes so the centroid sits at the canvas center.
-  ///
-  /// Skipped when pinned nodes exist — they act as immovable anchors, and
-  /// shifting them would violate the immutability contract.
-  void _applyCenteringForce() {
-    if (_pinnedNodes.isNotEmpty || nodeCount == 0) return;
-
-    var cx = 0.0;
-    var cy = 0.0;
-    for (final pos in _positions) {
-      cx += pos.dx;
-      cy += pos.dy;
-    }
-    cx /= nodeCount;
-    cy /= nodeCount;
-
-    final dx = width / 2 - cx;
-    final dy = height / 2 - cy;
-
-    for (var i = 0; i < nodeCount; i++) {
-      _positions[i] = _positions[i] + Offset(dx, dy);
-    }
-  }
-
-  /// Last-resort safety net: clamp any node beyond a generous boundary and
-  /// zero its velocity. Not a layout mechanism — only catches runaway nodes.
-  void _applyBoundarySafetyNet() {
-    final minX = -width;
-    final maxX = 2 * width;
-    final minY = -height;
-    final maxY = 2 * height;
-
-    for (var i = 0; i < nodeCount; i++) {
-      if (_pinnedNodes.contains(i)) continue;
-      final pos = _positions[i];
-      final clampedX = pos.dx.clamp(minX, maxX);
-      final clampedY = pos.dy.clamp(minY, maxY);
-      if (clampedX != pos.dx || clampedY != pos.dy) {
-        _positions[i] = Offset(clampedX, clampedY);
-        _velocities[i] = Offset.zero;
-      }
-    }
-  }
-
   /// Build initial positions, using [initial] where non-null and filling the
   /// rest with random offsets. Note: pre-seeded entries skip RNG calls, so the
   /// random sequence for later nodes diverges from a cold-start layout. This is
   /// intentional — strict seed-determinism only matters for the null case
   /// (first build / tests).
-  ///
-  /// The margin here keeps initial random spawns inside the visible canvas.
-  /// This is tighter than the runtime safety boundary ([-w, 2w]) because
-  /// spawning near the edge would waste early simulation steps.
   List<Offset> _initPositions(int? seed, List<Offset?>? initial) {
     final rng = math.Random(seed);
     const margin = 30.0;

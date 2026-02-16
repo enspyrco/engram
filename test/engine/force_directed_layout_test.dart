@@ -173,7 +173,7 @@ void main() {
       }
     });
 
-    test('settled centroid near canvas center', () {
+    test('nodes stay within bounds', () {
       final layout = ForceDirectedLayout(
         nodeCount: 5,
         edges: [(0, 1), (1, 2), (2, 3), (3, 4)],
@@ -184,17 +184,12 @@ void main() {
 
       while (layout.step()) {}
 
-      var cx = 0.0;
-      var cy = 0.0;
       for (final pos in layout.positions) {
-        cx += pos.dx;
-        cy += pos.dy;
+        expect(pos.dx, greaterThanOrEqualTo(0));
+        expect(pos.dx, lessThanOrEqualTo(400));
+        expect(pos.dy, greaterThanOrEqualTo(0));
+        expect(pos.dy, lessThanOrEqualTo(300));
       }
-      cx /= layout.nodeCount;
-      cy /= layout.nodeCount;
-
-      expect(cx, closeTo(200.0, 50.0));
-      expect(cy, closeTo(150.0, 50.0));
     });
   });
 }
