@@ -133,7 +133,7 @@ class ForceDirectedLayout {
       _velocities[i] = (_velocities[i] + forces[i] * alpha) * decay;
 
       // Apply velocity to position
-      var newPos = _positions[i] + _velocities[i];
+      final newPos = _positions[i] + _velocities[i];
 
       // Clamp to bounds and zero velocity at walls
       final clampedX = newPos.dx.clamp(margin, width - margin);

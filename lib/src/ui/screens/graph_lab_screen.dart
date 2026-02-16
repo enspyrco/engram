@@ -419,14 +419,12 @@ class _ToolbarButton extends StatelessWidget {
 class _DebugInfo {
   const _DebugInfo({
     this.temperature = 0,
-    this.maxVelocity = 0,
     this.pinnedCount = 0,
     this.totalCount = 0,
     this.isSettled = true,
   });
 
   final double temperature;
-  final double maxVelocity;
   final int pinnedCount;
   final int totalCount;
   final bool isSettled;
@@ -461,10 +459,6 @@ class _DebugOverlay extends StatelessWidget {
                 style: TextStyle(
                   color: info.isSettled ? Colors.green : Colors.orange,
                 ),
-              ),
-              Text(
-                'Vel: ${info.maxVelocity.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white70),
               ),
               Text(
                 'Pinned: ${info.pinnedCount} / ${info.totalCount}',
@@ -596,11 +590,11 @@ final _initialConcepts = [
 ];
 
 final _initialRelationships = [
-  Relationship(id: 'r1', fromConceptId: 'b', toConceptId: 'a', label: 'depends on'),
-  Relationship(id: 'r2', fromConceptId: 'd', toConceptId: 'c', label: 'depends on'),
-  Relationship(id: 'r3', fromConceptId: 'c', toConceptId: 'a', label: 'relates to'),
-  Relationship(id: 'r4', fromConceptId: 'e', toConceptId: 'a', label: 'relates to'),
-  Relationship(id: 'r5', fromConceptId: 'f', toConceptId: 'e', label: 'relates to'),
+  const Relationship(id: 'r1', fromConceptId: 'b', toConceptId: 'a', label: 'depends on'),
+  const Relationship(id: 'r2', fromConceptId: 'd', toConceptId: 'c', label: 'depends on'),
+  const Relationship(id: 'r3', fromConceptId: 'c', toConceptId: 'a', label: 'relates to'),
+  const Relationship(id: 'r4', fromConceptId: 'e', toConceptId: 'a', label: 'relates to'),
+  const Relationship(id: 'r5', fromConceptId: 'f', toConceptId: 'e', label: 'relates to'),
 ];
 
 final _initialQuizItems = [
@@ -724,11 +718,11 @@ final _batch2Concepts = [
 ];
 
 final _batch2Relationships = [
-  Relationship(id: 'r6', fromConceptId: 'g', toConceptId: 'a', label: 'relates to'),
-  Relationship(id: 'r7', fromConceptId: 'h', toConceptId: 'c', label: 'relates to'),
-  Relationship(id: 'r8', fromConceptId: 'i', toConceptId: 'c', label: 'depends on'),
-  Relationship(id: 'r9', fromConceptId: 'j', toConceptId: 'h', label: 'depends on'),
-  Relationship(id: 'r10', fromConceptId: 'k', toConceptId: 'g', label: 'relates to'),
+  const Relationship(id: 'r6', fromConceptId: 'g', toConceptId: 'a', label: 'relates to'),
+  const Relationship(id: 'r7', fromConceptId: 'h', toConceptId: 'c', label: 'relates to'),
+  const Relationship(id: 'r8', fromConceptId: 'i', toConceptId: 'c', label: 'depends on'),
+  const Relationship(id: 'r9', fromConceptId: 'j', toConceptId: 'h', label: 'depends on'),
+  const Relationship(id: 'r10', fromConceptId: 'k', toConceptId: 'g', label: 'relates to'),
 ];
 
 final _batch2QuizItems = [
