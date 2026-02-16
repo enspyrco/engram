@@ -15,6 +15,8 @@ class ForceDirectedLayout {
     this.height = 600.0,
     this.settledThreshold = 0.05,
     this.velocityDecay = 0.4,
+    this.theta = 0.9,
+    this.quadtreeThreshold = 30,
     int? seed,
     List<Offset?>? initialPositions,
     Set<int>? pinnedNodes,
@@ -52,6 +54,14 @@ class ForceDirectedLayout {
   /// Friction coefficient: each step, velocity is multiplied by
   /// `(1 - velocityDecay)`. Higher values = more friction = faster stopping.
   final double velocityDecay;
+
+  /// Barnes-Hut approximation ratio. When `cell.size / distance < theta`,
+  /// the cell is treated as a single body. Lower = more accurate, higher =
+  /// faster. Set to 0 for exact equivalence with O(n^2).
+  final double theta;
+
+  /// Node count above which Barnes-Hut is used instead of exact O(n^2).
+  final int quadtreeThreshold;
 
   late double _k;
   late double _temperature;
@@ -98,16 +108,12 @@ class ForceDirectedLayout {
     final alpha = _temperature / _initialTemperature;
     final forces = List<Offset>.filled(nodeCount, Offset.zero);
 
-    // Repulsive forces between all node pairs
-    for (var i = 0; i < nodeCount; i++) {
-      for (var j = i + 1; j < nodeCount; j++) {
-        final delta = _positions[i] - _positions[j];
-        final dist = math.max(delta.distance, 0.01);
-        final force = (_k * _k) / dist;
-        final normalized = delta / dist;
-        forces[i] = forces[i] + normalized * force;
-        forces[j] = forces[j] - normalized * force;
-      }
+    // Repulsive forces: exact O(n^2) for small graphs, Barnes-Hut O(n log n)
+    // for larger ones.
+    if (nodeCount > quadtreeThreshold) {
+      _computeRepulsionBarnesHut(forces);
+    } else {
+      _computeRepulsionExact(forces);
     }
 
     // Attractive forces along edges
@@ -162,6 +168,59 @@ class ForceDirectedLayout {
   void settle() {
     _temperature = 0.0;
     _velocities = List<Offset>.filled(nodeCount, Offset.zero);
+  }
+
+  /// O(n^2) exact pairwise repulsion.
+  void _computeRepulsionExact(List<Offset> forces) {
+    for (var i = 0; i < nodeCount; i++) {
+      for (var j = i + 1; j < nodeCount; j++) {
+        final delta = _positions[i] - _positions[j];
+        final dist = math.max(delta.distance, 0.01);
+        final force = (_k * _k) / dist;
+        final normalized = delta / dist;
+        forces[i] = forces[i] + normalized * force;
+        forces[j] = forces[j] - normalized * force;
+      }
+    }
+  }
+
+  /// O(n log n) Barnes-Hut repulsion via quadtree approximation.
+  void _computeRepulsionBarnesHut(List<Offset> forces) {
+    final tree = _Quadtree(_positions);
+    final kk = _k * _k;
+    for (var i = 0; i < nodeCount; i++) {
+      _traverseQuadtree(tree.root, i, _positions[i], kk, forces);
+    }
+  }
+
+  void _traverseQuadtree(
+    _QuadNode? node,
+    int nodeIndex,
+    Offset pos,
+    double kk,
+    List<Offset> forces,
+  ) {
+    if (node == null || node.count == 0) return;
+
+    // Leaf containing only this node — skip self-interaction
+    if (node.isLeaf && node.leafIndex == nodeIndex) return;
+
+    final delta = pos - Offset(node.centroidX, node.centroidY);
+    final dist = math.max(delta.distance, 0.01);
+
+    // Barnes-Hut criterion: if cell is small relative to distance, approximate
+    if (node.isLeaf || (node.size / dist < theta)) {
+      final force = kk * node.count / dist;
+      final normalized = delta / dist;
+      forces[nodeIndex] = forces[nodeIndex] + normalized * force;
+      return;
+    }
+
+    // Otherwise recurse into children
+    _traverseQuadtree(node.nw, nodeIndex, pos, kk, forces);
+    _traverseQuadtree(node.ne, nodeIndex, pos, kk, forces);
+    _traverseQuadtree(node.sw, nodeIndex, pos, kk, forces);
+    _traverseQuadtree(node.se, nodeIndex, pos, kk, forces);
   }
 
   /// Translate all unpinned nodes so the centroid sits at the canvas center.
@@ -230,4 +289,125 @@ class ForceDirectedLayout {
       );
     });
   }
+}
+
+// ── Barnes-Hut Quadtree ─────────────────────────────────────────────────
+
+/// A quadtree built from a set of 2D positions for Barnes-Hut approximation.
+class _Quadtree {
+  _Quadtree(List<Offset> positions) {
+    if (positions.isEmpty) {
+      root = null;
+      return;
+    }
+
+    // Compute square bounding box
+    var minX = positions[0].dx;
+    var maxX = minX;
+    var minY = positions[0].dy;
+    var maxY = minY;
+    for (final p in positions) {
+      if (p.dx < minX) minX = p.dx;
+      if (p.dx > maxX) maxX = p.dx;
+      if (p.dy < minY) minY = p.dy;
+      if (p.dy > maxY) maxY = p.dy;
+    }
+    // Make it square with a small padding to avoid zero-size
+    final size = math.max(maxX - minX, maxY - minY) + 1.0;
+    root = _QuadNode(minX - 0.5, minY - 0.5, size);
+
+    for (var i = 0; i < positions.length; i++) {
+      _insert(root!, positions[i].dx, positions[i].dy, i, 0);
+    }
+  }
+
+  _QuadNode? root;
+
+  static const _maxDepth = 20;
+
+  void _insert(_QuadNode node, double x, double y, int index, int depth) {
+    // Update centroid
+    final newCount = node.count + 1;
+    node.centroidX =
+        (node.centroidX * node.count + x) / newCount;
+    node.centroidY =
+        (node.centroidY * node.count + y) / newCount;
+    node.count = newCount;
+
+    if (node.isLeaf && node.leafIndex == -1) {
+      // Empty leaf — place here
+      node.leafIndex = index;
+      return;
+    }
+
+    if (depth >= _maxDepth) {
+      // Max depth — accumulate as aggregate
+      return;
+    }
+
+    // If this was a single-body leaf, push it down
+    if (node.isLeaf && node.leafIndex != -1) {
+      final oldIndex = node.leafIndex;
+      final oldX = node.centroidX * node.count - x;
+      // Recompute old position from centroid before new insert:
+      // centroid = (oldX + x) / 2, so oldX = 2*centroid - x
+      // But we already updated centroid above. Easier: store the old coords.
+      // Since we only had one point before, the old centroid WAS the old point.
+      final prevCentroidX =
+          (node.centroidX * newCount - x) / (newCount - 1);
+      final prevCentroidY =
+          (node.centroidY * newCount - y) / (newCount - 1);
+      node.leafIndex = -1;
+      _insertIntoChild(node, prevCentroidX, prevCentroidY, oldIndex, depth);
+    }
+
+    _insertIntoChild(node, x, y, index, depth);
+  }
+
+  void _insertIntoChild(
+      _QuadNode node, double x, double y, int index, int depth) {
+    final midX = node.x + node.size / 2;
+    final midY = node.y + node.size / 2;
+    final halfSize = node.size / 2;
+
+    if (x < midX) {
+      if (y < midY) {
+        node.nw ??= _QuadNode(node.x, node.y, halfSize);
+        _insert(node.nw!, x, y, index, depth + 1);
+      } else {
+        node.sw ??= _QuadNode(node.x, midY, halfSize);
+        _insert(node.sw!, x, y, index, depth + 1);
+      }
+    } else {
+      if (y < midY) {
+        node.ne ??= _QuadNode(midX, node.y, halfSize);
+        _insert(node.ne!, x, y, index, depth + 1);
+      } else {
+        node.se ??= _QuadNode(midX, midY, halfSize);
+        _insert(node.se!, x, y, index, depth + 1);
+      }
+    }
+  }
+}
+
+/// A node in the Barnes-Hut quadtree.
+class _QuadNode {
+  _QuadNode(this.x, this.y, this.size);
+
+  /// Top-left corner coordinates and cell size.
+  final double x, y, size;
+
+  /// Aggregate body count and centroid.
+  int count = 0;
+  double centroidX = 0.0;
+  double centroidY = 0.0;
+
+  /// For leaf nodes, the index of the single contained body (-1 if empty
+  /// or promoted to internal).
+  int leafIndex = -1;
+
+  /// Children (null until needed).
+  _QuadNode? nw, ne, sw, se;
+
+  bool get isLeaf => nw == null && ne == null && sw == null && se == null;
 }

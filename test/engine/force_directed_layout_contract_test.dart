@@ -13,6 +13,8 @@ ForceDirectedLayout makeLayout({
   int seed = 42,
   List<Offset?>? initialPositions,
   Set<int>? pinnedNodes,
+  double theta = 0.9,
+  int quadtreeThreshold = 30,
 }) {
   return ForceDirectedLayout(
     nodeCount: nodeCount,
@@ -22,6 +24,8 @@ ForceDirectedLayout makeLayout({
     seed: seed,
     initialPositions: initialPositions,
     pinnedNodes: pinnedNodes,
+    theta: theta,
+    quadtreeThreshold: quadtreeThreshold,
   );
 }
 
@@ -379,6 +383,117 @@ void main() {
           (Offset(cx, cy) - const Offset(400.0, 300.0)).distance;
       expect(distFromCenter, greaterThan(10.0),
           reason: 'centroid should NOT be perfectly centered with off-center pins');
+    });
+  });
+
+  group('Barnes-Hut quadtree', () {
+    test('BH produces similar results to exact for 50 nodes', () {
+      // Build a 50-node chain graph
+      const n = 50;
+      final edges = List.generate(n - 1, (i) => (i, i + 1));
+
+      final exact = makeLayout(
+        nodeCount: n,
+        edges: edges,
+        quadtreeThreshold: n + 1, // force exact
+      );
+      final bh = makeLayout(
+        nodeCount: n,
+        edges: edges,
+        quadtreeThreshold: 0, // force Barnes-Hut
+        theta: 0.5, // moderate accuracy
+      );
+
+      runToSettled(exact);
+      runToSettled(bh);
+
+      // Centroid should be similar (both centered)
+      var exactCx = 0.0, exactCy = 0.0;
+      var bhCx = 0.0, bhCy = 0.0;
+      for (var i = 0; i < n; i++) {
+        exactCx += exact.positions[i].dx;
+        exactCy += exact.positions[i].dy;
+        bhCx += bh.positions[i].dx;
+        bhCy += bh.positions[i].dy;
+      }
+      exactCx /= n;
+      exactCy /= n;
+      bhCx /= n;
+      bhCy /= n;
+
+      expect(bhCx, closeTo(exactCx, 100.0));
+      expect(bhCy, closeTo(exactCy, 100.0));
+    });
+
+    test('theta=0 produces exact-equivalent results', () {
+      const n = 40;
+      final edges = List.generate(n - 1, (i) => (i, i + 1));
+
+      final exact = makeLayout(
+        nodeCount: n,
+        edges: edges,
+        quadtreeThreshold: n + 1, // force exact
+      );
+      final bhExact = makeLayout(
+        nodeCount: n,
+        edges: edges,
+        quadtreeThreshold: 0, // force BH
+        theta: 0.0, // theta=0 means never approximate
+      );
+
+      runToSettled(exact);
+      runToSettled(bhExact);
+
+      // With theta=0, BH traverses every leaf — should match exact closely
+      for (var i = 0; i < n; i++) {
+        expect(bhExact.positions[i].dx,
+            closeTo(exact.positions[i].dx, 5.0),
+            reason: 'node $i x');
+        expect(bhExact.positions[i].dy,
+            closeTo(exact.positions[i].dy, 5.0),
+            reason: 'node $i y');
+      }
+    });
+
+    test('threshold gates BH vs exact selection', () {
+      // 10 nodes with threshold 5 → BH path
+      final bhLayout = makeLayout(
+        nodeCount: 10,
+        quadtreeThreshold: 5,
+      );
+      // 10 nodes with threshold 20 → exact path
+      final exactLayout = makeLayout(
+        nodeCount: 10,
+        quadtreeThreshold: 20,
+      );
+
+      // Both should settle and produce valid layouts
+      runToSettled(bhLayout);
+      runToSettled(exactLayout);
+      expect(bhLayout.isSettled, isTrue);
+      expect(exactLayout.isSettled, isTrue);
+    });
+
+    test('BH works with pinned nodes', () {
+      const n = 40;
+      final edges = List.generate(n - 1, (i) => (i, i + 1));
+
+      final layout = makeLayout(
+        nodeCount: n,
+        edges: edges,
+        quadtreeThreshold: 0, // force BH
+        initialPositions: [
+          const Offset(200, 150),
+          const Offset(500, 400),
+          ...List.filled(n - 2, null),
+        ],
+        pinnedNodes: {0, 1},
+      );
+      runToSettled(layout);
+
+      // Pinned positions preserved
+      expect(layout.positions[0], const Offset(200, 150));
+      expect(layout.positions[1], const Offset(500, 400));
     });
   });
 
