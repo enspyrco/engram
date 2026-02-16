@@ -16,7 +16,9 @@ class ForceDirectedLayout {
     this.settledThreshold = 0.1,
     int? seed,
     List<Offset?>? initialPositions,
+    Set<int>? pinnedNodes,
   }) {
+    _pinnedNodes = pinnedNodes ?? {};
     _k = math.sqrt((width * height) / math.max(nodeCount, 1));
     _positions = _initPositions(seed, initialPositions);
 
@@ -47,6 +49,7 @@ class ForceDirectedLayout {
   late double _k;
   late double _temperature;
   late List<Offset> _positions;
+  late Set<int> _pinnedNodes;
 
   /// Current node positions, indexed by node index.
   List<Offset> get positions => List.unmodifiable(_positions);
@@ -84,8 +87,9 @@ class ForceDirectedLayout {
       displacements[tgt] = displacements[tgt] - normalized * force;
     }
 
-    // Apply capped displacement
+    // Apply capped displacement (pinned nodes stay fixed)
     for (var i = 0; i < nodeCount; i++) {
+      if (_pinnedNodes.contains(i)) continue;
       final disp = displacements[i];
       final dist = math.max(disp.distance, 0.01);
       final capped = math.min(dist, _temperature);

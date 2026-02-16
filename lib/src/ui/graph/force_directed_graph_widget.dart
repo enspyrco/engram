@@ -242,18 +242,24 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
 
     // Seed the layout with old positions for existing nodes so the graph
     // settles incrementally instead of jumping on every update.
+    // Pinned nodes are immovable anchors — they exert forces but don't move.
     final totalCount = _nodes.length + teamNodes.length;
     final initialPositions = List<Offset?>.generate(totalCount, (i) {
       if (i < _nodes.length) return oldPositions[_nodes[i].id];
       return null; // team nodes get fresh positions — see #61
     });
     final hasOldPositions = initialPositions.any((p) => p != null);
+    final pinnedIndices = <int>{
+      for (var i = 0; i < _nodes.length; i++)
+        if (oldPositions.containsKey(_nodes[i].id)) i,
+    };
 
     _layout = ForceDirectedLayout(
       nodeCount: totalCount,
       edges: layoutEdges,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
+      pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
     );
 
     _syncPositions();
@@ -281,9 +287,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   }
 
   void _onTapUp(TapUpDetails details) {
-    final matrix = _transformController.value.clone()..invert();
-    final localPoint =
-        MatrixUtils.transformPoint(matrix, details.localPosition);
+    // GestureDetector is inside the InteractiveViewer, so localPosition
+    // is already in content coordinates — no transform inversion needed.
+    final localPoint = details.localPosition;
 
     // Check team nodes first (rendered on top)
     for (final teamNode in widget.teamNodes.reversed) {
@@ -357,7 +363,7 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     // 4. Particles (when catastrophe active)
     // 5. Relay pulses (when relays active)
 
-    Widget child = const SizedBox.shrink();
+    Widget child = SizedBox(width: graphSize.width, height: graphSize.height);
 
     // Layer 5: Relay pulses (topmost)
     if (widget.relayPulses.isNotEmpty) {
@@ -385,13 +391,13 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       );
     }
 
-    return GestureDetector(
-      onTapUp: _onTapUp,
-      child: InteractiveViewer(
-        transformationController: _transformController,
-        boundaryMargin: const EdgeInsets.all(200),
-        minScale: 0.3,
-        maxScale: 3.0,
+    return InteractiveViewer(
+      transformationController: _transformController,
+      boundaryMargin: const EdgeInsets.all(200),
+      minScale: 0.3,
+      maxScale: 3.0,
+      child: GestureDetector(
+        onTapUp: _onTapUp,
         child: CustomPaint(
           size: graphSize,
           painter: GraphPainter(

@@ -9,7 +9,7 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`); `SettingsRepository` — API keys via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
 - **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes
-- **Knowledge Graph**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay
+- **Knowledge Graph**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay. Incremental layout: existing nodes are pinned as immovable anchors, new nodes animate into position via force simulation
 - **Network Health**: `NetworkHealthScorer` computes composite health from mastery + freshness + critical paths; `ClusterDetector` finds concept communities via label propagation
 - **Services**: `OutlineClient` (HTTP), `ExtractionService` (Claude API via `anthropic_sdk_dart`)
 - **Social**: Wiki-URL-based friend discovery (SHA-256 hash of normalized URL), challenge (test friend on mastered cards) + nudge (remind about overdue) mechanics
@@ -19,7 +19,7 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Sign In**: Apple + Google branded sign-in buttons (auth gate before main app)
 - **Dashboard**: Stats cards, mastery bar, knowledge graph visualization
 - **Quiz**: Collection filter dropdown → session mode → Question → Reveal → Rate (0-5) → Session summary
-- **Ingest**: Collection picker → per-document extraction progress
+- **Ingest**: Collection picker → per-document extraction progress with live animated knowledge graph (new concepts settle into place via pinned force-directed layout)
 - **Social** (was Friends): 3-tab layout — Friends (friend list + challenges + nudges) | Team (guardians + goals + missions) | Glory (ranked leaderboard)
 - **Settings**: API key configuration (Outline URL/key, Anthropic key)
 
@@ -33,6 +33,14 @@ flutter run -d macos
 
 ## Testing
 Tests mirror lib/src/ structure. Use `mocktail` for mocking HTTP clients. Widget tests override providers with `_PreloadedGraphNotifier` to avoid async I/O. Custom `ForceDirectedGraphWidget` settles via temperature annealing, so `pumpAndSettle()` works in all tests. Always handle all analyzer hints — never use `// ignore` comments; fix the root cause instead.
+
+## Debugging Strategy
+When something visual doesn't work, **isolate → simplify → layer back in**:
+1. **Isolate** — Create a standalone screen (like `GraphLabScreen`) with hardcoded test data. Remove providers, auth, network, and other moving parts. Wire it as the default tab so it opens immediately.
+2. **Simplify** — Start with the absolute minimum: does a colored box render? Does a single node show? Build up from what works.
+3. **Layer back in** — Add complexity one piece at a time (edges, labels, animation, interaction) so you can pinpoint exactly which addition breaks things.
+
+This caught a `CustomPaint` sizing bug that was invisible in production (tight constraints from `Expanded` masked a `SizedBox.shrink()` child that collapsed to 0x0 under loose constraints).
 
 ## Synaptic Web Game Design
 
@@ -113,7 +121,7 @@ From the graph state management investigation and local-first architecture plann
 
 ## Implementation Roadmap
 
-Current state: All Synaptic Web phases complete. Tech debt sweep (#45, #46) merged. First test run in progress.
+Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animation refined. Actively ingesting and testing.
 
 ### Completed
 - ✓ Phase 4a — guardian system, team goals, glory board (#42)
@@ -124,14 +132,19 @@ Current state: All Synaptic Web phases complete. Tech debt sweep (#45, #46) merg
 - ✓ Extraction knowledge graph skill — `.claude/skills/extracting-knowledge-graph/` encodes the full extraction workflow (prompts, tool schemas, relationship taxonomy, scheduling constraints) as a portable agent skill with progressive disclosure
 - ✓ Outline wiki updated — `kb.xdeca.com` (was `wiki.xdeca.com`), `.env` updated with new URL and API key. `OutlineClient` still read-only; collection/document creation done via direct API calls
 - ✓ Agent Skills course ingested — 11-video Anthropic course on agent skills ingested into Outline collection "Agent Skills with Anthropic". Catalyst for extraction skill and FSRS migration insight
+- ✓ FSRS Phase 1 — `fsrs` package added, `difficulty` field on `QuizItem`, FSRS engine alongside SM-2 (#59)
+- ✓ Full-screen static knowledge graph with collection filtering (#58)
+- ✓ Incremental graph layout — preserve settled node positions across rebuilds, temperature scaling (#60)
+- ✓ Pinned animate-in — existing nodes are immovable anchors, new nodes settle via force simulation. Ingest screen uses animated `ForceDirectedGraphWidget`
+- ✓ Renamed "mind map" → "knowledge graph" across codebase and docs (#60)
 
 ### In progress
-- **First test run** — app launches on macOS, Firebase configured (project: `engram-26a3a`), debugging Apple Sign-In entitlements. macOS entitlements updated (`DebugProfile.entitlements` + `Release.entitlements`) with `com.apple.developer.applesignin` and `network.client`. Bundle ID changed to `co.enspyr.engram` — flutterfire may need reconfiguration if macOS pbxproj still shows old `com.engram.engram`. The `main.dart` Firebase init may need `Firebase.apps.isEmpty` guard if `GoogleService-Info.plist` triggers native auto-init.
+- **Knowledge graph animation polish** — pinned force-directed layout working, testing with live ingestion
 
 ### Next up
-1. **FSRS Phase 1** — Add `fsrs` package, `difficulty` field on `QuizItem`, update extraction tool schema + system prompt for difficulty prediction, write FSRS engine (see `docs/FSRS_MIGRATION.md`)
-2. **#47** — `clockProvider` for all provider-level DateTime.now() calls
-3. **#38** — Typed relationships (enhances knowledge graph and extraction quality; relationship types also inform FSRS difficulty prediction)
+1. **#47** — `clockProvider` for all provider-level DateTime.now() calls
+2. **#38** — Typed relationships (enhances knowledge graph and extraction quality; relationship types also inform FSRS difficulty prediction)
+3. **#61** — Preserve team node positions across graph rebuilds
 
 ### Longer-term
 4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
