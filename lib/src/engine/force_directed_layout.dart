@@ -132,6 +132,13 @@ class ForceDirectedLayout {
       // Accumulate force scaled by alpha, then apply friction
       _velocities[i] = (_velocities[i] + forces[i] * alpha) * decay;
 
+      // Cap velocity magnitude at temperature (prevents explosion from
+      // strong FR forces while preserving coasting once forces diminish)
+      final speed = _velocities[i].distance;
+      if (speed > _temperature) {
+        _velocities[i] *= _temperature / speed;
+      }
+
       // Apply velocity to position
       final newPos = _positions[i] + _velocities[i];
 
@@ -173,19 +180,15 @@ class ForceDirectedLayout {
   /// (first build / tests).
   List<Offset> _initPositions(int? seed, List<Offset?>? initial) {
     final rng = math.Random(seed);
-    final cx = width / 2;
-    final cy = height / 2;
-    // Start nodes in a tight cluster around the center. The force simulation
-    // will organically expand them to final positions. Cap radius to 1/4 of
-    // the smallest dimension so nodes stay within bounds for small viewports.
-    final radius = math.min(_k * 2, math.min(width, height) / 4);
+    const margin = 30.0;
     return List.generate(nodeCount, (i) {
       final provided =
           (initial != null && i < initial.length) ? initial[i] : null;
       if (provided != null) return provided;
-      final angle = rng.nextDouble() * 2 * math.pi;
-      final r = rng.nextDouble() * radius;
-      return Offset(cx + r * math.cos(angle), cy + r * math.sin(angle));
+      return Offset(
+        margin + rng.nextDouble() * (width - 2 * margin),
+        margin + rng.nextDouble() * (height - 2 * margin),
+      );
     });
   }
 }
