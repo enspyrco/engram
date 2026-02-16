@@ -193,21 +193,32 @@ class ForceDirectedLayout {
     _velocities = List<Offset>.filled(nodeCount, Offset.zero);
   }
 
-  /// Build initial positions, using [initial] where non-null and filling the
-  /// rest with random offsets. Note: pre-seeded entries skip RNG calls, so the
-  /// random sequence for later nodes diverges from a cold-start layout. This is
-  /// intentional — strict seed-determinism only matters for the null case
-  /// (first build / tests).
+  /// Build initial positions, using [initial] where non-null and placing new
+  /// nodes evenly on a circle centered in the canvas. This gives a clean
+  /// starting animation — nodes spread outward along edges rather than
+  /// scrambling from random positions.
   List<Offset> _initPositions(int? seed, List<Offset?>? initial) {
-    final rng = math.Random(seed);
-    const margin = 30.0;
+    final center = Offset(width / 2, height / 2);
+    final radius = 0.2 * math.min(width, height);
+
+    // Count new nodes so they can be distributed evenly on the circle.
+    var newCount = 0;
+    for (var i = 0; i < nodeCount; i++) {
+      final provided =
+          (initial != null && i < initial.length) ? initial[i] : null;
+      if (provided == null) newCount++;
+    }
+
+    var newIndex = 0;
     return List.generate(nodeCount, (i) {
       final provided =
           (initial != null && i < initial.length) ? initial[i] : null;
       if (provided != null) return provided;
+      final angle = (2 * math.pi * newIndex) / math.max(newCount, 1);
+      newIndex++;
       return Offset(
-        margin + rng.nextDouble() * (width - 2 * margin),
-        margin + rng.nextDouble() * (height - 2 * margin),
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
       );
     });
   }

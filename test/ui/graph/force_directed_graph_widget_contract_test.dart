@@ -5,9 +5,14 @@ import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
 import 'package:engram/src/ui/graph/force_directed_graph_widget.dart';
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 
 // ── Inline helpers ──────────────────────────────────────────────────────
+
+/// Compute 0.97^n (for recovering initial temperature after n cooling steps).
+double _pow097(int n) => math.pow(0.97, n).toDouble();
 
 KnowledgeGraph makeGraph({
   int conceptCount = 3,
@@ -190,9 +195,10 @@ void main() {
       ));
       await tester.pump();
 
-      // First tick reports temp after one cooling step: 100 * 0.97 = 97
-      // Recover initial temp: firstTemp / 0.97 ≈ 100 = min(800, 600) / 6
-      expect(firstTemp! / 0.97, closeTo(100.0, 0.1));
+      // After pre-settle (60 steps) + first tick, recover initial temp.
+      // Initial = min(800,600)/6 = 100, after 61 cooling steps: 100 * 0.97^61
+      final initialTemp = firstTemp! / _pow097(61);
+      expect(initialTemp, closeTo(100.0, 0.5));
       await tester.pumpAndSettle();
     });
 
@@ -211,8 +217,9 @@ void main() {
       ));
       await tester.pump();
 
-      // min(1200, 900) / 6 = 150, after one step: 150 * 0.97 = 145.5
-      expect(firstTemp! / 0.97, closeTo(150.0, 0.1));
+      // Initial = min(1200,900)/6 = 150, after 61 cooling steps
+      final initialTemp = firstTemp! / _pow097(61);
+      expect(initialTemp, closeTo(150.0, 0.5));
       await tester.pumpAndSettle();
     });
   });

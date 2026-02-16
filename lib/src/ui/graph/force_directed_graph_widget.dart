@@ -280,6 +280,12 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
     );
 
+    // Pre-settle: run ~1 second of simulation (60 steps at 60fps) before the
+    // first paint so nodes are already spread out when they appear.
+    for (var i = 0; i < 60; i++) {
+      if (!_layout.step()) break;
+    }
+
     _syncPositions();
   }
 
