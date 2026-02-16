@@ -6,7 +6,7 @@
 
 Engram has two souls:
 
-1. **Personal knowledge atlas** — SM-2 scheduling, spaced repetition, mind map, sub-concept mastery, cross-discipline semantic relationships. Inherently personal and offline-friendly.
+1. **Personal knowledge atlas** — SM-2 scheduling, spaced repetition, knowledge graph, sub-concept mastery, cross-discipline semantic relationships. Inherently personal and offline-friendly.
 2. **Cooperative team game** — guardians, glory board, challenges, nudges, repair missions. Inherently networked.
 
 The current architecture (Firestore-primary, local JSON fallback) optimizes for soul #2 at the expense of soul #1. Local-first inverts this: the device is the primary read/write path, the server handles sync, compute, and social coordination.
@@ -16,7 +16,7 @@ The current architecture (Firestore-primary, local JSON fallback) optimizes for 
 Local-first does **not** mean server-less. It means:
 
 - **Local storage is the primary read/write path** — no spinners, no network in the hot path
-- **The app works fully offline** for personal features (quiz review, sub-concept splitting, mind map)
+- **The app works fully offline** for personal features (quiz review, sub-concept splitting, knowledge graph)
 - **A server exists** for sync, backup, Claude API calls, and social feature coordination
 - **Changes sync via CRDTs** for conflict-free multi-device and multi-user merging (see `CRDT_SYNC_ARCHITECTURE.md`)
 

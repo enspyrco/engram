@@ -76,4 +76,4 @@ The current four types are intentionally simple. Issue #38 proposes expanding to
 - `contrast` — explicit differences between similar concepts
 - `composition` — part-of relationships
 
-These would enhance the mind map visualization and enable cross-discipline discovery.
+These would enhance the knowledge graph visualization and enable cross-discipline discovery.

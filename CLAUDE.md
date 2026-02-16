@@ -1,6 +1,6 @@
 # Engram
 
-Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via spaced repetition (migrating from SM-2 to FSRS — see `docs/FSRS_MIGRATION.md`). Visual mind map that "lights up" as you learn.
+Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via spaced repetition (migrating from SM-2 to FSRS — see `docs/FSRS_MIGRATION.md`). Visual knowledge graph that "lights up" as you learn.
 
 ## Architecture
 - **Models**: Immutable data classes with `fromJson`/`toJson` and `withXxx()` update methods
@@ -9,7 +9,7 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`); `SettingsRepository` — API keys via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
 - **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes
-- **Mind Map**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay
+- **Knowledge Graph**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay
 - **Network Health**: `NetworkHealthScorer` computes composite health from mastery + freshness + critical paths; `ClusterDetector` finds concept communities via label propagation
 - **Services**: `OutlineClient` (HTTP), `ExtractionService` (Claude API via `anthropic_sdk_dart`)
 - **Social**: Wiki-URL-based friend discovery (SHA-256 hash of normalized URL), challenge (test friend on mastered cards) + nudge (remind about overdue) mechanics
@@ -17,7 +17,7 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 
 ## Screens
 - **Sign In**: Apple + Google branded sign-in buttons (auth gate before main app)
-- **Dashboard**: Stats cards, mastery bar, mind map visualization
+- **Dashboard**: Stats cards, mastery bar, knowledge graph visualization
 - **Quiz**: Collection filter dropdown → session mode → Question → Reveal → Rate (0-5) → Session summary
 - **Ingest**: Collection picker → per-document extraction progress
 - **Social** (was Friends): 3-tab layout — Friends (friend list + challenges + nudges) | Team (guardians + goals + missions) | Glory (ranked leaderboard)
@@ -131,7 +131,7 @@ Current state: All Synaptic Web phases complete. Tech debt sweep (#45, #46) merg
 ### Next up
 1. **FSRS Phase 1** — Add `fsrs` package, `difficulty` field on `QuizItem`, update extraction tool schema + system prompt for difficulty prediction, write FSRS engine (see `docs/FSRS_MIGRATION.md`)
 2. **#47** — `clockProvider` for all provider-level DateTime.now() calls
-3. **#38** — Typed relationships (enhances mind map and extraction quality; relationship types also inform FSRS difficulty prediction)
+3. **#38** — Typed relationships (enhances knowledge graph and extraction quality; relationship types also inform FSRS difficulty prediction)
 
 ### Longer-term
 4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop

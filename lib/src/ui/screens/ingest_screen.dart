@@ -5,7 +5,7 @@ import '../../models/ingest_state.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../widgets/mind_map.dart';
+import '../graph/static_graph_widget.dart';
 
 class IngestScreen extends ConsumerWidget {
   const IngestScreen({super.key});
@@ -144,9 +144,9 @@ class _ProgressView extends ConsumerWidget {
 
     return Column(
       children: [
-        // Live mind map — grows as concepts are extracted
+        // Live graph — grows as concepts are extracted
         if (graph != null && graph.concepts.isNotEmpty)
-          Expanded(child: MindMap(graph: graph))
+          Expanded(child: StaticGraphWidget(graph: graph))
         else
           const Expanded(child: SizedBox.shrink()),
         // Progress info at the bottom

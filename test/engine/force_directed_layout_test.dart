@@ -105,6 +105,74 @@ void main() {
       expect(layout.isSettled, isTrue);
     });
 
+    test('initialPositions preserves pre-seeded positions', () {
+      const seeded0 = Offset(200, 150);
+      const seeded1 = Offset(400, 300);
+
+      final layout = ForceDirectedLayout(
+        nodeCount: 4,
+        edges: [(0, 1), (1, 2), (2, 3)],
+        seed: 42,
+        initialPositions: [seeded0, seeded1, null, null],
+      );
+
+      // Pre-seeded positions appear verbatim before any steps
+      expect(layout.positions[0], seeded0);
+      expect(layout.positions[1], seeded1);
+      // New nodes got random positions (not zero)
+      expect(layout.positions[2], isNot(Offset.zero));
+      expect(layout.positions[3], isNot(Offset.zero));
+    });
+
+    test('initialPositions reduces temperature', () {
+      final full = ForceDirectedLayout(
+        nodeCount: 4,
+        edges: [(0, 1), (1, 2), (2, 3)],
+        seed: 42,
+      );
+      final incremental = ForceDirectedLayout(
+        nodeCount: 4,
+        edges: [(0, 1), (1, 2), (2, 3)],
+        seed: 42,
+        initialPositions: [
+          const Offset(100, 100),
+          const Offset(200, 200),
+          const Offset(300, 300),
+          null, // one new node
+        ],
+      );
+
+      // Incremental layout should settle faster (lower starting temperature)
+      var fullSteps = 0;
+      while (full.step()) {
+        fullSteps++;
+      }
+      var incrSteps = 0;
+      while (incremental.step()) {
+        incrSteps++;
+      }
+      expect(incrSteps, lessThan(fullSteps));
+    });
+
+    test('initialPositions null behaves like no argument', () {
+      final withNull = ForceDirectedLayout(
+        nodeCount: 3,
+        edges: [(0, 1), (1, 2)],
+        seed: 42,
+        initialPositions: null,
+      );
+      final without = ForceDirectedLayout(
+        nodeCount: 3,
+        edges: [(0, 1), (1, 2)],
+        seed: 42,
+      );
+
+      // Same initial positions
+      for (var i = 0; i < 3; i++) {
+        expect(withNull.positions[i], without.positions[i]);
+      }
+    });
+
     test('nodes stay within bounds', () {
       final layout = ForceDirectedLayout(
         nodeCount: 5,

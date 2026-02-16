@@ -107,7 +107,7 @@ When a fracture hits a cluster, the accountability dashboard doesn't shame — i
 
 ### Guardian Badges
 
-On the mind map, a Guardian's connection to their cluster is rendered with a distinctive visual badge — a small shield icon or a glowing ring at the point where their avatar connects to the cluster. When the cluster is healthy (>80%), the badge pulses gently with green light. When it's endangered, the badge shifts to amber, then red.
+On the knowledge graph, a Guardian's connection to their cluster is rendered with a distinctive visual badge — a small shield icon or a glowing ring at the point where their avatar connects to the cluster. When the cluster is healthy (>80%), the badge pulses gently with green light. When it's endangered, the badge shifts to amber, then red.
 
 ---
 

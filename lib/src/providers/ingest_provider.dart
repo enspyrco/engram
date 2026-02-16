@@ -151,7 +151,7 @@ class IngestNotifier extends Notifier<IngestState> {
             '${result.relationships.length} relationships, '
             '${result.quizItems.length} quiz items');
 
-        // Merge into graph — staggered for live mind map animation
+        // Merge into graph — staggered for live knowledge graph animation
         state = state.copyWith(
           statusMessage: 'Adding ${result.concepts.length} concepts...',
         );

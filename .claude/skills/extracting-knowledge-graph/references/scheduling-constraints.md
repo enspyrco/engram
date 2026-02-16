@@ -125,6 +125,6 @@ The `GraphAnalyzer` uses "depends on" relationships to determine unlock order. *
 
 FSRS provides retrievability (R) as a continuous 0-1 value — much richer than SM-2's binary "has been reviewed" signal. This improves:
 
-- **Mind map mastery colors**: R maps directly to grey→red→amber→green gradient
+- **Knowledge graph mastery colors**: R maps directly to grey→red→amber→green gradient
 - **Network health scoring**: `NetworkHealthScorer` can use R instead of heuristic mastery
 - **Team mastery snapshots**: Per-concept R values are more granular than SM-2's repetition count
