@@ -7,6 +7,7 @@ import '../../engine/mastery_state.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/network_health.dart';
 import 'catastrophe_painter.dart';
+import 'edge_panel.dart';
 import 'graph_edge.dart';
 import 'graph_node.dart';
 import 'graph_painter.dart';
@@ -339,8 +340,31 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       }
     }
 
+    // Check edges (relationships)
+    const hitThreshold = 12.0;
+    for (final edge in _edges) {
+      if (_distanceToSegment(
+              localPoint, edge.source.position, edge.target.position) <
+          hitThreshold) {
+        setState(() => _selectedNodeId = null);
+        _showEdgeOverlay(edge, details.globalPosition);
+        return;
+      }
+    }
+
     _removeOverlay();
     setState(() => _selectedNodeId = null);
+  }
+
+  /// Perpendicular distance from [point] to the line segment [a]→[b].
+  static double _distanceToSegment(Offset point, Offset a, Offset b) {
+    final ab = b - a;
+    final lengthSq = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (lengthSq < 0.001) return (point - a).distance;
+    final t = ((point - a).dx * ab.dx + (point - a).dy * ab.dy) / lengthSq;
+    final clamped = t.clamp(0.0, 1.0);
+    final closest = Offset(a.dx + clamped * ab.dx, a.dy + clamped * ab.dy);
+    return (point - closest).distance;
   }
 
   void _showOverlay(GraphNode node, Offset globalPosition) {
@@ -371,6 +395,23 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
           elevation: 0,
           color: Colors.transparent,
           child: _TeamNodePanel(teamNode: teamNode),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _showEdgeOverlay(GraphEdge edge, Offset globalPosition) {
+    _removeOverlay();
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: globalPosition.dx + 12,
+        top: globalPosition.dy - 20,
+        child: Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: EdgePanel(edge: edge),
         ),
       ),
     );
@@ -627,3 +668,4 @@ class _TeamNodePanel extends StatelessWidget {
     );
   }
 }
+

@@ -4,6 +4,7 @@ import '../../engine/force_directed_layout.dart';
 import '../../engine/graph_analyzer.dart';
 import '../../engine/mastery_state.dart';
 import '../../models/knowledge_graph.dart';
+import 'edge_panel.dart';
 import 'graph_edge.dart';
 import 'graph_node.dart';
 import 'graph_painter.dart';
@@ -14,9 +15,20 @@ import 'graph_painter.dart';
 /// result with [GraphPainter]. Supports pan/zoom via [InteractiveViewer] and
 /// tap-to-inspect via overlay panels.
 class StaticGraphWidget extends StatefulWidget {
-  const StaticGraphWidget({required this.graph, super.key});
+  const StaticGraphWidget({
+    required this.graph,
+    this.layoutWidth,
+    this.layoutHeight,
+    super.key,
+  });
 
   final KnowledgeGraph graph;
+
+  /// Layout canvas width. When null, defaults to 800.
+  final double? layoutWidth;
+
+  /// Layout canvas height. When null, defaults to 600.
+  final double? layoutHeight;
 
   @override
   State<StaticGraphWidget> createState() => _StaticGraphWidgetState();
@@ -40,7 +52,9 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
   @override
   void didUpdateWidget(StaticGraphWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.graph != widget.graph) {
+    if (oldWidget.graph != widget.graph ||
+        oldWidget.layoutWidth != widget.layoutWidth ||
+        oldWidget.layoutHeight != widget.layoutHeight) {
       _removeOverlay();
       _computeLayout();
     }
@@ -116,6 +130,8 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
     final layout = ForceDirectedLayout(
       nodeCount: nodes.length,
       edges: layoutEdges,
+      width: widget.layoutWidth ?? 800.0,
+      height: widget.layoutHeight ?? 600.0,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
       pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
@@ -204,7 +220,7 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
         child: Material(
           elevation: 0,
           color: Colors.transparent,
-          child: _EdgePanel(edge: edge),
+          child: EdgePanel(edge: edge),
         ),
       ),
     );
@@ -335,80 +351,6 @@ class _NodePanel extends StatelessWidget {
                 ],
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tap card showing relationship details.
-class _EdgePanel extends StatelessWidget {
-  const _EdgePanel({required this.edge});
-
-  final GraphEdge edge;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = edge.isDependency
-        ? Colors.white.withValues(alpha: 0.9)
-        : Colors.white.withValues(alpha: 0.6);
-
-    return Card(
-      elevation: 4,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 250),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  edge.isDependency ? Icons.arrow_forward : Icons.link,
-                  size: 14,
-                  color: color,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    edge.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${edge.source.name}  \u2192  ${edge.target.name}',
-              style: const TextStyle(fontSize: 12),
-            ),
-            if (edge.relationship.description != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                edge.relationship.description!,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            if (edge.isDependency) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Dependency',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.amber.shade300,
-                ),
-              ),
-            ],
           ],
         ),
       ),

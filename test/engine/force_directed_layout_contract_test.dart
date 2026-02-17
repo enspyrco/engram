@@ -14,6 +14,7 @@ ForceDirectedLayout makeLayout({
   List<Offset?>? initialPositions,
   Set<int>? pinnedNodes,
   double edgeDamping = 0.3,
+  double gravity = 1.0,
 }) {
   return ForceDirectedLayout(
     nodeCount: nodeCount,
@@ -24,6 +25,7 @@ ForceDirectedLayout makeLayout({
     initialPositions: initialPositions,
     pinnedNodes: pinnedNodes,
     edgeDamping: edgeDamping,
+    gravity: gravity,
   );
 }
 
@@ -367,6 +369,97 @@ void main() {
         expect(pos.dy, greaterThanOrEqualTo(margin));
         expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
       }
+    });
+  });
+
+  group('Centering gravity', () {
+    test('gravity pulls nodes away from edges toward center', () {
+      // With gravity, nodes should end up closer to center on average
+      final withGravity = makeLayout(
+        nodeCount: 10,
+        edges: List.generate(9, (i) => (i, i + 1)),
+        gravity: 1.0,
+      );
+      runToSettled(withGravity);
+
+      final noGravity = makeLayout(
+        nodeCount: 10,
+        edges: List.generate(9, (i) => (i, i + 1)),
+        gravity: 0.0,
+      );
+      runToSettled(noGravity);
+
+      final center = const Offset(400, 300);
+      double avgDist(List<Offset> positions) {
+        var sum = 0.0;
+        for (final p in positions) {
+          sum += (p - center).distance;
+        }
+        return sum / positions.length;
+      }
+
+      // With gravity, average distance from center should be smaller
+      expect(avgDist(withGravity.positions),
+          lessThan(avgDist(noGravity.positions)));
+    });
+
+    test('gravity: 0.0 disables centering', () {
+      final layout = makeLayout(
+        nodeCount: 6,
+        edges: List.generate(5, (i) => (i, i + 1)),
+        gravity: 0.0,
+      );
+      runToSettled(layout);
+
+      // Should still converge and stay in bounds
+      expect(layout.isSettled, isTrue);
+      const margin = 30.0;
+      for (final pos in layout.positions) {
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
+      }
+    });
+
+    test('many disconnected nodes stay closer to center with gravity', () {
+      // 20 nodes in 4 disconnected clusters — mimics real-world scenario
+      // where repulsion pushes clusters to walls without gravity
+      final withGravity = makeLayout(
+        nodeCount: 20,
+        edges: [
+          (0, 1), (1, 2), (2, 3), (3, 4), // cluster A
+          (5, 6), (6, 7), (7, 8), (8, 9), // cluster B
+          (10, 11), (11, 12), (12, 13), (13, 14), // cluster C
+          (15, 16), (16, 17), (17, 18), (18, 19), // cluster D
+        ],
+        gravity: 1.0,
+      );
+      runToSettled(withGravity);
+
+      final noGravity = makeLayout(
+        nodeCount: 20,
+        edges: [
+          (0, 1), (1, 2), (2, 3), (3, 4),
+          (5, 6), (6, 7), (7, 8), (8, 9),
+          (10, 11), (11, 12), (12, 13), (13, 14),
+          (15, 16), (16, 17), (17, 18), (18, 19),
+        ],
+        gravity: 0.0,
+      );
+      runToSettled(noGravity);
+
+      final center = const Offset(400, 300);
+      double avgDist(List<Offset> positions) {
+        var sum = 0.0;
+        for (final p in positions) {
+          sum += (p - center).distance;
+        }
+        return sum / positions.length;
+      }
+
+      expect(avgDist(withGravity.positions),
+          lessThan(avgDist(noGravity.positions)));
     });
   });
 
