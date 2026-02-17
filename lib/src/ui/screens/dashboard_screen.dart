@@ -197,10 +197,17 @@ class _DashboardContent extends ConsumerWidget {
 
     return Stack(
       children: [
-        // Full-screen static graph
+        // Full-screen static graph — LayoutBuilder passes actual screen
+        // dimensions so the force-directed layout fills available space.
         Positioned.fill(
           child: graph != null
-              ? StaticGraphWidget(graph: graph)
+              ? LayoutBuilder(
+                  builder: (context, constraints) => StaticGraphWidget(
+                    graph: graph,
+                    layoutWidth: constraints.maxWidth,
+                    layoutHeight: constraints.maxHeight,
+                  ),
+                )
               : const Center(child: Text('No concepts to display')),
         ),
         // Collection filter chips at top

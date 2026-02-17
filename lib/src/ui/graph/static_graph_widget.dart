@@ -14,9 +14,20 @@ import 'graph_painter.dart';
 /// result with [GraphPainter]. Supports pan/zoom via [InteractiveViewer] and
 /// tap-to-inspect via overlay panels.
 class StaticGraphWidget extends StatefulWidget {
-  const StaticGraphWidget({required this.graph, super.key});
+  const StaticGraphWidget({
+    required this.graph,
+    this.layoutWidth,
+    this.layoutHeight,
+    super.key,
+  });
 
   final KnowledgeGraph graph;
+
+  /// Layout canvas width. When null, defaults to 800.
+  final double? layoutWidth;
+
+  /// Layout canvas height. When null, defaults to 600.
+  final double? layoutHeight;
 
   @override
   State<StaticGraphWidget> createState() => _StaticGraphWidgetState();
@@ -40,7 +51,9 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
   @override
   void didUpdateWidget(StaticGraphWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.graph != widget.graph) {
+    if (oldWidget.graph != widget.graph ||
+        oldWidget.layoutWidth != widget.layoutWidth ||
+        oldWidget.layoutHeight != widget.layoutHeight) {
       _removeOverlay();
       _computeLayout();
     }
@@ -116,6 +129,8 @@ class _StaticGraphWidgetState extends State<StaticGraphWidget> {
     final layout = ForceDirectedLayout(
       nodeCount: nodes.length,
       edges: layoutEdges,
+      width: widget.layoutWidth ?? 800.0,
+      height: widget.layoutHeight ?? 600.0,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
       pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,

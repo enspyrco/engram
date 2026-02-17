@@ -16,6 +16,7 @@ class ForceDirectedLayout {
     this.settledThreshold = 0.05,
     this.velocityDecay = 0.4,
     this.edgeDamping = 0.3,
+    this.gravity = 1.0,
     int? seed,
     List<Offset?>? initialPositions,
     Set<int>? pinnedNodes,
@@ -58,6 +59,11 @@ class ForceDirectedLayout {
   /// connected nodes along the edge direction, like springs submerged in
   /// water. Prevents oscillation without slowing global motion. `0.0` disables.
   final double edgeDamping;
+
+  /// Centering gravity strength. Pulls each node toward the canvas center
+  /// with force proportional to distance, preventing clusters from drifting
+  /// to the edges. `0.0` disables.
+  final double gravity;
 
   late double _k;
   late double _temperature;
@@ -139,6 +145,18 @@ class ForceDirectedLayout {
 
       forces[src] = forces[src] + normalized * force;
       forces[tgt] = forces[tgt] - normalized * force;
+    }
+
+    // Centering gravity: pull each node toward the canvas center with force
+    // proportional to distance. Prevents disconnected clusters from drifting
+    // to the edges under repulsive forces.
+    if (gravity > 0) {
+      final center = Offset(width / 2, height / 2);
+      for (var i = 0; i < nodeCount; i++) {
+        if (_pinnedNodes.contains(i)) continue;
+        final delta = center - _positions[i];
+        forces[i] = forces[i] + delta * gravity;
+      }
     }
 
     // Velocity integration (pinned nodes stay fixed)

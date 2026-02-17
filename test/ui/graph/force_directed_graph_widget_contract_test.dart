@@ -271,6 +271,7 @@ void main() {
     testWidgets('tapping a node shows overlay with concept name',
         (tester) async {
       // Compute where the node will settle — widget uses seed 42 internally
+      // and runs 60 pre-settle steps with gravity before first paint.
       final seedLayout = ForceDirectedLayout(
         nodeCount: 1,
         edges: [],
@@ -278,6 +279,9 @@ void main() {
         height: 100,
         seed: 42,
       );
+      for (var i = 0; i < 60; i++) {
+        if (!seedLayout.step()) break;
+      }
       final nodePos = seedLayout.positions[0];
 
       final graph = KnowledgeGraph(
@@ -326,6 +330,9 @@ void main() {
         height: 100,
         seed: 42,
       );
+      for (var i = 0; i < 60; i++) {
+        if (!seedLayout.step()) break;
+      }
       final nodePos = seedLayout.positions[0];
 
       final graph = KnowledgeGraph(

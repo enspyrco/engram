@@ -339,8 +339,31 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       }
     }
 
+    // Check edges (relationships)
+    const hitThreshold = 12.0;
+    for (final edge in _edges) {
+      if (_distanceToSegment(
+              localPoint, edge.source.position, edge.target.position) <
+          hitThreshold) {
+        setState(() => _selectedNodeId = null);
+        _showEdgeOverlay(edge, details.globalPosition);
+        return;
+      }
+    }
+
     _removeOverlay();
     setState(() => _selectedNodeId = null);
+  }
+
+  /// Perpendicular distance from [point] to the line segment [a]→[b].
+  static double _distanceToSegment(Offset point, Offset a, Offset b) {
+    final ab = b - a;
+    final lengthSq = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (lengthSq < 0.001) return (point - a).distance;
+    final t = ((point - a).dx * ab.dx + (point - a).dy * ab.dy) / lengthSq;
+    final clamped = t.clamp(0.0, 1.0);
+    final closest = Offset(a.dx + clamped * ab.dx, a.dy + clamped * ab.dy);
+    return (point - closest).distance;
   }
 
   void _showOverlay(GraphNode node, Offset globalPosition) {
@@ -371,6 +394,23 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
           elevation: 0,
           color: Colors.transparent,
           child: _TeamNodePanel(teamNode: teamNode),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _showEdgeOverlay(GraphEdge edge, Offset globalPosition) {
+    _removeOverlay();
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: globalPosition.dx + 12,
+        top: globalPosition.dy - 20,
+        child: Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: _EdgePanel(edge: edge),
         ),
       ),
     );
@@ -619,6 +659,80 @@ class _TeamNodePanel extends StatelessWidget {
               Text(
                 '${snapshot.summary.streak}-day streak',
                 style: const TextStyle(fontSize: 10, color: Colors.amber),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tap card showing relationship details.
+class _EdgePanel extends StatelessWidget {
+  const _EdgePanel({required this.edge});
+
+  final GraphEdge edge;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = edge.isDependency
+        ? Colors.white.withValues(alpha: 0.9)
+        : Colors.white.withValues(alpha: 0.6);
+
+    return Card(
+      elevation: 4,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 250),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  edge.isDependency ? Icons.arrow_forward : Icons.link,
+                  size: 14,
+                  color: color,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    edge.label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${edge.source.name}  \u2192  ${edge.target.name}',
+              style: const TextStyle(fontSize: 12),
+            ),
+            if (edge.relationship.description != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                edge.relationship.description!,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (edge.isDependency) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Dependency',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.amber.shade300,
+                ),
               ),
             ],
           ],
