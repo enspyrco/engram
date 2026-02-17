@@ -4,8 +4,7 @@ import 'graph_edge.dart';
 
 /// Tap card showing relationship details between two concepts.
 ///
-/// Used by both [StaticGraphWidget] and [ForceDirectedGraphWidget] when the
-/// user taps on an edge.
+/// Used by [ForceDirectedGraphWidget] when the user taps on an edge.
 class EdgePanel extends StatelessWidget {
   const EdgePanel({required this.edge, super.key});
 

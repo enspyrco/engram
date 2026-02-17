@@ -19,6 +19,7 @@ class GraphPainter extends CustomPainter {
     this.teamNodes = const [],
     this.avatarCache,
     this.selectedNodeId,
+    this.draggingNodeId,
     this.guardianMap = const {},
     this.currentUserUid,
   });
@@ -28,6 +29,9 @@ class GraphPainter extends CustomPainter {
   final List<TeamNode> teamNodes;
   final TeamAvatarCache? avatarCache;
   final String? selectedNodeId;
+
+  /// The ID of the node currently being dragged (scaled up with glow ring).
+  final String? draggingNodeId;
 
   /// Maps concept ID → guardian UID (if the concept's cluster has a guardian).
   final Map<String, String> guardianMap;
@@ -129,6 +133,20 @@ class GraphPainter extends CustomPainter {
   void _paintNode(Canvas canvas, GraphNode node) {
     final color = masteryColors[node.masteryState] ?? Colors.grey;
     final isSelected = node.id == selectedNodeId;
+    final isDragging = node.id == draggingNodeId;
+    final effectiveRadius = isDragging ? node.radius * 1.2 : node.radius;
+
+    // Drag glow ring
+    if (isDragging) {
+      canvas.drawCircle(
+        node.position,
+        effectiveRadius + 6,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.15)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.0,
+      );
+    }
 
     if (node.masteryState == MasteryState.mastered) {
       final glowPaint = Paint()
@@ -156,11 +174,11 @@ class GraphPainter extends CustomPainter {
 
     final opacity = 0.4 + 0.6 * node.freshness;
     final nodePaint = Paint()..color = color.withValues(alpha: opacity);
-    canvas.drawCircle(node.position, node.radius, nodePaint);
+    canvas.drawCircle(node.position, effectiveRadius, nodePaint);
 
     canvas.drawCircle(
       node.position,
-      node.radius,
+      effectiveRadius,
       Paint()
         ..color = Colors.white.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
@@ -352,6 +370,7 @@ class GraphPainter extends CustomPainter {
         oldDelegate.edges != edges ||
         oldDelegate.teamNodes != teamNodes ||
         oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.draggingNodeId != draggingNodeId ||
         oldDelegate.guardianMap != guardianMap ||
         oldDelegate.currentUserUid != currentUserUid;
   }
