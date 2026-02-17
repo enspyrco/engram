@@ -121,7 +121,7 @@ From the graph state management investigation and local-first architecture plann
 
 ## Implementation Roadmap
 
-Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animation refined. Actively ingesting and testing.
+Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animation complete (fluid physics, centering gravity, responsive layout). Actively ingesting and testing.
 
 ### Completed
 - ✓ Phase 4a — guardian system, team goals, glory board (#42)
@@ -137,9 +137,11 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Incremental graph layout — preserve settled node positions across rebuilds, temperature scaling (#60)
 - ✓ Pinned animate-in — existing nodes are immovable anchors, new nodes settle via force simulation. Ingest screen uses animated `ForceDirectedGraphWidget`
 - ✓ Renamed "mind map" → "knowledge graph" across codebase and docs (#60)
-
-### In progress
-- **Knowledge graph animation polish** — pinned force-directed layout working, testing with live ingestion
+- ✓ Velocity-based physics — d3-force style velocity integration with momentum and coasting (#63)
+- ✓ Viscous edge damping — springs-in-water feel, prevents oscillation without slowing global motion (#67)
+- ✓ Circle initial placement + pre-settle — nodes start on a circle, 60-step simulation before first paint (#68)
+- ✓ Ingest graph session filtering — live graph shows only concepts from current ingestion session (#69)
+- ✓ Centering gravity + dashboard layout sizing + relationship tap — gravity prevents edge drift, LayoutBuilder for responsive sizing, shared EdgePanel, edge tap on animated graph (#70)
 
 ### Next up
 1. **#47** — `clockProvider` for all provider-level DateTime.now() calls
