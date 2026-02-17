@@ -63,6 +63,10 @@ class ForceDirectedLayout {
   /// Centering gravity strength. Pulls each node toward the canvas center
   /// with force proportional to distance, preventing clusters from drifting
   /// to the edges. `0.0` disables.
+  ///
+  /// Default `1.0` was tuned to compete with FR repulsion (which scales as
+  /// k²/dist across n² pairs). Lower values let clusters drift to walls;
+  /// higher values collapse the graph toward center.
   final double gravity;
 
   late double _k;
