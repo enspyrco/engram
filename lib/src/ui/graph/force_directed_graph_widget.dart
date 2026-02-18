@@ -366,10 +366,12 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     final localPoint = details.localPosition;
     _removeOverlay();
 
-    // Find the node under the touch point
+    // Only concept nodes are draggable — team nodes represent other users
+    // and should not be repositioned by the current user.
     for (var i = _nodes.length - 1; i >= 0; i--) {
       if (_nodes[i].containsPoint(localPoint)) {
         _draggingNodeIndex = i;
+        _selectedNodeId = null;
         _layout.pinNode(i);
         // Restart the ticker if the simulation had settled
         if (!_ticker.isActive) _ticker.start();
@@ -397,6 +399,18 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     _draggingNodeIndex = null;
 
     // Ensure the ticker is running so neighbors can re-settle
+    if (!_ticker.isActive) _ticker.start();
+    setState(() {});
+  }
+
+  void _onLongPressCancel() {
+    final idx = _draggingNodeIndex;
+    if (idx == null) return;
+
+    _layout.unpinNode(idx);
+    _layout.reheat();
+    _draggingNodeIndex = null;
+
     if (!_ticker.isActive) _ticker.start();
     setState(() {});
   }
@@ -517,6 +531,7 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
         onLongPressStart: _onLongPressStart,
         onLongPressMoveUpdate: _onLongPressMoveUpdate,
         onLongPressEnd: _onLongPressEnd,
+        onLongPressCancel: _onLongPressCancel,
         child: CustomPaint(
           size: graphSize,
           painter: GraphPainter(

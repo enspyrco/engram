@@ -1,6 +1,8 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/sync_status.dart';
+import 'clock_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
@@ -10,7 +12,7 @@ final syncProvider =
 
 class SyncNotifier extends Notifier<SyncStatus> {
   @override
-  SyncStatus build() => const SyncStatus();
+  SyncStatus build() => SyncStatus.empty;
 
   /// Check all ingested collections for documents whose `updatedAt` timestamp
   /// has changed since we last ingested them, and discover new collections
@@ -77,15 +79,15 @@ class SyncNotifier extends Notifier<SyncStatus> {
         state = state.copyWith(
           phase: SyncPhase.updatesAvailable,
           staleDocumentCount: staleCount,
-          staleCollectionIds: staleCollections,
-          newCollections: newCollections,
+          staleCollectionIds: IList(staleCollections),
+          newCollections: IList(newCollections),
         );
       } else {
         state = state.copyWith(
           phase: SyncPhase.upToDate,
-          newCollections: const [],
+          newCollections: const IListConst([]),
         );
-        await repo.setLastSyncTimestamp(DateTime.now().toUtc().toIso8601String());
+        await repo.setLastSyncTimestamp(ref.read(clockProvider)().toIso8601String());
       }
     } catch (e) {
       state = state.copyWith(
@@ -151,9 +153,9 @@ class SyncNotifier extends Notifier<SyncStatus> {
       }
 
       final repo = ref.read(settingsRepositoryProvider);
-      await repo.setLastSyncTimestamp(DateTime.now().toUtc().toIso8601String());
+      await repo.setLastSyncTimestamp(ref.read(clockProvider)().toIso8601String());
 
-      state = const SyncStatus(phase: SyncPhase.upToDate);
+      state = SyncStatus.empty.copyWith(phase: SyncPhase.upToDate);
     } catch (e) {
       state = state.copyWith(
         phase: SyncPhase.error,
@@ -164,7 +166,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
 
   /// Dismiss the new collections banner without navigating.
   void dismissNewCollections() {
-    state = state.copyWith(newCollections: const []);
+    state = state.copyWith(newCollections: const IListConst([]));
     // If there are no stale docs either, go back to idle/upToDate
     if (state.staleDocumentCount == 0) {
       state = state.copyWith(phase: SyncPhase.upToDate);
@@ -172,6 +174,6 @@ class SyncNotifier extends Notifier<SyncStatus> {
   }
 
   void reset() {
-    state = const SyncStatus();
+    state = SyncStatus.empty;
   }
 }

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/catastrophe_event.dart';
 import '../models/network_health.dart';
 import '../models/repair_mission.dart';
+import 'clock_provider.dart';
 import 'cluster_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'network_health_provider.dart';
@@ -116,7 +117,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
     final transition = TierTransition(
       from: prevTier,
       to: nextTier,
-      timestamp: DateTime.now().toUtc(),
+      timestamp: ref.read(clockProvider)(),
     );
 
     if (transition.isWorsening) {
@@ -127,7 +128,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
   }
 
   void _onWorseningTransition(TierTransition transition, NetworkHealth health) {
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final nowStr = now.toIso8601String();
 
     // Find the worst cluster (for labeling the event)
@@ -178,7 +179,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
     final resolvedEvents = state.activeEvents.map((event) {
       if (!event.isResolved && event.tier.index > transition.to.index) {
         return event.withResolved(
-          DateTime.now().toUtc().toIso8601String(),
+          ref.read(clockProvider)().toIso8601String(),
         );
       }
       return event;
@@ -196,7 +197,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
 
   /// Record that a concept was reviewed during a repair mission.
   void recordMissionReview(String conceptId) {
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final updatedMissions = state.activeMissions.map((mission) {
       if (mission.isComplete) return mission;
       if (!mission.conceptIds.contains(conceptId)) return mission;

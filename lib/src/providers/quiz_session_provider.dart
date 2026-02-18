@@ -10,6 +10,7 @@ import '../models/quiz_session_state.dart';
 import '../models/session_mode.dart';
 import 'auth_provider.dart';
 import 'catastrophe_provider.dart';
+import 'clock_provider.dart';
 import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'relay_provider.dart';
@@ -34,7 +35,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final repo = ref.read(settingsRepositoryProvider);
     final absence = inspectAbsence(
       lastSessionDateIso: repo.getLastSessionDate(),
-      now: DateTime.now().toUtc(),
+      now: ref.read(clockProvider)(),
     );
 
     final isComeback = absence?.isComeback ?? false;
@@ -93,7 +94,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final effectiveInterval =
         inMission ? (result.interval * 1.5).round() : result.interval;
 
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final nextReview =
         now.add(Duration(days: effectiveInterval)).toIso8601String();
 
@@ -151,7 +152,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
       lastSessionDateIso: repo.getLastSessionDate(),
       previousStreak: repo.getCurrentStreak(),
       previousLongest: repo.getLongestStreak(),
-      now: DateTime.now().toUtc(),
+      now: ref.read(clockProvider)(),
     );
     await Future.wait([
       repo.setLastSessionDate(update.lastSessionDate),

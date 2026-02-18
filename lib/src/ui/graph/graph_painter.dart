@@ -13,6 +13,66 @@ import 'team_node.dart';
 /// Paints in layer order: team-to-concept edges, concept edges, concept nodes,
 /// concept labels, team avatar nodes.
 class GraphPainter extends CustomPainter {
+  // -- Concept node visual constants --
+
+  /// Scale factor applied to a node's radius while being dragged.
+  static const dragScaleFactor = 1.2;
+
+  /// Gap between the drag glow ring and the scaled node edge.
+  static const dragGlowGap = 6.0;
+
+  /// Stroke width of the drag glow ring.
+  static const dragGlowStrokeWidth = 3.0;
+
+  /// Gap between the selection ring and the node edge.
+  static const selectionRingGap = 4.0;
+
+  /// Radial glow extends to this multiple of node radius for mastered nodes.
+  static const masteryGlowRadiusMultiplier = 2.5;
+
+  /// Gap between the guardian gold ring and the node edge.
+  static const guardianRingGap = 2.0;
+
+  /// Minimum opacity for node fill (at freshness = 0).
+  static const minFreshnessOpacity = 0.4;
+
+  /// Gap between the node edge and the label text below it.
+  static const labelGap = 4.0;
+
+  /// Maximum width for concept label text layout.
+  static const labelMaxWidth = 100.0;
+
+  // -- Edge / arrowhead constants --
+
+  /// Offset from the target node center where the arrowhead tip is placed.
+  /// Keeps the arrowhead visually outside the target node circle.
+  static const arrowTipOffset = 18.0;
+
+  /// Size of the arrowhead triangle (base and height).
+  static const arrowSize = 8.0;
+
+  // -- Team node visual constants --
+
+  /// Gap between the team node health ring and the avatar edge.
+  static const teamHealthRingGap = 3.0;
+
+  /// Gap between the team node selection ring and the avatar edge.
+  static const teamSelectionRingGap = 7.0;
+
+  /// Gap between the team avatar edge and the name label below it.
+  static const teamLabelGap = 6.0;
+
+  /// Maximum width for team node name label text layout.
+  static const teamLabelMaxWidth = 80.0;
+
+  // -- Shield badge constants --
+
+  /// Position offset as a fraction of node radius for the shield badge.
+  static const shieldBadgeOffset = 0.7;
+
+  /// Half-size of the shield badge icon.
+  static const shieldBadgeSize = 5.0;
+
   GraphPainter({
     required this.nodes,
     required this.edges,
@@ -106,9 +166,8 @@ class GraphPainter extends CustomPainter {
     if (dist < 1.0) return;
 
     final unit = direction / dist;
-    final tip = to - unit * 18.0;
+    final tip = to - unit * arrowTipOffset;
     final perpendicular = Offset(-unit.dy, unit.dx);
-    const arrowSize = 8.0;
 
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
@@ -134,37 +193,39 @@ class GraphPainter extends CustomPainter {
     final color = masteryColors[node.masteryState] ?? Colors.grey;
     final isSelected = node.id == selectedNodeId;
     final isDragging = node.id == draggingNodeId;
-    final effectiveRadius = isDragging ? node.radius * 1.2 : node.radius;
+    final effectiveRadius =
+        isDragging ? node.radius * dragScaleFactor : node.radius;
 
     // Drag glow ring
     if (isDragging) {
       canvas.drawCircle(
         node.position,
-        effectiveRadius + 6,
+        effectiveRadius + dragGlowGap,
         Paint()
           ..color = Colors.white.withValues(alpha: 0.15)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0,
+          ..strokeWidth = dragGlowStrokeWidth,
       );
     }
 
     if (node.masteryState == MasteryState.mastered) {
+      final glowRadius = node.radius * masteryGlowRadiusMultiplier;
       final glowPaint = Paint()
         ..shader = ui.Gradient.radial(
           node.position,
-          node.radius * 2.5,
+          glowRadius,
           [
             color.withValues(alpha: 0.4),
             color.withValues(alpha: 0.0),
           ],
         );
-      canvas.drawCircle(node.position, node.radius * 2.5, glowPaint);
+      canvas.drawCircle(node.position, glowRadius, glowPaint);
     }
 
     if (isSelected) {
       canvas.drawCircle(
         node.position,
-        node.radius + 4,
+        node.radius + selectionRingGap,
         Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
@@ -172,7 +233,7 @@ class GraphPainter extends CustomPainter {
       );
     }
 
-    final opacity = 0.4 + 0.6 * node.freshness;
+    final opacity = minFreshnessOpacity + (1.0 - minFreshnessOpacity) * node.freshness;
     final nodePaint = Paint()..color = color.withValues(alpha: opacity);
     canvas.drawCircle(node.position, effectiveRadius, nodePaint);
 
@@ -192,7 +253,7 @@ class GraphPainter extends CustomPainter {
       if (guardianUid == currentUserUid) {
         canvas.drawCircle(
           node.position,
-          node.radius + 2,
+          node.radius + guardianRingGap,
           Paint()
             ..color = const Color(0xFFFFD700).withValues(alpha: 0.7)
             ..style = PaintingStyle.stroke
@@ -207,10 +268,10 @@ class GraphPainter extends CustomPainter {
 
   void _paintShieldBadge(Canvas canvas, Offset center, double radius) {
     final badgeCenter = Offset(
-      center.dx + radius * 0.7,
-      center.dy - radius * 0.7,
+      center.dx + radius * shieldBadgeOffset,
+      center.dy - radius * shieldBadgeOffset,
     );
-    const badgeSize = 5.0;
+    const badgeSize = shieldBadgeSize;
 
     final path = Path()
       ..moveTo(badgeCenter.dx, badgeCenter.dy - badgeSize)
@@ -245,11 +306,11 @@ class GraphPainter extends CustomPainter {
       ..addText(node.name);
 
     final paragraph = paragraphBuilder.build()
-      ..layout(const ui.ParagraphConstraints(width: 100));
+      ..layout(const ui.ParagraphConstraints(width: labelMaxWidth));
 
     final labelOffset = Offset(
       node.position.dx - paragraph.width / 2,
-      node.position.dy + node.radius + 4,
+      node.position.dy + node.radius + labelGap,
     );
     canvas.drawParagraph(paragraph, labelOffset);
   }
@@ -263,7 +324,7 @@ class GraphPainter extends CustomPainter {
     final healthColor = Color.lerp(Colors.red, Colors.green, teamNode.healthRatio)!;
     canvas.drawCircle(
       pos,
-      r + 3,
+      r + teamHealthRingGap,
       Paint()
         ..color = healthColor
         ..style = PaintingStyle.stroke
@@ -274,7 +335,7 @@ class GraphPainter extends CustomPainter {
     if (isSelected) {
       canvas.drawCircle(
         pos,
-        r + 7,
+        r + teamSelectionRingGap,
         Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
@@ -306,11 +367,11 @@ class GraphPainter extends CustomPainter {
       ..addText(teamNode.displayName);
 
     final paragraph = paragraphBuilder.build()
-      ..layout(const ui.ParagraphConstraints(width: 80));
+      ..layout(const ui.ParagraphConstraints(width: teamLabelMaxWidth));
 
     canvas.drawParagraph(
       paragraph,
-      Offset(pos.dx - paragraph.width / 2, pos.dy + r + 6),
+      Offset(pos.dx - paragraph.width / 2, pos.dy + r + teamLabelGap),
     );
   }
 

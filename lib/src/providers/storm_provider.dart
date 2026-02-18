@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/entropy_storm.dart';
 import 'auth_provider.dart';
+import 'clock_provider.dart';
 import 'guardian_provider.dart';
 import 'network_health_provider.dart';
 
@@ -90,7 +91,7 @@ class StormNotifier extends AsyncNotifier<EntropyStorm?> {
 
   /// Check if storm should transition between scheduled → active → survived/failed.
   void _checkStormTransitions(EntropyStorm storm) {
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final teamRepo = ref.read(teamRepositoryProvider);
     if (teamRepo == null) return;
 

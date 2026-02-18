@@ -129,7 +129,7 @@ class _SyncBanner extends ConsumerWidget {
 class _NewCollectionsBanner extends ConsumerWidget {
   const _NewCollectionsBanner({required this.collections});
 
-  final List<Map<String, String>> collections;
+  final Iterable<Map<String, String>> collections;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

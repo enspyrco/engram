@@ -217,17 +217,21 @@ class ForceDirectedLayout {
 
   /// Pin a node so it becomes an immovable anchor (drag start).
   void pinNode(int index) {
+    assert(index >= 0 && index < nodeCount, 'pinNode index out of range');
     _pinnedNodes.add(index);
     _velocities[index] = Offset.zero;
   }
 
   /// Unpin a node so it resumes physics simulation (drag end).
   void unpinNode(int index) {
+    assert(index >= 0 && index < nodeCount, 'unpinNode index out of range');
     _pinnedNodes.remove(index);
   }
 
   /// Move a node to [position] immediately and zero its velocity.
   void setNodePosition(int index, Offset position) {
+    assert(
+        index >= 0 && index < nodeCount, 'setNodePosition index out of range');
     _positions[index] = position;
     _velocities[index] = Offset.zero;
   }

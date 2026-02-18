@@ -139,6 +139,7 @@ Future<void> _writeProfile({
   String? email,
   String? photoUrl,
   bool onlyIfNew = false,
+  DateTime? now,
 }) async {
   final docRef = firestore.collection('users').doc(uid);
   final profileRef = docRef.collection('profile').doc('main');
@@ -148,14 +149,14 @@ Future<void> _writeProfile({
     if (existing.exists) return;
   }
 
-  final now = DateTime.now().toUtc().toIso8601String();
+  final timestamp = (now ?? DateTime.now().toUtc()).toIso8601String();
   final profile = UserProfile(
     uid: uid,
     displayName: displayName,
     email: email,
     photoUrl: photoUrl,
     currentStreak: 0,
-    createdAt: now,
+    createdAt: timestamp,
   );
   await profileRef.set(profile.toJson(), SetOptions(merge: true));
 }
