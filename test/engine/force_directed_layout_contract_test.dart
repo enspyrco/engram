@@ -389,7 +389,7 @@ void main() {
       );
       runToSettled(noGravity);
 
-      final center = const Offset(400, 300);
+      const center = Offset(400, 300);
       double avgDist(List<Offset> positions) {
         var sum = 0.0;
         for (final p in positions) {
@@ -449,7 +449,7 @@ void main() {
       );
       runToSettled(noGravity);
 
-      final center = const Offset(400, 300);
+      const center = Offset(400, 300);
       double avgDist(List<Offset> positions) {
         var sum = 0.0;
         for (final p in positions) {

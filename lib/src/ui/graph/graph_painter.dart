@@ -13,6 +13,32 @@ import 'team_node.dart';
 /// Paints in layer order: team-to-concept edges, concept edges, concept nodes,
 /// concept labels, team avatar nodes.
 class GraphPainter extends CustomPainter {
+  GraphPainter({
+    required this.nodes,
+    required this.edges,
+    this.teamNodes = const [],
+    this.avatarCache,
+    this.selectedNodeId,
+    this.draggingNodeId,
+    this.guardianMap = const {},
+    this.currentUserUid,
+  });
+
+  final List<GraphNode> nodes;
+  final List<GraphEdge> edges;
+  final List<TeamNode> teamNodes;
+  final TeamAvatarCache? avatarCache;
+  final String? selectedNodeId;
+
+  /// The ID of the node currently being dragged (scaled up with glow ring).
+  final String? draggingNodeId;
+
+  /// Maps concept ID → guardian UID (if the concept's cluster has a guardian).
+  final Map<String, String> guardianMap;
+
+  /// Current user's UID, for highlighting their guarded nodes.
+  final String? currentUserUid;
+
   // -- Concept node visual constants --
 
   /// Scale factor applied to a node's radius while being dragged.
@@ -72,32 +98,6 @@ class GraphPainter extends CustomPainter {
 
   /// Half-size of the shield badge icon.
   static const shieldBadgeSize = 5.0;
-
-  GraphPainter({
-    required this.nodes,
-    required this.edges,
-    this.teamNodes = const [],
-    this.avatarCache,
-    this.selectedNodeId,
-    this.draggingNodeId,
-    this.guardianMap = const {},
-    this.currentUserUid,
-  });
-
-  final List<GraphNode> nodes;
-  final List<GraphEdge> edges;
-  final List<TeamNode> teamNodes;
-  final TeamAvatarCache? avatarCache;
-  final String? selectedNodeId;
-
-  /// The ID of the node currently being dragged (scaled up with glow ring).
-  final String? draggingNodeId;
-
-  /// Maps concept ID → guardian UID (if the concept's cluster has a guardian).
-  final Map<String, String> guardianMap;
-
-  /// Current user's UID, for highlighting their guarded nodes.
-  final String? currentUserUid;
 
   @override
   void paint(Canvas canvas, Size size) {
