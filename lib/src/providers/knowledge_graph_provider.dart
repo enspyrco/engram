@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,7 @@ import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
+import '../models/topic.dart';
 import 'graph_store_provider.dart';
 
 final knowledgeGraphProvider =
@@ -16,7 +19,51 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   @override
   Future<KnowledgeGraph> build() async {
     final repo = ref.watch(graphRepositoryProvider);
-    return repo.load();
+    var graph = await repo.load();
+
+    // Auto-migrate: generate one topic per collection from existing
+    // document metadata if no topics exist yet.
+    if (graph.topics.isEmpty && graph.documentMetadata.isNotEmpty) {
+      graph = _autoMigrateTopics(graph);
+      // Persist the migration
+      unawaited(repo.save(graph).catchError((e) {
+        debugPrint('[KnowledgeGraph] Failed to persist topic migration: $e');
+      }));
+    }
+
+    return graph;
+  }
+
+  /// Generate one topic per collection from existing document metadata.
+  KnowledgeGraph _autoMigrateTopics(KnowledgeGraph graph) {
+    final collectionDocs = <String, List<String>>{};
+    final collectionNames = <String, String>{};
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    for (final meta in graph.documentMetadata) {
+      final cId = meta.collectionId;
+      final cName = meta.collectionName;
+      if (cId != null && cName != null) {
+        collectionDocs.putIfAbsent(cId, () => []).add(meta.documentId);
+        collectionNames.putIfAbsent(cId, () => cName);
+      }
+    }
+
+    var result = graph;
+    for (final entry in collectionDocs.entries) {
+      final topic = Topic(
+        id: 'auto-${entry.key}',
+        name: collectionNames[entry.key]!,
+        description: 'Auto-migrated from collection',
+        documentIds: entry.value.toSet(),
+        createdAt: now,
+      );
+      result = result.withTopic(topic);
+    }
+
+    debugPrint('[KnowledgeGraph] Auto-migrated ${collectionDocs.length} '
+        'collection(s) to topics');
+    return result;
   }
 
   Future<void> reload() async {
@@ -185,6 +232,20 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     final repo = ref.read(graphRepositoryProvider);
     repo.save(newGraph).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in backfillCollectionInfo: $e');
+    });
+  }
+
+  /// Upsert a topic into the graph and persist.
+  void upsertTopic(Topic topic) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final newGraph = current.withTopic(topic);
+    state = AsyncData(newGraph);
+
+    final repo = ref.read(graphRepositoryProvider);
+    repo.save(newGraph).catchError((e) {
+      debugPrint('[KnowledgeGraph] Storage error in upsertTopic: $e');
     });
   }
 

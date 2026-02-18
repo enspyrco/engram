@@ -10,11 +10,15 @@ const maxSessionSize = 20;
 ///
 /// When [collectionId] is set, only items from concepts belonging to
 /// documents in that collection are included. Unlocking remains graph-wide.
+///
+/// When [topicDocumentIds] is set, only items from concepts in those documents
+/// are included. This takes precedence over [collectionId].
 List<QuizItem> scheduleDueItems(
   KnowledgeGraph graph, {
   DateTime? now,
   int? maxItems = maxSessionSize,
   String? collectionId,
+  Set<String>? topicDocumentIds,
 }) {
   final currentTime = now ?? DateTime.now().toUtc();
   final analyzer = GraphAnalyzer(graph);
@@ -22,14 +26,19 @@ List<QuizItem> scheduleDueItems(
   final unlockedIds = analyzer.unlockedConcepts.toSet();
   final foundationalIds = analyzer.foundationalConcepts.toSet();
 
-  // Build collection-scoped concept filter when a collection is selected.
-  Set<String>? collectionConceptIds;
-  if (collectionId != null) {
+  // Build concept filter based on topic or collection scope.
+  Set<String>? scopedConceptIds;
+  if (topicDocumentIds != null) {
+    scopedConceptIds = graph.concepts
+        .where((c) => topicDocumentIds.contains(c.sourceDocumentId))
+        .map((c) => c.id)
+        .toSet();
+  } else if (collectionId != null) {
     final collectionDocIds = graph.documentMetadata
         .where((m) => m.collectionId == collectionId)
         .map((m) => m.documentId)
         .toSet();
-    collectionConceptIds = graph.concepts
+    scopedConceptIds = graph.concepts
         .where((c) => collectionDocIds.contains(c.sourceDocumentId))
         .map((c) => c.id)
         .toSet();
@@ -38,9 +47,9 @@ List<QuizItem> scheduleDueItems(
   final due = graph.quizItems.where((item) {
     // Only include items from unlocked concepts
     if (!unlockedIds.contains(item.conceptId)) return false;
-    // Filter by collection when set
-    if (collectionConceptIds != null &&
-        !collectionConceptIds.contains(item.conceptId)) {
+    // Filter by topic or collection when set
+    if (scopedConceptIds != null &&
+        !scopedConceptIds.contains(item.conceptId)) {
       return false;
     }
     final nextReview = DateTime.parse(item.nextReview);

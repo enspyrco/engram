@@ -28,6 +28,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
   void startSession({
     SessionMode mode = SessionMode.full,
     String? collectionId,
+    String? topicId,
   }) {
     final graph = ref.read(knowledgeGraphProvider).valueOrNull;
     if (graph == null) return;
@@ -44,10 +45,20 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final effectiveMode = isComeback ? SessionMode.quick : mode;
     final maxItems = effectiveMode.maxItems;
 
+    // Resolve topic to document IDs for filtering
+    Set<String>? topicDocumentIds;
+    if (topicId != null) {
+      final topic = graph.topics.where((t) => t.id == topicId).firstOrNull;
+      if (topic != null) {
+        topicDocumentIds = topic.documentIds.unlock;
+      }
+    }
+
     final dueItems = scheduleDueItems(
       graph,
       maxItems: maxItems,
       collectionId: collectionId,
+      topicDocumentIds: topicDocumentIds,
     );
     if (dueItems.isEmpty) {
       state = QuizSessionState(

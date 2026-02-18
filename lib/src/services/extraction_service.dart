@@ -13,9 +13,9 @@ You are a knowledge extraction engine. Given a wiki document, extract:
 3. **Quiz items**: Flashcard-style questions that test understanding of each concept.
 
 Guidelines:
-- Extract 3-10 concepts per document depending on density.
+- Extract all significant concepts. Let document density guide quantity — a brief glossary may yield 2-3, a dense technical article may yield 15-20. Favor precision over volume.
 - Concept IDs must be canonical lowercase kebab-case based on the concept name (e.g. "docker-compose", "dependency-injection"). If existing concept IDs are provided, reuse them for the same concepts instead of creating new IDs.
-- Create relationships between concepts from THIS document. Use the concept IDs you generate.
+- Create relationships between concepts. You may reference existing concept IDs to build cross-document connections.
 - For prerequisite relationships (concept A requires understanding concept B first), use the label "depends on". Reserve other labels like "is a type of", "enables", "related to" for non-prerequisite relationships.
 - Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
 - Use clear, concise language. Answers should be 1-3 sentences.
@@ -273,7 +273,11 @@ class ExtractionService {
       );
     }
 
-    return _parseResult(toolInput, documentTitle);
+    return _parseResult(
+      toolInput,
+      documentTitle,
+      existingConceptIds: existingConceptIds.toSet(),
+    );
   }
 
   /// Ask Claude to suggest sub-concepts for splitting a parent concept.
@@ -374,19 +378,20 @@ class ExtractionService {
 
   ExtractionResult _parseResult(
     Map<String, dynamic> input,
-    String documentTitle,
-  ) {
+    String documentTitle, {
+    Set<String> existingConceptIds = const {},
+  }) {
     final conceptsList = input['concepts'] as List<dynamic>? ?? [];
     final relationshipsList = input['relationships'] as List<dynamic>? ?? [];
     final quizItemsList = input['quizItems'] as List<dynamic>? ?? [];
 
-    // Build a set of valid concept IDs for validation
-    final conceptIds = <String>{};
+    // Build a set of valid concept IDs: newly extracted + existing graph
+    final extractedIds = <String>{};
 
     final concepts = conceptsList.map((c) {
       final map = c as Map<String, dynamic>;
       final id = map['id'] as String;
-      conceptIds.add(id);
+      extractedIds.add(id);
       return Concept(
         id: id,
         name: map['name'] as String,
@@ -399,6 +404,8 @@ class ExtractionService {
       );
     }).toList();
 
+    final validIds = {...extractedIds, ...existingConceptIds};
+
     final relationships = <Relationship>[];
     for (final r in relationshipsList) {
       final map = r as Map<String, dynamic>;
@@ -406,7 +413,7 @@ class ExtractionService {
       final toId = map['toConceptId'] as String;
 
       // Skip relationships with orphaned concept references
-      if (!conceptIds.contains(fromId) || !conceptIds.contains(toId)) {
+      if (!validIds.contains(fromId) || !validIds.contains(toId)) {
         continue;
       }
 
@@ -424,7 +431,7 @@ class ExtractionService {
       final map = q as Map<String, dynamic>;
       final conceptId = map['conceptId'] as String;
 
-      if (!conceptIds.contains(conceptId)) {
+      if (!validIds.contains(conceptId)) {
         continue;
       }
 

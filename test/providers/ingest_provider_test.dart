@@ -82,7 +82,7 @@ void main() {
       await container.read(ingestProvider.notifier).loadCollections();
 
       final state = container.read(ingestProvider);
-      expect(state.phase, IngestPhase.ready);
+      expect(state.phase, IngestPhase.topicSelection);
       expect(state.collections, hasLength(2));
     });
 

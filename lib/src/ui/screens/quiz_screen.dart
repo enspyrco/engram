@@ -8,6 +8,7 @@ import '../../providers/collection_filter_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/quiz_session_provider.dart';
 import '../../providers/split_concept_provider.dart';
+import '../../providers/topic_provider.dart';
 import '../widgets/quality_rating_bar.dart';
 import '../widgets/quiz_card.dart';
 import '../widgets/session_summary.dart';
@@ -31,10 +32,15 @@ class QuizScreen extends ConsumerWidget {
             hasItems: hasItems,
             isComeback: session.isComeback,
             daysSinceLastSession: session.daysSinceLastSession,
-            onStart: (mode, collectionId) =>
+            onStart: ({
+              required SessionMode mode,
+              String? collectionId,
+              String? topicId,
+            }) =>
                 ref.read(quizSessionProvider.notifier).startSession(
                       mode: mode,
                       collectionId: collectionId,
+                      topicId: topicId,
                     ),
           ),
         QuizPhase.question => _QuestionView(session: session),
@@ -59,7 +65,11 @@ class _IdleView extends ConsumerWidget {
   final bool hasItems;
   final bool isComeback;
   final int? daysSinceLastSession;
-  final void Function(SessionMode mode, String? collectionId) onStart;
+  final void Function({
+    required SessionMode mode,
+    String? collectionId,
+    String? topicId,
+  }) onStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,16 +91,41 @@ class _IdleView extends ConsumerWidget {
       );
     }
 
+    final topics = ref.watch(availableTopicsProvider);
+    final selectedTopicId = ref.watch(selectedTopicIdProvider);
     final collections = ref.watch(availableCollectionsProvider);
-    final selectedId = ref.watch(selectedCollectionIdProvider);
+    final selectedCollectionId = ref.watch(selectedCollectionIdProvider);
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (collections.isNotEmpty) ...[
+          // Topic filter (preferred)
+          if (topics.isNotEmpty) ...[
             DropdownButton<String?>(
-              value: selectedId,
+              value: selectedTopicId,
+              onChanged: (value) {
+                ref.read(selectedTopicIdProvider.notifier).state = value;
+                // Clear collection when topic is selected
+                if (value != null) {
+                  ref.read(selectedCollectionIdProvider.notifier).state = null;
+                }
+              },
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All topics'),
+                ),
+                for (final t in topics)
+                  DropdownMenuItem(value: t.id, child: Text(t.name)),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          // Collection filter (fallback)
+          if (collections.isNotEmpty && selectedTopicId == null) ...[
+            DropdownButton<String?>(
+              value: selectedCollectionId,
               onChanged: (value) =>
                   ref.read(selectedCollectionIdProvider.notifier).state = value,
               items: [
@@ -119,25 +154,41 @@ class _IdleView extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () => onStart(SessionMode.quick, selectedId),
+              onPressed: () => onStart(
+                mode: SessionMode.quick,
+                collectionId: selectedCollectionId,
+                topicId: selectedTopicId,
+              ),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Refresher'),
             ),
           ] else ...[
             FilledButton.icon(
-              onPressed: () => onStart(SessionMode.full, selectedId),
+              onPressed: () => onStart(
+                mode: SessionMode.full,
+                collectionId: selectedCollectionId,
+                topicId: selectedTopicId,
+              ),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Full Session'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(SessionMode.quick, selectedId),
+              onPressed: () => onStart(
+                mode: SessionMode.quick,
+                collectionId: selectedCollectionId,
+                topicId: selectedTopicId,
+              ),
               icon: const Icon(Icons.bolt),
               label: const Text('Quick (5 min)'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(SessionMode.allDue, selectedId),
+              onPressed: () => onStart(
+                mode: SessionMode.allDue,
+                collectionId: selectedCollectionId,
+                topicId: selectedTopicId,
+              ),
               icon: const Icon(Icons.all_inclusive),
               label: const Text('All Due'),
             ),

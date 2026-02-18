@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/ingest_state.dart';
 import '../../models/knowledge_graph.dart';
+import '../../models/topic.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/topic_provider.dart';
 import '../graph/force_directed_graph_widget.dart';
 
 class IngestScreen extends ConsumerWidget {
@@ -21,11 +23,15 @@ class IngestScreen extends ConsumerWidget {
       body: !config.isFullyConfigured
           ? _notConfigured(context)
           : switch (ingest.phase) {
-              IngestPhase.idle => _IdleView(onLoad: () =>
-                  ref.read(ingestProvider.notifier).loadCollections()),
+              IngestPhase.idle => _IdleView(
+                  onLoad: () =>
+                      ref.read(ingestProvider.notifier).loadCollections()),
               IngestPhase.loadingCollections =>
                 const Center(child: CircularProgressIndicator()),
               IngestPhase.ready => _CollectionPicker(state: ingest),
+              IngestPhase.topicSelection => _TopicSelectionView(state: ingest),
+              IngestPhase.configuringTopic =>
+                _TopicConfigurator(state: ingest),
               IngestPhase.ingesting => _ProgressView(state: ingest),
               IngestPhase.done => _DoneView(state: ingest),
               IngestPhase.error => _ErrorView(state: ingest),
@@ -41,7 +47,8 @@ class IngestScreen extends ConsumerWidget {
         children: [
           Icon(Icons.key_off, size: 64, color: theme.colorScheme.error),
           const SizedBox(height: 16),
-          Text('API keys not configured', style: theme.textTheme.headlineSmall),
+          Text('API keys not configured',
+              style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text('Go to Settings to enter your API keys.'),
         ],
@@ -66,6 +73,340 @@ class _IdleView extends StatelessWidget {
   }
 }
 
+class _TopicSelectionView extends ConsumerWidget {
+  const _TopicSelectionView({required this.state});
+  final IngestState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final topics = ref.watch(availableTopicsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('Topics', style: theme.textTheme.titleMedium),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  ref.read(ingestProvider.notifier).startNewTopic();
+                  ref.read(ingestProvider.notifier)
+                      .loadDocumentsForAllCollections();
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New Topic'),
+              ),
+            ],
+          ),
+        ),
+        if (topics.isEmpty)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.topic_outlined,
+                      size: 64, color: theme.colorScheme.primary),
+                  const SizedBox(height: 16),
+                  Text('No topics yet',
+                      style: theme.textTheme.headlineSmall),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'Create a topic to group documents for ingestion.'),
+                ],
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              itemCount: topics.length,
+              itemBuilder: (context, index) {
+                final topic = topics[index];
+                return _TopicTile(topic: topic);
+              },
+            ),
+          ),
+        // Legacy collection picker button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: OutlinedButton.icon(
+            onPressed: () {
+              // Switch to legacy collection picker
+              ref.read(ingestProvider.notifier).selectCollection(
+                    state.collections.first,
+                  );
+            },
+            icon: const Icon(Icons.folder_outlined),
+            label: const Text('Single Collection (Legacy)'),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _TopicTile extends ConsumerWidget {
+  const _TopicTile({required this.topic});
+  final Topic topic;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return ListTile(
+      leading: Icon(Icons.topic, color: theme.colorScheme.primary),
+      title: Text(topic.name),
+      subtitle: Text(
+        '${topic.documentIds.length} documents'
+        '${topic.lastIngestedAt != null ? ' — last ingested ${_formatDate(topic.lastIngestedAt!)}' : ''}',
+      ),
+      trailing: FilledButton(
+        onPressed: () {
+          ref.read(ingestProvider.notifier).selectTopic(topic);
+          ref.read(ingestProvider.notifier)
+              .loadDocumentsForAllCollections();
+        },
+        child: const Text('Ingest'),
+      ),
+    );
+  }
+
+  String _formatDate(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    return '${dt.month}/${dt.day}/${dt.year}';
+  }
+}
+
+class _TopicConfigurator extends ConsumerStatefulWidget {
+  const _TopicConfigurator({required this.state});
+  final IngestState state;
+
+  @override
+  ConsumerState<_TopicConfigurator> createState() =>
+      _TopicConfiguratorState();
+}
+
+class _TopicConfiguratorState extends ConsumerState<_TopicConfigurator> {
+  late TextEditingController _nameController;
+  late TextEditingController _descController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController =
+        TextEditingController(text: widget.state.topicName);
+    _descController =
+        TextEditingController(text: widget.state.topicDescription);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ingest = ref.watch(ingestProvider);
+    final isExisting = ingest.selectedTopic != null;
+    final docs = ingest.availableDocuments;
+    final selectedIds = ingest.selectedDocumentIds;
+
+    // Group documents by collection
+    final collectionGroups = <String, List<Map<String, dynamic>>>{};
+    for (final doc in docs) {
+      final collectionName = doc['collectionName'] as String? ?? 'Unknown';
+      collectionGroups.putIfAbsent(collectionName, () => []).add(doc);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Topic name and description
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Topic name',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (v) =>
+                ref.read(ingestProvider.notifier).updateTopicName(v),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(
+            controller: _descController,
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (v) =>
+                ref.read(ingestProvider.notifier).updateTopicDescription(v),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            '${selectedIds.length} documents selected',
+            style: theme.textTheme.bodySmall,
+          ),
+        ),
+        const Divider(),
+        // Document picker grouped by collection
+        Expanded(
+          child: docs.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  children: [
+                    for (final entry in collectionGroups.entries) ...[
+                      _CollectionSection(
+                        collectionName: entry.key,
+                        collectionId:
+                            entry.value.first['collectionId'] as String,
+                        documents: entry.value,
+                        selectedIds: selectedIds,
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+        // Action buttons
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              OutlinedButton(
+                onPressed: () => ref.read(ingestProvider.notifier).reset(),
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: selectedIds.isNotEmpty &&
+                          _nameController.text.isNotEmpty
+                      ? () => ref
+                          .read(ingestProvider.notifier)
+                          .startTopicIngestion()
+                      : null,
+                  child: Text(isExisting
+                      ? 'Update & Ingest'
+                      : 'Create & Ingest'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: selectedIds.isNotEmpty &&
+                          _nameController.text.isNotEmpty
+                      ? () => ref
+                          .read(ingestProvider.notifier)
+                          .startTopicIngestion(forceReExtract: true)
+                      : null,
+                  child: const Text('Re-extract All'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CollectionSection extends ConsumerWidget {
+  const _CollectionSection({
+    required this.collectionName,
+    required this.collectionId,
+    required this.documents,
+    required this.selectedIds,
+  });
+
+  final String collectionName;
+  final String collectionId;
+  final List<Map<String, dynamic>> documents;
+  final dynamic selectedIds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final allSelected =
+        documents.every((d) => selectedIds.contains(d['id']));
+
+    return ExpansionTile(
+      title: Text(collectionName, style: theme.textTheme.titleSmall),
+      subtitle: Text('${documents.length} documents'),
+      trailing: TextButton(
+        onPressed: () {
+          if (allSelected) {
+            ref.read(ingestProvider.notifier)
+                .deselectAllInCollection(collectionId);
+          } else {
+            ref.read(ingestProvider.notifier)
+                .selectAllInCollection(collectionId);
+          }
+        },
+        child: Text(allSelected ? 'Deselect All' : 'Select All'),
+      ),
+      initiallyExpanded: true,
+      children: [
+        for (final doc in documents)
+          CheckboxListTile(
+            value: selectedIds.contains(doc['id']),
+            onChanged: (_) => ref
+                .read(ingestProvider.notifier)
+                .toggleDocument(doc['id'] as String),
+            title: Text(doc['title'] as String),
+            subtitle: _StatusChip(status: doc['status'] as String),
+            dense: true,
+          ),
+      ],
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color color, String label) = switch (status) {
+      'new' => (Colors.blue, 'New'),
+      'changed' => (Colors.amber, 'Changed'),
+      'unchanged' => (Colors.grey, 'Unchanged'),
+      _ => (Colors.grey, status),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// Legacy collection picker — kept for backward compatibility.
 class _CollectionPicker extends ConsumerWidget {
   const _CollectionPicker({required this.state});
   final IngestState state;
@@ -79,7 +420,8 @@ class _CollectionPicker extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('Select a collection', style: theme.textTheme.titleMedium),
+          child: Text('Select a collection',
+              style: theme.textTheme.titleMedium),
         ),
         Expanded(
           child: ListView.builder(
@@ -87,13 +429,15 @@ class _CollectionPicker extends ConsumerWidget {
             itemBuilder: (context, index) {
               final collection = state.collections[index];
               final name = collection['name'] as String? ?? 'Untitled';
-              final isSelected = state.selectedCollection?['id'] ==
-                  collection['id'];
+              final isSelected =
+                  state.selectedCollection?['id'] == collection['id'];
 
               return ListTile(
                 title: Text(name),
                 leading: Icon(
-                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
                   color: isSelected ? theme.colorScheme.primary : null,
                 ),
                 onTap: () => ref
@@ -110,7 +454,8 @@ class _CollectionPicker extends ConsumerWidget {
               Expanded(
                 child: FilledButton(
                   onPressed: state.selectedCollection != null
-                      ? () => ref.read(ingestProvider.notifier).startIngestion()
+                      ? () =>
+                          ref.read(ingestProvider.notifier).startIngestion()
                       : null,
                   child: const Text('Start Ingestion'),
                 ),
@@ -160,6 +505,15 @@ class _ProgressView extends ConsumerWidget {
 
     return Column(
       children: [
+        // Topic name if available
+        if (state.selectedTopic != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              state.selectedTopic!.name,
+              style: theme.textTheme.titleSmall,
+            ),
+          ),
         // Live graph — grows as concepts are extracted
         if (graph != null && graph.concepts.isNotEmpty)
           Expanded(child: ForceDirectedGraphWidget(graph: graph))
@@ -221,9 +575,18 @@ class _DoneView extends ConsumerWidget {
         children: [
           Icon(Icons.check_circle, size: 64, color: Colors.green.shade600),
           const SizedBox(height: 16),
-          Text('Ingestion Complete', style: theme.textTheme.headlineSmall),
+          Text('Ingestion Complete',
+              style: theme.textTheme.headlineSmall),
+          if (state.selectedTopic != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              state.selectedTopic!.name,
+              style: theme.textTheme.titleMedium,
+            ),
+          ],
           const SizedBox(height: 8),
-          Text('${state.extractedCount} extracted, ${state.skippedCount} skipped'),
+          Text(
+              '${state.extractedCount} extracted, ${state.skippedCount} skipped'),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => ref.read(ingestProvider.notifier).reset(),
@@ -249,7 +612,8 @@ class _ErrorView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            Icon(Icons.error_outline,
+                size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(state.errorMessage, textAlign: TextAlign.center),
             const SizedBox(height: 24),

@@ -13,7 +13,7 @@ This is the Claude API tool definition used for structured extraction. Claude is
   "properties": {
     "concepts": {
       "type": "array",
-      "description": "Key concepts found in the document (3-10 depending on density)",
+      "description": "Key concepts found in the document. Extract all significant concepts — let density guide quantity.",
       "items": {
         "type": "object",
         "required": ["id", "name", "description"],
@@ -40,7 +40,7 @@ This is the Claude API tool definition used for structured extraction. Claude is
     },
     "relationships": {
       "type": "array",
-      "description": "Relationships between concepts from THIS document only",
+      "description": "Relationships between concepts, including cross-document connections via existing concept IDs",
       "items": {
         "type": "object",
         "required": ["id", "fromConceptId", "toConceptId", "label"],
@@ -51,7 +51,7 @@ This is the Claude API tool definition used for structured extraction. Claude is
           },
           "fromConceptId": {
             "type": "string",
-            "description": "Source concept ID (must match a concept in this extraction)"
+            "description": "Source concept ID (must match a concept in this extraction or existing graph)"
           },
           "toConceptId": {
             "type": "string",
@@ -161,10 +161,10 @@ Used when splitting a parent concept into sub-concepts.
 ```
 You are a knowledge extraction assistant. Given a document:
 
-- Extract 3-10 concepts depending on density
+- Extract all significant concepts. Let document density guide quantity.
 - Concept IDs must be canonical lowercase kebab-case (e.g., "docker-compose")
 - REUSE existing concept IDs when they appear again (prevents duplicates)
-- Create relationships between concepts from THIS document only
+- Create relationships between concepts, including cross-document connections via existing concept IDs
 - Use "depends on" for prerequisites; other labels for non-prerequisite relationships
 - Create 1-3 quiz items per concept
 - Use clear, concise language; answers should be 1-3 sentences
