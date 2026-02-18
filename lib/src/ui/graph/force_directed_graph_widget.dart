@@ -95,8 +95,10 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   /// Index of the node currently being dragged, or null.
   int? _draggingNodeIndex;
 
-  /// Viewport-local position of the last double-tap-down, for zoom centering.
-  Offset? _doubleTapLocalPosition;
+  /// Manual double-tap detection state. We avoid GestureDetector's built-in
+  /// onDoubleTap because it delays onTapUp by kDoubleTapTimeout (300ms).
+  DateTime? _lastTapTime;
+  Offset? _lastTapViewportPos;
 
   /// Offset into the layout positions list where team nodes begin.
   int _teamNodeStartIndex = 0;
@@ -345,17 +347,41 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     return 20.0 / scale;
   }
 
-  /// Convert a global position to the InteractiveViewer's viewport-local
-  /// coordinate space (before the pan/zoom transform).
+  /// Convert a global screen position to graph content coordinates.
+  /// First maps to the widget's local space, then inverts the pan/zoom.
+  Offset _toContentCoords(Offset globalPosition) {
+    final RenderBox box = context.findRenderObject()! as RenderBox;
+    final viewportLocal = box.globalToLocal(globalPosition);
+    final matrix = _transformController.value.clone()..invert();
+    return MatrixUtils.transformPoint(matrix, viewportLocal);
+  }
+
+  /// Convert a global position to viewport-local space (for zoom focal point).
   Offset _toViewportLocal(Offset globalPosition) {
     final RenderBox box = context.findRenderObject()! as RenderBox;
     return box.globalToLocal(globalPosition);
   }
 
   void _onTapUp(TapUpDetails details) {
-    // GestureDetector is inside the InteractiveViewer's Transform, so
-    // localPosition is already in content coordinates.
-    final localPoint = details.localPosition;
+    final viewportLocal = _toViewportLocal(details.globalPosition);
+
+    // Manual double-tap detection — avoids the 300ms delay that
+    // GestureDetector's onDoubleTap imposes on single taps.
+    final now = DateTime.now();
+    if (_lastTapTime != null && _lastTapViewportPos != null) {
+      final elapsed = now.difference(_lastTapTime!);
+      final dist = (viewportLocal - _lastTapViewportPos!).distance;
+      if (elapsed < const Duration(milliseconds: 300) && dist < 40) {
+        _lastTapTime = null;
+        _lastTapViewportPos = null;
+        _handleDoubleTapZoom(viewportLocal);
+        return;
+      }
+    }
+    _lastTapTime = now;
+    _lastTapViewportPos = viewportLocal;
+
+    final localPoint = _toContentCoords(details.globalPosition);
     final hitRadius = _minHitRadius;
 
     // Check team nodes first (rendered on top)
@@ -393,15 +419,7 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     setState(() => _selectedNodeId = null);
   }
 
-  void _onDoubleTapDown(TapDownDetails details) {
-    // Record in viewport-local space (before the zoom/pan transform) so
-    // the focal-point zoom math works correctly.
-    _doubleTapLocalPosition = _toViewportLocal(details.globalPosition);
-  }
-
-  void _onDoubleTap() {
-    final focal = _doubleTapLocalPosition;
-    if (focal == null) return;
+  void _handleDoubleTapZoom(Offset viewportLocal) {
     _removeOverlay();
 
     final currentScale = _transformController.value.getMaxScaleOnAxis();
@@ -411,14 +429,14 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
 
     // Zoom centered on the tapped viewport point.
     final m = Matrix4.identity()
-      ..translate(focal.dx, focal.dy)
+      ..translate(viewportLocal.dx, viewportLocal.dy)
       ..scale(zoomFactor, zoomFactor)
-      ..translate(-focal.dx, -focal.dy);
+      ..translate(-viewportLocal.dx, -viewportLocal.dy);
     _transformController.value = m * _transformController.value;
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
-    final localPoint = details.localPosition;
+    final localPoint = _toContentCoords(details.globalPosition);
     final hitRadius = _minHitRadius;
     _removeOverlay();
 
@@ -443,7 +461,7 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     final idx = _draggingNodeIndex;
     if (idx == null) return;
 
-    _layout.setNodePosition(idx, details.localPosition);
+    _layout.setNodePosition(idx, _toContentCoords(details.globalPosition));
     _syncPositions();
     setState(() {});
   }
@@ -579,20 +597,19 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       );
     }
 
-    return InteractiveViewer(
-      transformationController: _transformController,
-      constrained: false,
-      boundaryMargin: const EdgeInsets.all(double.infinity),
-      minScale: 0.05,
-      maxScale: 3.0,
-      child: GestureDetector(
-        onTapUp: _onTapUp,
-        onDoubleTapDown: _onDoubleTapDown,
-        onDoubleTap: _onDoubleTap,
-        onLongPressStart: _onLongPressStart,
-        onLongPressMoveUpdate: _onLongPressMoveUpdate,
-        onLongPressEnd: _onLongPressEnd,
-        onLongPressCancel: _onLongPressCancel,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapUp: _onTapUp,
+      onLongPressStart: _onLongPressStart,
+      onLongPressMoveUpdate: _onLongPressMoveUpdate,
+      onLongPressEnd: _onLongPressEnd,
+      onLongPressCancel: _onLongPressCancel,
+      child: InteractiveViewer(
+        transformationController: _transformController,
+        constrained: false,
+        boundaryMargin: const EdgeInsets.all(double.infinity),
+        minScale: 0.05,
+        maxScale: 3.0,
         child: CustomPaint(
           size: graphSize,
           painter: GraphPainter(

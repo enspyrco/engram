@@ -321,8 +321,6 @@ void main() {
       final widgetTopLeft =
           tester.getTopLeft(find.byType(ForceDirectedGraphWidget));
       await tester.tapAt(widgetTopLeft + nodePos);
-      // DoubleTapRecognizer delays single-tap by kDoubleTapTimeout (300ms).
-      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       // Overlay card shows the concept name
@@ -374,13 +372,11 @@ void main() {
       final widgetTopLeft =
           tester.getTopLeft(find.byType(ForceDirectedGraphWidget));
       await tester.tapAt(widgetTopLeft + nodePos);
-      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(find.text('TestConcept'), findsOneWidget);
 
       // Now tap empty space (top-left corner, far from node near center)
       await tester.tapAt(widgetTopLeft + const Offset(5, 5));
-      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(find.text('TestConcept'), findsNothing);
     });
