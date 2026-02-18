@@ -1,12 +1,13 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
 enum IngestPhase { idle, loadingCollections, ready, ingesting, done, error }
 
 @immutable
 class IngestState {
-  const IngestState({
+  IngestState({
     this.phase = IngestPhase.idle,
-    this.collections = const [],
+    List<Map<String, dynamic>> collections = const [],
     this.selectedCollection,
     this.totalDocuments = 0,
     this.processedDocuments = 0,
@@ -15,11 +16,28 @@ class IngestState {
     this.currentDocumentTitle = '',
     this.statusMessage = '',
     this.errorMessage = '',
-    this.sessionConceptIds = const {},
+    Set<String> sessionConceptIds = const {},
+  })  : collections = IList(collections),
+        sessionConceptIds = ISet(sessionConceptIds);
+
+  const IngestState._({
+    this.phase = IngestPhase.idle,
+    this.collections = const IListConst([]),
+    this.selectedCollection,
+    this.totalDocuments = 0,
+    this.processedDocuments = 0,
+    this.extractedCount = 0,
+    this.skippedCount = 0,
+    this.currentDocumentTitle = '',
+    this.statusMessage = '',
+    this.errorMessage = '',
+    this.sessionConceptIds = const ISetConst({}),
   });
 
+  static const empty = IngestState._();
+
   final IngestPhase phase;
-  final List<Map<String, dynamic>> collections;
+  final IList<Map<String, dynamic>> collections;
   final Map<String, dynamic>? selectedCollection;
   final int totalDocuments;
   final int processedDocuments;
@@ -31,14 +49,14 @@ class IngestState {
 
   /// Concept IDs extracted during this ingestion session. Used to filter the
   /// live graph visualization to only show newly extracted nodes.
-  final Set<String> sessionConceptIds;
+  final ISet<String> sessionConceptIds;
 
   double get progress =>
       totalDocuments > 0 ? processedDocuments / totalDocuments : 0;
 
   IngestState copyWith({
     IngestPhase? phase,
-    List<Map<String, dynamic>>? collections,
+    IList<Map<String, dynamic>>? collections,
     Map<String, dynamic>? Function()? selectedCollection,
     int? totalDocuments,
     int? processedDocuments,
@@ -47,9 +65,9 @@ class IngestState {
     String? currentDocumentTitle,
     String? statusMessage,
     String? errorMessage,
-    Set<String>? sessionConceptIds,
+    ISet<String>? sessionConceptIds,
   }) {
-    return IngestState(
+    return IngestState._(
       phase: phase ?? this.phase,
       collections: collections ?? this.collections,
       selectedCollection: selectedCollection != null

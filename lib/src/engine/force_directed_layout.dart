@@ -215,6 +215,36 @@ class ForceDirectedLayout {
     _velocities = List<Offset>.filled(nodeCount, Offset.zero);
   }
 
+  /// Pin a node so it becomes an immovable anchor (drag start).
+  void pinNode(int index) {
+    assert(index >= 0 && index < nodeCount, 'pinNode index out of range');
+    _pinnedNodes.add(index);
+    _velocities[index] = Offset.zero;
+  }
+
+  /// Unpin a node so it resumes physics simulation (drag end).
+  void unpinNode(int index) {
+    assert(index >= 0 && index < nodeCount, 'unpinNode index out of range');
+    _pinnedNodes.remove(index);
+  }
+
+  /// Move a node to [position] immediately and zero its velocity.
+  void setNodePosition(int index, Offset position) {
+    assert(
+        index >= 0 && index < nodeCount, 'setNodePosition index out of range');
+    _positions[index] = position;
+    _velocities[index] = Offset.zero;
+  }
+
+  /// Raise temperature to restart the simulation after settling.
+  ///
+  /// [fraction] controls how much of the initial temperature to restore
+  /// (default 0.15 — gentle re-settle). A higher value causes more
+  /// rearrangement.
+  void reheat([double fraction = 0.15]) {
+    _temperature = _initialTemperature * fraction;
+  }
+
   /// Build initial positions, using [initial] where non-null and placing new
   /// nodes evenly on a circle centered in the canvas. This gives a clean
   /// starting animation — nodes spread outward along edges rather than

@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/team_goal.dart';
 import 'auth_provider.dart';
+import 'clock_provider.dart';
 import 'guardian_provider.dart';
 
 const _uuid = Uuid();
@@ -41,7 +42,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
     final user = ref.read(authStateProvider).valueOrNull;
     if (teamRepo == null || user == null) return;
 
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final goal = TeamGoal(
       id: 'goal_${_uuid.v4()}',
       title: title,
@@ -71,7 +72,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
     if (goal != null) {
       final updatedProgress = goal.totalProgress + amount;
       if (updatedProgress >= goal.targetValue && !goal.isComplete) {
-        final now = DateTime.now().toUtc().toIso8601String();
+        final now = ref.read(clockProvider)().toIso8601String();
         await teamRepo.completeGoal(goalId, now);
 
         // Award goal points to all contributors

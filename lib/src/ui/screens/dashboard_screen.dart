@@ -11,7 +11,7 @@ import '../../providers/graph_structure_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/network_health_provider.dart';
 import '../../providers/sync_provider.dart';
-import '../graph/static_graph_widget.dart';
+import '../graph/force_directed_graph_widget.dart';
 import '../navigation_shell.dart';
 import '../widgets/mastery_bar.dart';
 import '../widgets/network_health_indicator.dart';
@@ -129,7 +129,7 @@ class _SyncBanner extends ConsumerWidget {
 class _NewCollectionsBanner extends ConsumerWidget {
   const _NewCollectionsBanner({required this.collections});
 
-  final List<Map<String, String>> collections;
+  final Iterable<Map<String, String>> collections;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -197,12 +197,13 @@ class _DashboardContent extends ConsumerWidget {
 
     return Stack(
       children: [
-        // Full-screen static graph — LayoutBuilder passes actual screen
+        // Full-screen animated graph — LayoutBuilder passes actual screen
         // dimensions so the force-directed layout fills available space.
         Positioned.fill(
           child: graph != null
               ? LayoutBuilder(
-                  builder: (context, constraints) => StaticGraphWidget(
+                  builder: (context, constraints) =>
+                      ForceDirectedGraphWidget(
                     graph: graph,
                     layoutWidth: constraints.maxWidth,
                     layoutHeight: constraints.maxHeight,

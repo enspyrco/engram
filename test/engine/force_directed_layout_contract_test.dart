@@ -389,7 +389,7 @@ void main() {
       );
       runToSettled(noGravity);
 
-      final center = const Offset(400, 300);
+      const center = Offset(400, 300);
       double avgDist(List<Offset> positions) {
         var sum = 0.0;
         for (final p in positions) {
@@ -449,7 +449,7 @@ void main() {
       );
       runToSettled(noGravity);
 
-      final center = const Offset(400, 300);
+      const center = Offset(400, 300);
       double avgDist(List<Offset> positions) {
         var sum = 0.0;
         for (final p in positions) {
@@ -460,6 +460,55 @@ void main() {
 
       expect(avgDist(withGravity.positions),
           lessThan(avgDist(noGravity.positions)));
+    });
+  });
+
+  group('Drag and release equilibrium', () {
+    test('dragging node far away and releasing shifts neighbors to new equilibrium', () {
+      // Phase 1: settle a 4-node chain
+      final layout = makeLayout(
+        nodeCount: 4,
+        edges: [(0, 1), (1, 2), (2, 3)],
+      );
+      runToSettled(layout);
+      final originalPositions = List<Offset>.from(layout.positions);
+
+      // Phase 2: simulate a drag — pin node 1 and move it far from its
+      // settled position
+      layout.pinNode(1);
+      final dragTarget = Offset(
+        originalPositions[1].dx + 200,
+        originalPositions[1].dy + 150,
+      );
+      layout.setNodePosition(1, dragTarget);
+
+      // Phase 3: release — unpin and reheat to let neighbors re-settle
+      layout.unpinNode(1);
+      layout.reheat();
+      runToSettled(layout);
+
+      // The released node and its neighbors should have shifted to a new
+      // equilibrium that differs from the original positions
+      var totalDisplacement = 0.0;
+      for (var i = 0; i < layout.positions.length; i++) {
+        totalDisplacement +=
+            (layout.positions[i] - originalPositions[i]).distance;
+      }
+
+      // Significant movement expected — at least 50px total across all nodes
+      expect(totalDisplacement, greaterThan(50.0));
+
+      // Layout should be settled (converged to new equilibrium)
+      expect(layout.isSettled, isTrue);
+
+      // All positions still within bounds
+      const margin = 30.0;
+      for (final pos in layout.positions) {
+        expect(pos.dx, greaterThanOrEqualTo(margin));
+        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
+        expect(pos.dy, greaterThanOrEqualTo(margin));
+        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
+      }
     });
   });
 

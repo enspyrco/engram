@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,7 +15,7 @@ final ingestProvider =
 
 class IngestNotifier extends Notifier<IngestState> {
   @override
-  IngestState build() => const IngestState();
+  IngestState build() => IngestState.empty;
 
   Future<void> loadCollections() async {
     state = state.copyWith(phase: IngestPhase.loadingCollections);
@@ -23,7 +24,7 @@ class IngestNotifier extends Notifier<IngestState> {
       final collections = await client.listCollections();
       state = state.copyWith(
         phase: IngestPhase.ready,
-        collections: collections,
+        collections: IList(collections),
       );
     } catch (e) {
       state = state.copyWith(
@@ -48,7 +49,7 @@ class IngestNotifier extends Notifier<IngestState> {
       extractedCount: 0,
       skippedCount: 0,
       processedDocuments: 0,
-      sessionConceptIds: {},
+      sessionConceptIds: const ISetConst({}),
     );
 
     try {
@@ -157,10 +158,8 @@ class IngestNotifier extends Notifier<IngestState> {
         // show nodes as they appear during staggered ingestion.
         state = state.copyWith(
           statusMessage: 'Adding ${result.concepts.length} concepts...',
-          sessionConceptIds: {
-            ...state.sessionConceptIds,
-            ...result.concepts.map((c) => c.id),
-          },
+          sessionConceptIds: state.sessionConceptIds
+              .addAll(result.concepts.map((c) => c.id)),
         );
         debugPrint('[Ingest] Adding concepts to graph...');
         try {
@@ -219,6 +218,6 @@ class IngestNotifier extends Notifier<IngestState> {
   }
 
   void reset() {
-    state = const IngestState();
+    state = IngestState.empty;
   }
 }

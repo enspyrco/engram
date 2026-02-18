@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../../engine/force_directed_layout.dart';
 import '../../engine/graph_analyzer.dart';
@@ -88,6 +89,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   final _avatarCache = TeamAvatarCache();
   String? _selectedNodeId;
   OverlayEntry? _overlayEntry;
+
+  /// Index of the node currently being dragged, or null.
+  int? _draggingNodeIndex;
 
   /// Offset into the layout positions list where team nodes begin.
   int _teamNodeStartIndex = 0;
@@ -184,6 +188,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
   }
 
   void _buildGraph() {
+    // A graph rebuild invalidates any in-progress drag.
+    _draggingNodeIndex = null;
+
     // Preserve settled positions so incremental updates don't reset the layout.
     final oldPositions = <String, Offset>{};
     for (final node in _nodes) {
@@ -356,6 +363,60 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     setState(() => _selectedNodeId = null);
   }
 
+  void _onLongPressStart(LongPressStartDetails details) {
+    final localPoint = details.localPosition;
+    _removeOverlay();
+
+    // Only concept nodes are draggable — team nodes represent other users
+    // and should not be repositioned by the current user.
+    for (var i = _nodes.length - 1; i >= 0; i--) {
+      if (_nodes[i].containsPoint(localPoint)) {
+        _draggingNodeIndex = i;
+        _selectedNodeId = null;
+        _layout.pinNode(i);
+        HapticFeedback.mediumImpact();
+        // Restart the ticker if the simulation had settled
+        if (!_ticker.isActive) _ticker.start();
+        setState(() {});
+        return;
+      }
+    }
+  }
+
+  void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
+    final idx = _draggingNodeIndex;
+    if (idx == null) return;
+
+    _layout.setNodePosition(idx, details.localPosition);
+    _syncPositions();
+    setState(() {});
+  }
+
+  void _onLongPressEnd(LongPressEndDetails details) {
+    final idx = _draggingNodeIndex;
+    if (idx == null) return;
+
+    _layout.unpinNode(idx);
+    _layout.reheat();
+    _draggingNodeIndex = null;
+
+    // Ensure the ticker is running so neighbors can re-settle
+    if (!_ticker.isActive) _ticker.start();
+    setState(() {});
+  }
+
+  void _onLongPressCancel() {
+    final idx = _draggingNodeIndex;
+    if (idx == null) return;
+
+    _layout.unpinNode(idx);
+    _layout.reheat();
+    _draggingNodeIndex = null;
+
+    if (!_ticker.isActive) _ticker.start();
+    setState(() {});
+  }
+
   /// Perpendicular distance from [point] to the line segment [a]→[b].
   static double _distanceToSegment(Offset point, Offset a, Offset b) {
     final ab = b - a;
@@ -469,6 +530,10 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       maxScale: 3.0,
       child: GestureDetector(
         onTapUp: _onTapUp,
+        onLongPressStart: _onLongPressStart,
+        onLongPressMoveUpdate: _onLongPressMoveUpdate,
+        onLongPressEnd: _onLongPressEnd,
+        onLongPressCancel: _onLongPressCancel,
         child: CustomPaint(
           size: graphSize,
           painter: GraphPainter(
@@ -477,6 +542,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
             teamNodes: widget.teamNodes,
             avatarCache: _avatarCache,
             selectedNodeId: _selectedNodeId,
+            draggingNodeId: _draggingNodeIndex != null
+                ? _nodes[_draggingNodeIndex!].id
+                : null,
             guardianMap: widget.guardianMap,
             currentUserUid: widget.currentUserUid,
           ),

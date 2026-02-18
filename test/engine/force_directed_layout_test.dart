@@ -173,6 +173,129 @@ void main() {
       }
     });
 
+    group('Dynamic pinning', () {
+      test('pinNode freezes node in place during simulation', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        // Run a few steps so nodes spread out
+        for (var i = 0; i < 10; i++) {
+          layout.step();
+        }
+
+        final positionBefore = layout.positions[1];
+        layout.pinNode(1);
+
+        // Run more steps — pinned node should not move
+        for (var i = 0; i < 20; i++) {
+          layout.step();
+        }
+
+        expect(layout.positions[1], positionBefore);
+      });
+
+      test('unpinNode allows node to resume physics', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        // Settle a bit, then pin/unpin node 1
+        for (var i = 0; i < 10; i++) {
+          layout.step();
+        }
+
+        layout.pinNode(1);
+        final pinnedPos = layout.positions[1];
+
+        // Unpin and reheat so it can move
+        layout.unpinNode(1);
+        layout.reheat();
+
+        // Run to settled — node should have moved from its pinned position
+        var steps = 0;
+        while (layout.step()) {
+          steps++;
+          if (steps > 500) break;
+        }
+
+        final displacement = (layout.positions[1] - pinnedPos).distance;
+        expect(displacement, greaterThan(0.1));
+      });
+
+      test('setNodePosition moves a node immediately', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        const target = Offset(100, 200);
+        layout.setNodePosition(1, target);
+
+        expect(layout.positions[1], target);
+      });
+
+      test('setNodePosition zeros velocity', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        // Run a few steps to build up velocity
+        for (var i = 0; i < 5; i++) {
+          layout.step();
+        }
+        // Verify there's some velocity first
+        expect(layout.velocities[1].distance, greaterThan(0));
+
+        layout.setNodePosition(1, const Offset(100, 200));
+        expect(layout.velocities[1], Offset.zero);
+      });
+
+      test('reheat raises temperature after settling', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        // Run to settled
+        while (layout.step()) {}
+        expect(layout.isSettled, isTrue);
+
+        layout.reheat();
+
+        expect(layout.isSettled, isFalse);
+        expect(layout.temperature, greaterThan(layout.settledThreshold));
+      });
+
+      test('reheat with custom fraction controls temperature', () {
+        final layout = ForceDirectedLayout(
+          nodeCount: 3,
+          edges: [(0, 1), (1, 2)],
+          seed: 42,
+        );
+
+        while (layout.step()) {}
+
+        layout.reheat(0.5);
+        final highTemp = layout.temperature;
+
+        // Settle again, then reheat with lower fraction
+        while (layout.step()) {}
+        layout.reheat(0.1);
+        final lowTemp = layout.temperature;
+
+        expect(highTemp, greaterThan(lowTemp));
+      });
+    });
+
     test('nodes stay within bounds', () {
       final layout = ForceDirectedLayout(
         nodeCount: 5,

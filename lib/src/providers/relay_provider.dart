@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/nudge.dart';
 import '../models/relay_challenge.dart';
 import 'auth_provider.dart';
+import 'clock_provider.dart';
 import 'guardian_provider.dart';
 import 'nudge_provider.dart';
 import 'user_profile_provider.dart';
@@ -43,7 +44,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     final user = ref.read(authStateProvider).valueOrNull;
     if (teamRepo == null || user == null) return;
 
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final relay = RelayChallenge(
       id: 'relay_${_uuid.v4()}',
       title: title,
@@ -67,7 +68,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     if (relay == null) return;
 
     // Validate: leg must be unclaimed
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     if (relay.legs[legIndex].statusAt(now) != RelayLegStatus.unclaimed) return;
 
     // Validate: prior leg must be completed (or this is the first leg)
@@ -100,7 +101,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     final leg = relay.legs[legIndex];
     if (leg.completedAt != null) return; // already completed
 
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
     final nowStr = now.toIso8601String();
     var updated = relay.withLegCompleted(legIndex, nowStr);
 
@@ -125,7 +126,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
 
   /// Check for stalled legs and auto-send nudges with 6h debounce.
   void _checkForStalls(List<RelayChallenge> relays) {
-    final now = DateTime.now().toUtc();
+    final now = ref.read(clockProvider)();
 
     for (final relay in relays) {
       for (var i = 0; i < relay.legs.length; i++) {

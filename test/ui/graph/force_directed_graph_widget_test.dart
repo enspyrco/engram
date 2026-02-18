@@ -58,6 +58,50 @@ void main() {
       expect(find.byType(ForceDirectedGraphWidget), findsOneWidget);
     });
 
+    testWidgets('long-press drag does not crash and re-settles', (tester) async {
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(id: 'c1', name: 'A', description: '', sourceDocumentId: 'd1'),
+          Concept(id: 'c2', name: 'B', description: '', sourceDocumentId: 'd1'),
+        ],
+        relationships: [
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'c2',
+            toConceptId: 'c1',
+            label: 'depends on',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox.expand(
+              child: ForceDirectedGraphWidget(graph: graph),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Simulate a long-press drag gesture near the center (where nodes
+      // are likely to be after force-directed layout settles).
+      final center = tester.getCenter(find.byType(ForceDirectedGraphWidget));
+      final gesture = await tester.startGesture(center);
+      await tester.pump(const Duration(milliseconds: 600)); // trigger long press
+      await gesture.moveBy(const Offset(50, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(20, -10));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Widget should still be alive and settled after the drag.
+      expect(find.byType(ForceDirectedGraphWidget), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
+    });
+
     testWidgets('handles empty graph', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

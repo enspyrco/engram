@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../engine/streak.dart';
 import '../services/notification_service.dart';
+import 'clock_provider.dart';
 import 'dashboard_stats_provider.dart';
 import 'settings_provider.dart';
 import 'sync_provider.dart';
@@ -27,7 +28,7 @@ final notificationUpdaterProvider = Provider<void>((ref) {
 
   final absence = inspectAbsence(
     lastSessionDateIso: settingsRepo.getLastSessionDate(),
-    now: DateTime.now().toUtc(),
+    now: ref.read(clockProvider)(),
   );
 
   final copy = buildNotificationCopy(

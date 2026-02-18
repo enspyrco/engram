@@ -1,34 +1,46 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
 enum SyncPhase { idle, checking, updatesAvailable, syncing, upToDate, error }
 
 @immutable
 class SyncStatus {
-  const SyncStatus({
+  SyncStatus({
     this.phase = SyncPhase.idle,
     this.staleDocumentCount = 0,
-    this.staleCollectionIds = const [],
-    this.newCollections = const [],
+    List<String> staleCollectionIds = const [],
+    List<Map<String, String>> newCollections = const [],
+    this.errorMessage = '',
+  })  : staleCollectionIds = IList(staleCollectionIds),
+        newCollections = IList(newCollections);
+
+  const SyncStatus._({
+    this.phase = SyncPhase.idle,
+    this.staleDocumentCount = 0,
+    this.staleCollectionIds = const IListConst([]),
+    this.newCollections = const IListConst([]),
     this.errorMessage = '',
   });
 
+  static const empty = SyncStatus._();
+
   final SyncPhase phase;
   final int staleDocumentCount;
-  final List<String> staleCollectionIds;
+  final IList<String> staleCollectionIds;
 
   /// Collections found in Outline that haven't been ingested yet.
   /// Each entry is a map with 'id' and 'name' keys.
-  final List<Map<String, String>> newCollections;
+  final IList<Map<String, String>> newCollections;
   final String errorMessage;
 
   SyncStatus copyWith({
     SyncPhase? phase,
     int? staleDocumentCount,
-    List<String>? staleCollectionIds,
-    List<Map<String, String>>? newCollections,
+    IList<String>? staleCollectionIds,
+    IList<Map<String, String>>? newCollections,
     String? errorMessage,
   }) {
-    return SyncStatus(
+    return SyncStatus._(
       phase: phase ?? this.phase,
       staleDocumentCount: staleDocumentCount ?? this.staleDocumentCount,
       staleCollectionIds: staleCollectionIds ?? this.staleCollectionIds,

@@ -11,11 +11,16 @@ class SocialRepository {
   SocialRepository({
     required FirebaseFirestore firestore,
     required String userId,
+    DateTime Function()? clock,
   })  : _firestore = firestore,
-        _userId = userId;
+        _userId = userId,
+        _clock = clock ?? _defaultClock;
+
+  static DateTime _defaultClock() => DateTime.now().toUtc();
 
   final FirebaseFirestore _firestore;
   final String _userId;
+  final DateTime Function() _clock;
 
   // --- Wiki Groups ---
 
@@ -34,7 +39,7 @@ class SocialRepository {
       'uid': _userId,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'joinedAt': DateTime.now().toUtc().toIso8601String(),
+      'joinedAt': _clock().toIso8601String(),
     });
   }
 
