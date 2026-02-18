@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
+import '../models/ingest_document.dart';
 import '../models/ingest_state.dart';
 import '../models/topic.dart';
 import 'clock_provider.dart';
@@ -82,7 +84,7 @@ class IngestNotifier extends Notifier<IngestState> {
       final graph =
           ref.read(knowledgeGraphProvider).valueOrNull;
 
-      final allDocs = <Map<String, dynamic>>[];
+      final allDocs = <IngestDocument>[];
       for (final collection in state.collections) {
         final collectionId = collection['id'] as String;
         final collectionName = collection['name'] as String? ?? 'Untitled';
@@ -92,24 +94,26 @@ class IngestNotifier extends Notifier<IngestState> {
           final updatedAt = doc['updatedAt'] as String;
 
           // Compute status
-          String docStatus = 'new';
+          var docStatus = IngestDocumentStatus.newDoc;
           if (graph != null) {
             final meta = graph.documentMetadata
                 .where((m) => m.documentId == docId)
                 .firstOrNull;
             if (meta != null) {
-              docStatus = meta.updatedAt == updatedAt ? 'unchanged' : 'changed';
+              docStatus = meta.updatedAt == updatedAt
+                  ? IngestDocumentStatus.unchanged
+                  : IngestDocumentStatus.changed;
             }
           }
 
-          allDocs.add({
-            'id': docId,
-            'title': doc['title'] as String,
-            'updatedAt': updatedAt,
-            'collectionId': collectionId,
-            'collectionName': collectionName,
-            'status': docStatus,
-          });
+          allDocs.add(IngestDocument(
+            id: docId,
+            title: doc['title'] as String,
+            updatedAt: updatedAt,
+            collectionId: collectionId,
+            collectionName: collectionName,
+            status: docStatus,
+          ));
         }
       }
 
@@ -136,8 +140,8 @@ class IngestNotifier extends Notifier<IngestState> {
   /// Select all documents in a collection.
   void selectAllInCollection(String collectionId) {
     final docIds = state.availableDocuments
-        .where((d) => d['collectionId'] == collectionId)
-        .map((d) => d['id'] as String);
+        .where((d) => d.collectionId == collectionId)
+        .map((d) => d.id);
     state = state.copyWith(
       selectedDocumentIds: state.selectedDocumentIds.addAll(docIds),
     );
@@ -146,8 +150,8 @@ class IngestNotifier extends Notifier<IngestState> {
   /// Deselect all documents in a collection.
   void deselectAllInCollection(String collectionId) {
     final docIds = state.availableDocuments
-        .where((d) => d['collectionId'] == collectionId)
-        .map((d) => d['id'] as String)
+        .where((d) => d.collectionId == collectionId)
+        .map((d) => d.id)
         .toSet();
     state = state.copyWith(
       selectedDocumentIds: state.selectedDocumentIds.removeAll(docIds),
@@ -165,7 +169,7 @@ class IngestNotifier extends Notifier<IngestState> {
 
     final topic = isNewTopic
         ? Topic(
-            id: 'topic-${now.millisecondsSinceEpoch}',
+            id: const Uuid().v4(),
             name: state.topicName.isNotEmpty
                 ? state.topicName
                 : 'Topic ${now.toIso8601String()}',
@@ -199,7 +203,7 @@ class IngestNotifier extends Notifier<IngestState> {
 
       // Build the list of documents to process from the selected IDs
       final docsToProcess = state.availableDocuments
-          .where((d) => state.selectedDocumentIds.contains(d['id']))
+          .where((d) => state.selectedDocumentIds.contains(d.id))
           .toList();
 
       state = state.copyWith(totalDocuments: docsToProcess.length);
@@ -218,11 +222,11 @@ class IngestNotifier extends Notifier<IngestState> {
       var skipped = 0;
 
       for (final doc in docsToProcess) {
-        final docId = doc['id'] as String;
-        final docTitle = doc['title'] as String;
-        final updatedAt = doc['updatedAt'] as String;
-        final collectionId = doc['collectionId'] as String?;
-        final collectionName = doc['collectionName'] as String?;
+        final docId = doc.id;
+        final docTitle = doc.title;
+        final updatedAt = doc.updatedAt;
+        final collectionId = doc.collectionId;
+        final collectionName = doc.collectionName;
 
         state = state.copyWith(currentDocumentTitle: docTitle);
 
@@ -233,11 +237,11 @@ class IngestNotifier extends Notifier<IngestState> {
         if (!forceReExtract &&
             existing != null &&
             existing.updatedAt == updatedAt) {
-          if (existing.collectionId == null && collectionId != null) {
+          if (existing.collectionId == null) {
             graphNotifier.backfillCollectionInfo(
               docId,
               collectionId: collectionId,
-              collectionName: collectionName ?? '',
+              collectionName: collectionName,
               skipPersist: true,
             );
           }
@@ -344,8 +348,7 @@ class IngestNotifier extends Notifier<IngestState> {
       // Record collection IDs for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);
       final collectionIds = docsToProcess
-          .map((d) => d['collectionId'] as String?)
-          .whereType<String>()
+          .map((d) => d.collectionId)
           .toSet();
       for (final cid in collectionIds) {
         await settingsRepo.addIngestedCollectionId(cid);

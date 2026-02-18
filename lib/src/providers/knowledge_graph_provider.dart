@@ -8,6 +8,7 @@ import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
 import '../models/topic.dart';
+import 'clock_provider.dart';
 import 'graph_store_provider.dart';
 
 final knowledgeGraphProvider =
@@ -38,7 +39,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   KnowledgeGraph _autoMigrateTopics(KnowledgeGraph graph) {
     final collectionDocs = <String, List<String>>{};
     final collectionNames = <String, String>{};
-    final now = DateTime.now().toUtc().toIso8601String();
+    final now = ref.read(clockProvider)().toIso8601String();
 
     for (final meta in graph.documentMetadata) {
       final cId = meta.collectionId;
@@ -145,18 +146,24 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     state = AsyncData(cleared);
     await Future.delayed(delay);
 
+    // Existing concept IDs in the graph (for cross-document relationships).
+    final existingIds = cleared.concepts.map((c) => c.id).toSet();
+
     // Step 2: Add concepts in batches — each batch triggers one graph rebuild
     for (var i = 0; i < result.concepts.length; i += batchSize) {
       final end = (i + batchSize).clamp(0, result.concepts.length);
       final revealedConcepts = result.concepts.sublist(0, end);
       final revealedIds = revealedConcepts.map((c) => c.id).toSet();
+      // Include existing graph concepts so cross-document edges appear
+      // as soon as their newly-extracted endpoint is revealed.
+      final validIds = {...revealedIds, ...existingIds};
 
       final partial = ExtractionResult(
         concepts: revealedConcepts,
         relationships: result.relationships
             .where((r) =>
-                revealedIds.contains(r.fromConceptId) &&
-                revealedIds.contains(r.toConceptId))
+                validIds.contains(r.fromConceptId) &&
+                validIds.contains(r.toConceptId))
             .toList(),
         quizItems: result.quizItems
             .where((q) => revealedIds.contains(q.conceptId))

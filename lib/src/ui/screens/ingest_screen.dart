@@ -1,6 +1,8 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/ingest_document.dart';
 import '../../models/ingest_state.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/topic.dart';
@@ -133,19 +135,19 @@ class _TopicSelectionView extends ConsumerWidget {
             ),
           ),
         // Legacy collection picker button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: OutlinedButton.icon(
-            onPressed: () {
-              // Switch to legacy collection picker
-              ref.read(ingestProvider.notifier).selectCollection(
-                    state.collections.first,
-                  );
-            },
-            icon: const Icon(Icons.folder_outlined),
-            label: const Text('Single Collection (Legacy)'),
+        if (state.collections.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                ref.read(ingestProvider.notifier).selectCollection(
+                      state.collections.first,
+                    );
+              },
+              icon: const Icon(Icons.folder_outlined),
+              label: const Text('Single Collection (Legacy)'),
+            ),
           ),
-        ),
         const SizedBox(height: 8),
       ],
     );
@@ -223,10 +225,9 @@ class _TopicConfiguratorState extends ConsumerState<_TopicConfigurator> {
     final selectedIds = ingest.selectedDocumentIds;
 
     // Group documents by collection
-    final collectionGroups = <String, List<Map<String, dynamic>>>{};
+    final collectionGroups = <String, List<IngestDocument>>{};
     for (final doc in docs) {
-      final collectionName = doc['collectionName'] as String? ?? 'Unknown';
-      collectionGroups.putIfAbsent(collectionName, () => []).add(doc);
+      collectionGroups.putIfAbsent(doc.collectionName, () => []).add(doc);
     }
 
     return Column(
@@ -275,8 +276,7 @@ class _TopicConfiguratorState extends ConsumerState<_TopicConfigurator> {
                     for (final entry in collectionGroups.entries) ...[
                       _CollectionSection(
                         collectionName: entry.key,
-                        collectionId:
-                            entry.value.first['collectionId'] as String,
+                        collectionId: entry.value.first.collectionId,
                         documents: entry.value,
                         selectedIds: selectedIds,
                       ),
@@ -337,14 +337,14 @@ class _CollectionSection extends ConsumerWidget {
 
   final String collectionName;
   final String collectionId;
-  final List<Map<String, dynamic>> documents;
-  final dynamic selectedIds;
+  final List<IngestDocument> documents;
+  final ISet<String> selectedIds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final allSelected =
-        documents.every((d) => selectedIds.contains(d['id']));
+        documents.every((d) => selectedIds.contains(d.id));
 
     return ExpansionTile(
       title: Text(collectionName, style: theme.textTheme.titleSmall),
@@ -365,12 +365,12 @@ class _CollectionSection extends ConsumerWidget {
       children: [
         for (final doc in documents)
           CheckboxListTile(
-            value: selectedIds.contains(doc['id']),
+            value: selectedIds.contains(doc.id),
             onChanged: (_) => ref
                 .read(ingestProvider.notifier)
-                .toggleDocument(doc['id'] as String),
-            title: Text(doc['title'] as String),
-            subtitle: _StatusChip(status: doc['status'] as String),
+                .toggleDocument(doc.id),
+            title: Text(doc.title),
+            subtitle: _StatusChip(status: doc.status),
             dense: true,
           ),
       ],
@@ -380,15 +380,14 @@ class _CollectionSection extends ConsumerWidget {
 
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status});
-  final String status;
+  final IngestDocumentStatus status;
 
   @override
   Widget build(BuildContext context) {
     final (Color color, String label) = switch (status) {
-      'new' => (Colors.blue, 'New'),
-      'changed' => (Colors.amber, 'Changed'),
-      'unchanged' => (Colors.grey, 'Unchanged'),
-      _ => (Colors.grey, status),
+      IngestDocumentStatus.newDoc => (Colors.blue, 'New'),
+      IngestDocumentStatus.changed => (Colors.amber, 'Changed'),
+      IngestDocumentStatus.unchanged => (Colors.grey, 'Unchanged'),
     };
 
     return Row(

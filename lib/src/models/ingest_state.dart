@@ -1,6 +1,7 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
+import 'ingest_document.dart';
 import 'topic.dart';
 
 enum IngestPhase {
@@ -29,7 +30,7 @@ class IngestState {
     this.errorMessage = '',
     Set<String> sessionConceptIds = const {},
     this.selectedTopic,
-    List<Map<String, dynamic>> availableDocuments = const [],
+    List<IngestDocument> availableDocuments = const [],
     Set<String> selectedDocumentIds = const {},
     this.topicName = '',
     this.topicDescription = '',
@@ -77,9 +78,8 @@ class IngestState {
   /// The topic being configured or ingested.
   final Topic? selectedTopic;
 
-  /// Documents available for selection, each with status info.
-  /// Maps contain: id, title, updatedAt, collectionId, collectionName, status.
-  final IList<Map<String, dynamic>> availableDocuments;
+  /// Documents available for selection, with status info.
+  final IList<IngestDocument> availableDocuments;
 
   /// User's document selection for the current ingestion run.
   final ISet<String> selectedDocumentIds;
@@ -106,7 +106,7 @@ class IngestState {
     String? errorMessage,
     ISet<String>? sessionConceptIds,
     Topic? Function()? selectedTopic,
-    IList<Map<String, dynamic>>? availableDocuments,
+    IList<IngestDocument>? availableDocuments,
     ISet<String>? selectedDocumentIds,
     String? topicName,
     String? topicDescription,
