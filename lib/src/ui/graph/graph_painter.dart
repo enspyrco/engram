@@ -111,7 +111,10 @@ class GraphPainter extends CustomPainter {
     }
     // Layer 4: Concept labels
     for (final node in nodes) {
-      _paintLabel(canvas, node);
+      final isDragging = node.id == draggingNodeId;
+      _paintLabel(canvas, node,
+          effectiveRadius:
+              isDragging ? node.radius * dragScaleFactor : null);
     }
     // Layer 5: Team avatar nodes (on top)
     for (final teamNode in teamNodes) {
@@ -225,7 +228,7 @@ class GraphPainter extends CustomPainter {
     if (isSelected) {
       canvas.drawCircle(
         node.position,
-        node.radius + selectionRingGap,
+        effectiveRadius + selectionRingGap,
         Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
@@ -253,7 +256,7 @@ class GraphPainter extends CustomPainter {
       if (guardianUid == currentUserUid) {
         canvas.drawCircle(
           node.position,
-          node.radius + guardianRingGap,
+          effectiveRadius + guardianRingGap,
           Paint()
             ..color = const Color(0xFFFFD700).withValues(alpha: 0.7)
             ..style = PaintingStyle.stroke
@@ -262,7 +265,7 @@ class GraphPainter extends CustomPainter {
       }
 
       // Small shield badge at top-right of guarded nodes
-      _paintShieldBadge(canvas, node.position, node.radius);
+      _paintShieldBadge(canvas, node.position, effectiveRadius);
     }
   }
 
@@ -290,7 +293,7 @@ class GraphPainter extends CustomPainter {
     );
   }
 
-  void _paintLabel(Canvas canvas, GraphNode node) {
+  void _paintLabel(Canvas canvas, GraphNode node, {double? effectiveRadius}) {
     final paragraphBuilder = ui.ParagraphBuilder(
       ui.ParagraphStyle(
         textAlign: TextAlign.center,
@@ -310,7 +313,7 @@ class GraphPainter extends CustomPainter {
 
     final labelOffset = Offset(
       node.position.dx - paragraph.width / 2,
-      node.position.dy + node.radius + labelGap,
+      node.position.dy + (effectiveRadius ?? node.radius) + labelGap,
     );
     canvas.drawParagraph(paragraph, labelOffset);
   }

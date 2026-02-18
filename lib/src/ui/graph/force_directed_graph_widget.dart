@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../../engine/force_directed_layout.dart';
 import '../../engine/graph_analyzer.dart';
@@ -373,6 +374,7 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
         _draggingNodeIndex = i;
         _selectedNodeId = null;
         _layout.pinNode(i);
+        HapticFeedback.mediumImpact();
         // Restart the ticker if the simulation had settled
         if (!_ticker.isActive) _ticker.start();
         setState(() {});
