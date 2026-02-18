@@ -268,6 +268,10 @@ void main() {
   });
 
   group('Tap interaction', () {
+    // Use layout dimensions larger than the auto-scaling threshold
+    // (sqrt(nodeCount) * 120) so the seed layout matches the widget's layout.
+    const testLayoutSize = 200.0;
+
     testWidgets('tapping a node shows overlay with concept name',
         (tester) async {
       // Compute where the node will settle — widget uses seed 42 internally
@@ -275,8 +279,8 @@ void main() {
       final seedLayout = ForceDirectedLayout(
         nodeCount: 1,
         edges: [],
-        width: 100,
-        height: 100,
+        width: testLayoutSize,
+        height: testLayoutSize,
         seed: 42,
       );
       for (var i = 0; i < 60; i++) {
@@ -306,16 +310,19 @@ void main() {
       await tester.pumpWidget(wrapWidget(
         ForceDirectedGraphWidget(
           graph: graph,
-          layoutWidth: 100,
-          layoutHeight: 100,
+          layoutWidth: testLayoutSize,
+          layoutHeight: testLayoutSize,
         ),
       ));
       await tester.pumpAndSettle();
 
-      // Tap at the node's layout position (relative to widget top-left)
+      // Tap at the node's layout position (relative to widget top-left).
+      // With identity transform, localPosition matches content coordinates.
       final widgetTopLeft =
           tester.getTopLeft(find.byType(ForceDirectedGraphWidget));
       await tester.tapAt(widgetTopLeft + nodePos);
+      // DoubleTapRecognizer delays single-tap by kDoubleTapTimeout (300ms).
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       // Overlay card shows the concept name
@@ -326,8 +333,8 @@ void main() {
       final seedLayout = ForceDirectedLayout(
         nodeCount: 1,
         edges: [],
-        width: 100,
-        height: 100,
+        width: testLayoutSize,
+        height: testLayoutSize,
         seed: 42,
       );
       for (var i = 0; i < 60; i++) {
@@ -357,8 +364,8 @@ void main() {
       await tester.pumpWidget(wrapWidget(
         ForceDirectedGraphWidget(
           graph: graph,
-          layoutWidth: 100,
-          layoutHeight: 100,
+          layoutWidth: testLayoutSize,
+          layoutHeight: testLayoutSize,
         ),
       ));
       await tester.pumpAndSettle();
@@ -367,11 +374,13 @@ void main() {
       final widgetTopLeft =
           tester.getTopLeft(find.byType(ForceDirectedGraphWidget));
       await tester.tapAt(widgetTopLeft + nodePos);
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(find.text('TestConcept'), findsOneWidget);
 
-      // Now tap empty space (top-left corner, far from node in [30..70])
+      // Now tap empty space (top-left corner, far from node near center)
       await tester.tapAt(widgetTopLeft + const Offset(5, 5));
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(find.text('TestConcept'), findsNothing);
     });

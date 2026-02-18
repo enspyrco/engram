@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -92,6 +94,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
 
   /// Index of the node currently being dragged, or null.
   int? _draggingNodeIndex;
+
+  /// Viewport-local position of the last double-tap-down, for zoom centering.
+  Offset? _doubleTapLocalPosition;
 
   /// Offset into the layout positions list where team nodes begin.
   int _teamNodeStartIndex = 0;
@@ -278,11 +283,20 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
         if (oldPositions.containsKey(_nodes[i].id)) i,
     };
 
+    // Scale layout area with node count so large graphs have room to breathe.
+    // ~120px per node in each dimension (area = 120² × nodeCount), with a
+    // floor of the viewport size so small graphs still fill the screen.
+    final baseWidth = widget.layoutWidth ?? 800.0;
+    final baseHeight = widget.layoutHeight ?? 600.0;
+    final scaledSide = math.sqrt(totalCount.toDouble()) * 120;
+    final layoutW = math.max(baseWidth, scaledSide);
+    final layoutH = math.max(baseHeight, scaledSide * (baseHeight / baseWidth));
+
     _layout = ForceDirectedLayout(
       nodeCount: totalCount,
       edges: layoutEdges,
-      width: widget.layoutWidth ?? 800.0,
-      height: widget.layoutHeight ?? 600.0,
+      width: layoutW,
+      height: layoutH,
       seed: 42,
       initialPositions: hasOldPositions ? initialPositions : null,
       pinnedNodes: pinnedIndices.isNotEmpty ? pinnedIndices : null,
@@ -324,14 +338,30 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     }
   }
 
+  /// Minimum hit-test radius in content coordinates, scaled so that nodes and
+  /// edges remain tappable regardless of zoom level (~20 screen pixels).
+  double get _minHitRadius {
+    final scale = _transformController.value.getMaxScaleOnAxis();
+    return 20.0 / scale;
+  }
+
+  /// Convert a global position to the InteractiveViewer's viewport-local
+  /// coordinate space (before the pan/zoom transform).
+  Offset _toViewportLocal(Offset globalPosition) {
+    final RenderBox box = context.findRenderObject()! as RenderBox;
+    return box.globalToLocal(globalPosition);
+  }
+
   void _onTapUp(TapUpDetails details) {
-    // GestureDetector is inside the InteractiveViewer, so localPosition
-    // is already in content coordinates — no transform inversion needed.
+    // GestureDetector is inside the InteractiveViewer's Transform, so
+    // localPosition is already in content coordinates.
     final localPoint = details.localPosition;
+    final hitRadius = _minHitRadius;
 
     // Check team nodes first (rendered on top)
     for (final teamNode in widget.teamNodes.reversed) {
-      if (teamNode.containsPoint(localPoint)) {
+      final r = math.max(teamNode.radius, hitRadius);
+      if ((localPoint - teamNode.position).distance <= r) {
         setState(() => _selectedNodeId = teamNode.id);
         _showTeamOverlay(teamNode, details.globalPosition);
         return;
@@ -340,7 +370,8 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
 
     // Check concept nodes
     for (final node in _nodes.reversed) {
-      if (node.containsPoint(localPoint)) {
+      final r = math.max(node.radius, hitRadius);
+      if ((localPoint - node.position).distance <= r) {
         setState(() => _selectedNodeId = node.id);
         _showOverlay(node, details.globalPosition);
         return;
@@ -348,11 +379,10 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     }
 
     // Check edges (relationships)
-    const hitThreshold = 12.0;
     for (final edge in _edges) {
       if (_distanceToSegment(
               localPoint, edge.source.position, edge.target.position) <
-          hitThreshold) {
+          hitRadius) {
         setState(() => _selectedNodeId = null);
         _showEdgeOverlay(edge, details.globalPosition);
         return;
@@ -363,14 +393,40 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     setState(() => _selectedNodeId = null);
   }
 
+  void _onDoubleTapDown(TapDownDetails details) {
+    // Record in viewport-local space (before the zoom/pan transform) so
+    // the focal-point zoom math works correctly.
+    _doubleTapLocalPosition = _toViewportLocal(details.globalPosition);
+  }
+
+  void _onDoubleTap() {
+    final focal = _doubleTapLocalPosition;
+    if (focal == null) return;
+    _removeOverlay();
+
+    final currentScale = _transformController.value.getMaxScaleOnAxis();
+    final targetScale = math.min(currentScale * 2.0, 3.0);
+    final zoomFactor = targetScale / currentScale;
+    if (zoomFactor <= 1.01) return; // already at max
+
+    // Zoom centered on the tapped viewport point.
+    final m = Matrix4.identity()
+      ..translate(focal.dx, focal.dy)
+      ..scale(zoomFactor, zoomFactor)
+      ..translate(-focal.dx, -focal.dy);
+    _transformController.value = m * _transformController.value;
+  }
+
   void _onLongPressStart(LongPressStartDetails details) {
     final localPoint = details.localPosition;
+    final hitRadius = _minHitRadius;
     _removeOverlay();
 
     // Only concept nodes are draggable — team nodes represent other users
     // and should not be repositioned by the current user.
     for (var i = _nodes.length - 1; i >= 0; i--) {
-      if (_nodes[i].containsPoint(localPoint)) {
+      final r = math.max(_nodes[i].radius, hitRadius);
+      if ((localPoint - _nodes[i].position).distance <= r) {
         _draggingNodeIndex = i;
         _selectedNodeId = null;
         _layout.pinNode(i);
@@ -525,11 +581,14 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
 
     return InteractiveViewer(
       transformationController: _transformController,
-      boundaryMargin: const EdgeInsets.all(200),
-      minScale: 0.3,
+      constrained: false,
+      boundaryMargin: const EdgeInsets.all(double.infinity),
+      minScale: 0.05,
       maxScale: 3.0,
       child: GestureDetector(
         onTapUp: _onTapUp,
+        onDoubleTapDown: _onDoubleTapDown,
+        onDoubleTap: _onDoubleTap,
         onLongPressStart: _onLongPressStart,
         onLongPressMoveUpdate: _onLongPressMoveUpdate,
         onLongPressEnd: _onLongPressEnd,

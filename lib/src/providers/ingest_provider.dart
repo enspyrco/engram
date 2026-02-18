@@ -31,10 +31,26 @@ class IngestNotifier extends Notifier<IngestState> {
         collections: IList(collections),
       );
     } catch (e) {
-      state = state.copyWith(
-        phase: IngestPhase.error,
-        errorMessage: 'Failed to load collections: $e',
-      );
+      // Show topic selection even when offline — existing topics are local.
+      // New topic creation will be limited (no document list), but users
+      // can still browse and re-ingest existing topics.
+      final hasTopics = ref
+              .read(knowledgeGraphProvider)
+              .valueOrNull
+              ?.topics
+              .isNotEmpty ??
+          false;
+      if (hasTopics) {
+        state = state.copyWith(
+          phase: IngestPhase.topicSelection,
+          statusMessage: 'Offline — showing saved topics',
+        );
+      } else {
+        state = state.copyWith(
+          phase: IngestPhase.error,
+          errorMessage: 'Failed to load collections: $e',
+        );
+      }
     }
   }
 

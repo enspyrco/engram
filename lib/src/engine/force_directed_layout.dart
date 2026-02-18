@@ -113,7 +113,6 @@ class ForceDirectedLayout {
 
     final alpha = _temperature / _initialTemperature;
     final forces = List<Offset>.filled(nodeCount, Offset.zero);
-    const margin = 30.0;
 
     // Repulsive forces between all node pairs
     for (var i = 0; i < nodeCount; i++) {
@@ -181,19 +180,9 @@ class ForceDirectedLayout {
         _velocities[i] *= _temperature / speed;
       }
 
-      // Apply velocity to position
-      final newPos = _positions[i] + _velocities[i];
-
-      // Clamp to bounds and zero velocity at walls
-      final clampedX = newPos.dx.clamp(margin, width - margin);
-      final clampedY = newPos.dy.clamp(margin, height - margin);
-      if (clampedX != newPos.dx) {
-        _velocities[i] = Offset(0, _velocities[i].dy);
-      }
-      if (clampedY != newPos.dy) {
-        _velocities[i] = Offset(_velocities[i].dx, 0);
-      }
-      _positions[i] = Offset(clampedX, clampedY);
+      // Apply velocity to position (no boundary clamping — centering gravity
+      // keeps the graph cohesive, and InteractiveViewer handles pan/zoom).
+      _positions[i] = _positions[i] + _velocities[i];
     }
 
     // Cool down

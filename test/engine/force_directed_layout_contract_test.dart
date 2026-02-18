@@ -279,24 +279,23 @@ void main() {
     });
   });
 
-  group('Bounds enforcement', () {
-    test('all settled positions within margin bounds', () {
+  group('Layout convergence', () {
+    test('all nodes settle (no boundary clamping)', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
       );
       runToSettled(layout);
 
-      const margin = 30.0;
+      expect(layout.isSettled, isTrue);
+      // With gravity, nodes should cluster near center — not fly to infinity
+      final center = const Offset(400, 300);
       for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
+        expect((pos - center).distance, lessThan(800.0));
       }
     });
 
-    test('custom canvas size respected', () {
+    test('custom canvas size settles', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
@@ -305,13 +304,7 @@ void main() {
       );
       runToSettled(layout);
 
-      const margin = 30.0;
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(1200.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(900.0 - margin));
-      }
+      expect(layout.isSettled, isTrue);
     });
   });
 
@@ -344,16 +337,9 @@ void main() {
       runToSettled(layout);
 
       expect(layout.isSettled, isTrue);
-      const margin = 30.0;
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
-      }
     });
 
-    test('damped layout still converges within bounds', () {
+    test('damped layout still converges', () {
       final layout = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
@@ -362,13 +348,6 @@ void main() {
       runToSettled(layout);
 
       expect(layout.isSettled, isTrue);
-      const margin = 30.0;
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
-      }
     });
   });
 
@@ -411,15 +390,8 @@ void main() {
       );
       runToSettled(layout);
 
-      // Should still converge and stay in bounds
+      // Should still converge
       expect(layout.isSettled, isTrue);
-      const margin = 30.0;
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
-      }
     });
 
     test('many disconnected nodes stay closer to center with gravity', () {
@@ -500,15 +472,6 @@ void main() {
 
       // Layout should be settled (converged to new equilibrium)
       expect(layout.isSettled, isTrue);
-
-      // All positions still within bounds
-      const margin = 30.0;
-      for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(800.0 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(600.0 - margin));
-      }
     });
   });
 

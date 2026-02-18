@@ -515,7 +515,15 @@ class _ProgressView extends ConsumerWidget {
           ),
         // Live graph — grows as concepts are extracted
         if (graph != null && graph.concepts.isNotEmpty)
-          Expanded(child: ForceDirectedGraphWidget(graph: graph))
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) => ForceDirectedGraphWidget(
+                graph: graph,
+                layoutWidth: constraints.maxWidth,
+                layoutHeight: constraints.maxHeight,
+              ),
+            ),
+          )
         else
           const Expanded(child: SizedBox.shrink()),
         // Progress info at the bottom
