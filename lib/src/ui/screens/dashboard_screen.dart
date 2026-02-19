@@ -6,6 +6,7 @@ import '../../models/sync_status.dart';
 import '../../providers/catastrophe_provider.dart';
 import '../../providers/collection_filter_provider.dart';
 import '../../providers/dashboard_stats_provider.dart';
+import '../../providers/document_diff_provider.dart';
 import '../../providers/filtered_graph_provider.dart';
 import '../../providers/graph_structure_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
@@ -13,6 +14,7 @@ import '../../providers/network_health_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../graph/force_directed_graph_widget.dart';
 import '../navigation_shell.dart';
+import '../widgets/document_diff_sheet.dart';
 import '../widgets/mastery_bar.dart';
 import '../widgets/network_health_indicator.dart';
 import '../widgets/repair_mission_card.dart';
@@ -43,7 +45,7 @@ class DashboardScreen extends ConsumerWidget {
         children: [
           if (syncStatus.phase == SyncPhase.updatesAvailable &&
               syncStatus.staleDocumentCount > 0)
-            _SyncBanner(staleCount: syncStatus.staleDocumentCount),
+            _SyncBanner(syncStatus: syncStatus),
           if (syncStatus.newCollections.isNotEmpty)
             _NewCollectionsBanner(
               collections: syncStatus.newCollections,
@@ -99,13 +101,18 @@ class _SyncIconButton extends ConsumerWidget {
 }
 
 class _SyncBanner extends ConsumerWidget {
-  const _SyncBanner({required this.staleCount});
+  const _SyncBanner({required this.syncStatus});
 
-  final int staleCount;
+  final SyncStatus syncStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final staleCount = syncStatus.staleDocumentCount;
+    // Only changed docs (those with ingestedAt) can show a diff.
+    final changedDocs = syncStatus.staleDocuments
+        .where((d) => d.containsKey('ingestedAt'))
+        .toList();
 
     return MaterialBanner(
       content: Text(
@@ -113,6 +120,11 @@ class _SyncBanner extends ConsumerWidget {
       ),
       leading: Icon(Icons.sync, color: theme.colorScheme.primary),
       actions: [
+        if (changedDocs.isNotEmpty)
+          TextButton(
+            onPressed: () => _showChanges(context, ref, changedDocs),
+            child: const Text('View changes'),
+          ),
         TextButton(
           onPressed: () => ref.read(syncProvider.notifier).syncStaleDocuments(),
           child: const Text('Sync'),
@@ -122,6 +134,76 @@ class _SyncBanner extends ConsumerWidget {
           child: const Text('Dismiss'),
         ),
       ],
+    );
+  }
+
+  void _showChanges(
+    BuildContext context,
+    WidgetRef ref,
+    List<Map<String, String>> changedDocs,
+  ) {
+    if (changedDocs.length == 1) {
+      _openDiffSheet(context, ref, changedDocs.first);
+    } else {
+      _openDocPicker(context, ref, changedDocs);
+    }
+  }
+
+  void _openDiffSheet(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, String> doc,
+  ) {
+    ref.read(documentDiffProvider.notifier).fetchDiff(
+          documentId: doc['id']!,
+          ingestedAt: doc['ingestedAt']!,
+        );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        builder: (context, scrollController) =>
+            DocumentDiffSheet(scrollController: scrollController),
+      ),
+    ).whenComplete(() {
+      ref.read(documentDiffProvider.notifier).reset();
+    });
+  }
+
+  void _openDocPicker(
+    BuildContext context,
+    WidgetRef ref,
+    List<Map<String, String>> changedDocs,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Changed documents',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final doc in changedDocs)
+            ListTile(
+              leading: const Icon(Icons.description),
+              title: Text(doc['title'] ?? doc['id']!),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).pop();
+                _openDiffSheet(context, ref, doc);
+              },
+            ),
+        ],
+      ),
     );
   }
 }

@@ -48,6 +48,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
       // --- Check for stale documents in ingested collections ---
       var staleCount = 0;
       final staleCollections = <String>[];
+      final staleDocs = <Map<String, String>>[];
 
       if (ingestedIds.isNotEmpty && graph.documentMetadata.isNotEmpty) {
         for (final collectionId in ingestedIds) {
@@ -56,6 +57,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
 
           for (final doc in docs) {
             final docId = doc['id'] as String;
+            final docTitle = doc['title'] as String;
             final updatedAt = doc['updatedAt'] as String;
 
             final existing = graph.documentMetadata
@@ -66,6 +68,11 @@ class SyncNotifier extends Notifier<SyncStatus> {
             if (existing == null || existing.updatedAt != updatedAt) {
               staleCount++;
               collectionHasStale = true;
+              staleDocs.add({
+                'id': docId,
+                'title': docTitle,
+                if (existing != null) 'ingestedAt': existing.ingestedAt,
+              });
             }
           }
 
@@ -80,6 +87,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
           phase: SyncPhase.updatesAvailable,
           staleDocumentCount: staleCount,
           staleCollectionIds: IList(staleCollections),
+          staleDocuments: IList(staleDocs),
           newCollections: IList(newCollections),
         );
       } else {
