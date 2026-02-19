@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
+import 'clock_provider.dart';
 import 'service_providers.dart';
 
 /// State for the document diff viewer.
@@ -60,20 +61,18 @@ class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
       final client = ref.read(outlineClientProvider);
 
       // Fetch current doc and revisions in parallel.
-      final results = await Future.wait([
-        client.getDocument(documentId),
-        client.listRevisions(documentId),
-      ]);
-
-      final currentDoc = results[0] as Map<String, dynamic>;
-      final revisions = results[1] as List<Map<String, dynamic>>;
+      final docFuture = client.getDocument(documentId);
+      final revisionsFuture = client.listRevisions(documentId);
+      final (currentDoc, revisions) =
+          await (docFuture, revisionsFuture).wait;
       final currentText = currentDoc['text'] as String? ?? '';
 
       if (revisions.isEmpty) {
         state = DocumentDiffLoaded(
           oldText: '',
           newText: currentText,
-          revisionDate: DateTime.tryParse(ingestedAt) ?? DateTime.now().toUtc(),
+          revisionDate:
+              DateTime.tryParse(ingestedAt) ?? ref.read(clockProvider)(),
         );
         return;
       }

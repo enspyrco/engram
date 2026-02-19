@@ -362,7 +362,8 @@ class _CollectionSection extends ConsumerWidget {
         initialChildSize: 0.6,
         maxChildSize: 0.9,
         minChildSize: 0.3,
-        builder: (context, scrollController) => const DocumentDiffSheet(),
+        builder: (context, scrollController) =>
+            DocumentDiffSheet(scrollController: scrollController),
       ),
     ).whenComplete(() {
       ref.read(documentDiffProvider.notifier).reset();

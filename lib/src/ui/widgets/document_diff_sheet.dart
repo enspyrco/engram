@@ -4,10 +4,18 @@ import 'package:pretty_diff_text/pretty_diff_text.dart';
 
 import '../../providers/document_diff_provider.dart';
 
+const _kAddedColor = Color.fromARGB(255, 139, 197, 139);
+const _kRemovedColor = Color.fromARGB(255, 255, 129, 129);
+
 /// Bottom sheet content that shows a visual diff between the previously
 /// ingested version and the current version of a document.
 class DocumentDiffSheet extends ConsumerWidget {
-  const DocumentDiffSheet({super.key});
+  const DocumentDiffSheet({super.key, this.scrollController});
+
+  /// When used inside a [DraggableScrollableSheet], pass the sheet's
+  /// scroll controller so that scrolling the diff content also controls
+  /// the sheet size.
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,6 +52,7 @@ class DocumentDiffSheet extends ConsumerWidget {
           oldText: oldText,
           newText: newText,
           revisionDate: revisionDate,
+          scrollController: scrollController,
         ),
     };
   }
@@ -54,11 +63,13 @@ class _LoadedDiff extends StatelessWidget {
     required this.oldText,
     required this.newText,
     required this.revisionDate,
+    this.scrollController,
   });
 
   final String oldText;
   final String newText;
   final DateTime revisionDate;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -88,15 +99,9 @@ class _LoadedDiff extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _LegendChip(
-                color: Color.fromARGB(255, 139, 197, 139),
-                label: 'Added',
-              ),
+              _LegendChip(color: _kAddedColor, label: 'Added'),
               SizedBox(width: 12),
-              _LegendChip(
-                color: Color.fromARGB(255, 255, 129, 129),
-                label: 'Removed',
-              ),
+              _LegendChip(color: _kRemovedColor, label: 'Removed'),
             ],
           ),
         ),
@@ -104,6 +109,7 @@ class _LoadedDiff extends StatelessWidget {
         // Diff content
         Flexible(
           child: SingleChildScrollView(
+            controller: scrollController,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: PrettyDiffText(
               oldText: oldText,
@@ -113,11 +119,11 @@ class _LoadedDiff extends StatelessWidget {
                   ) ??
                   const TextStyle(fontFamily: 'monospace'),
               addedTextStyle: const TextStyle(
-                backgroundColor: Color.fromARGB(255, 139, 197, 139),
+                backgroundColor: _kAddedColor,
                 fontFamily: 'monospace',
               ),
               deletedTextStyle: const TextStyle(
-                backgroundColor: Color.fromARGB(255, 255, 129, 129),
+                backgroundColor: _kRemovedColor,
                 decoration: TextDecoration.lineThrough,
                 fontFamily: 'monospace',
               ),
