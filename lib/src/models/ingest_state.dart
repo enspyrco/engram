@@ -1,7 +1,19 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
-enum IngestPhase { idle, loadingCollections, ready, ingesting, done, error }
+import 'ingest_document.dart';
+import 'topic.dart';
+
+enum IngestPhase {
+  idle,
+  loadingCollections,
+  ready,
+  topicSelection,
+  configuringTopic,
+  ingesting,
+  done,
+  error,
+}
 
 @immutable
 class IngestState {
@@ -17,8 +29,15 @@ class IngestState {
     this.statusMessage = '',
     this.errorMessage = '',
     Set<String> sessionConceptIds = const {},
+    this.selectedTopic,
+    List<IngestDocument> availableDocuments = const [],
+    Set<String> selectedDocumentIds = const {},
+    this.topicName = '',
+    this.topicDescription = '',
   })  : collections = IList(collections),
-        sessionConceptIds = ISet(sessionConceptIds);
+        sessionConceptIds = ISet(sessionConceptIds),
+        availableDocuments = IList(availableDocuments),
+        selectedDocumentIds = ISet(selectedDocumentIds);
 
   const IngestState._({
     this.phase = IngestPhase.idle,
@@ -32,6 +51,11 @@ class IngestState {
     this.statusMessage = '',
     this.errorMessage = '',
     this.sessionConceptIds = const ISetConst({}),
+    this.selectedTopic,
+    this.availableDocuments = const IListConst([]),
+    this.selectedDocumentIds = const ISetConst({}),
+    this.topicName = '',
+    this.topicDescription = '',
   });
 
   static const empty = IngestState._();
@@ -51,6 +75,21 @@ class IngestState {
   /// live graph visualization to only show newly extracted nodes.
   final ISet<String> sessionConceptIds;
 
+  /// The topic being configured or ingested.
+  final Topic? selectedTopic;
+
+  /// Documents available for selection, with status info.
+  final IList<IngestDocument> availableDocuments;
+
+  /// User's document selection for the current ingestion run.
+  final ISet<String> selectedDocumentIds;
+
+  /// Name for a new topic being created.
+  final String topicName;
+
+  /// Description for a new topic being created.
+  final String topicDescription;
+
   double get progress =>
       totalDocuments > 0 ? processedDocuments / totalDocuments : 0;
 
@@ -66,6 +105,11 @@ class IngestState {
     String? statusMessage,
     String? errorMessage,
     ISet<String>? sessionConceptIds,
+    Topic? Function()? selectedTopic,
+    IList<IngestDocument>? availableDocuments,
+    ISet<String>? selectedDocumentIds,
+    String? topicName,
+    String? topicDescription,
   }) {
     return IngestState._(
       phase: phase ?? this.phase,
@@ -81,6 +125,12 @@ class IngestState {
       statusMessage: statusMessage ?? this.statusMessage,
       errorMessage: errorMessage ?? this.errorMessage,
       sessionConceptIds: sessionConceptIds ?? this.sessionConceptIds,
+      selectedTopic:
+          selectedTopic != null ? selectedTopic() : this.selectedTopic,
+      availableDocuments: availableDocuments ?? this.availableDocuments,
+      selectedDocumentIds: selectedDocumentIds ?? this.selectedDocumentIds,
+      topicName: topicName ?? this.topicName,
+      topicDescription: topicDescription ?? this.topicDescription,
     );
   }
 }

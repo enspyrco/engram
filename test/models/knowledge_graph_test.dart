@@ -5,6 +5,7 @@ import 'package:engram/src/models/document_metadata.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
+import 'package:engram/src/models/topic.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -662,6 +663,164 @@ void main() {
       expect(newGraph.quizItems.length, 2);
       expect(newGraph.quizItems.first.repetitions, 1);
       expect(newGraph.quizItems.last.repetitions, 0);
+    });
+
+    test('withTopic adds a new topic', () {
+      final graph = KnowledgeGraph();
+      final topic = Topic(
+        id: 'topic-1',
+        name: 'Agent Skills',
+        documentIds: {'doc-1', 'doc-2'},
+        createdAt: '2026-02-18T00:00:00.000Z',
+      );
+
+      final updated = graph.withTopic(topic);
+
+      expect(updated.topics, hasLength(1));
+      expect(updated.topics.first.id, 'topic-1');
+      expect(updated.topics.first.documentIds, hasLength(2));
+    });
+
+    test('withTopic upserts existing topic by ID', () {
+      final topic1 = Topic(
+        id: 'topic-1',
+        name: 'Version 1',
+        createdAt: '2026-02-18T00:00:00.000Z',
+      );
+      final graph = KnowledgeGraph(topics: [topic1]);
+
+      final topic1Updated = Topic(
+        id: 'topic-1',
+        name: 'Version 2',
+        documentIds: {'doc-1'},
+        createdAt: '2026-02-18T00:00:00.000Z',
+      );
+
+      final updated = graph.withTopic(topic1Updated);
+
+      expect(updated.topics, hasLength(1));
+      expect(updated.topics.first.name, 'Version 2');
+      expect(updated.topics.first.documentIds, hasLength(1));
+    });
+
+    test('withoutTopic removes topic by ID', () {
+      final graph = KnowledgeGraph(topics: [
+        Topic(
+          id: 'topic-1',
+          name: 'Keep',
+          createdAt: '2026-02-18T00:00:00.000Z',
+        ),
+        Topic(
+          id: 'topic-2',
+          name: 'Remove',
+          createdAt: '2026-02-18T00:00:00.000Z',
+        ),
+      ]);
+
+      final updated = graph.withoutTopic('topic-2');
+
+      expect(updated.topics, hasLength(1));
+      expect(updated.topics.first.id, 'topic-1');
+    });
+
+    test('topics survive withNewExtraction', () {
+      final topic = Topic(
+        id: 'topic-1',
+        name: 'Persisted Topic',
+        createdAt: '2026-02-18T00:00:00.000Z',
+      );
+      final graph = KnowledgeGraph(topics: [topic]);
+
+      final result = ExtractionResult(
+        concepts: [
+          Concept(
+            id: 'c1',
+            name: 'C1',
+            description: 'Desc',
+            sourceDocumentId: '',
+          ),
+        ],
+        relationships: const [],
+        quizItems: [],
+      );
+
+      final updated = graph.withNewExtraction(
+        result,
+        documentId: 'doc-1',
+        documentTitle: 'Doc 1',
+        updatedAt: '2025-01-01',
+      );
+
+      expect(updated.topics, hasLength(1));
+      expect(updated.topics.first.id, 'topic-1');
+    });
+
+    test('topics survive withUpdatedQuizItem', () {
+      final topic = Topic(
+        id: 'topic-1',
+        name: 'Persisted',
+        createdAt: '2026-02-18T00:00:00.000Z',
+      );
+      final graph = KnowledgeGraph(
+        topics: [topic],
+        quizItems: [
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
+        ],
+      );
+
+      final updated = graph.quizItems.first.withReview(
+        easeFactor: 2.6,
+        interval: 1,
+        repetitions: 1,
+        nextReview: '2025-01-02T00:00:00.000Z',
+      );
+
+      final newGraph = graph.withUpdatedQuizItem(updated);
+
+      expect(newGraph.topics, hasLength(1));
+      expect(newGraph.topics.first.id, 'topic-1');
+    });
+
+    test('topics round-trip through JSON', () {
+      final graph = KnowledgeGraph(
+        topics: [
+          Topic(
+            id: 'topic-1',
+            name: 'Agent Skills',
+            description: 'Course',
+            documentIds: {'doc-1', 'doc-2'},
+            createdAt: '2026-02-18T00:00:00.000Z',
+            lastIngestedAt: '2026-02-18T01:00:00.000Z',
+          ),
+        ],
+      );
+
+      final jsonStr = jsonEncode(graph.toJson());
+      final restored =
+          KnowledgeGraph.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+
+      expect(restored.topics, hasLength(1));
+      expect(restored.topics.first.id, 'topic-1');
+      expect(restored.topics.first.name, 'Agent Skills');
+      expect(restored.topics.first.documentIds, hasLength(2));
+    });
+
+    test('fromJson handles missing topics field (backward compat)', () {
+      final json = {
+        'concepts': <dynamic>[],
+        'relationships': <dynamic>[],
+        'quizItems': <dynamic>[],
+        'documentMetadata': <dynamic>[],
+      };
+
+      final graph = KnowledgeGraph.fromJson(json);
+
+      expect(graph.topics, isEmpty);
     });
   });
 }

@@ -37,14 +37,15 @@ Use Claude with **forced tool calling** (`ToolChoice.tool`) on an `extract_knowl
 
 #### Extraction Rules
 
-**Concepts (3-10 per document depending on density):**
+**Concepts (quantity driven by document density):**
+- Extract all significant concepts. Let document density guide quantity — a brief glossary may yield 2-3, a dense technical article may yield 15-20. Favor precision over volume.
 - IDs must be **canonical lowercase kebab-case** (e.g., `docker-compose`, `sm2-algorithm`)
 - **REUSE existing concept IDs** when a concept already exists in the graph — this prevents duplicates across documents
 - Each concept gets: `id`, `name`, `description` (1-3 sentences), optional `tags`
 - Track `sourceDocumentId` to know which document produced each concept
 
 **Relationships:**
-- Only create relationships between concepts from **the current document**
+- Create relationships between concepts, including **cross-document connections** using existing concept IDs
 - Use `"depends on"` label for prerequisites; other labels for non-prerequisite connections
 - See `references/relationship-types.md` for the full relationship taxonomy
 - Each relationship: `id`, `fromConceptId`, `toConceptId`, `label`, optional `description`
@@ -60,7 +61,7 @@ Use Claude with **forced tool calling** (`ToolChoice.tool`) on an `extract_knowl
 
 After extraction, **before merging into the graph**:
 
-1. **Skip orphaned relationships** — if `fromConceptId` or `toConceptId` doesn't match any extracted concept, drop the relationship
+1. **Skip orphaned relationships** — if `fromConceptId` or `toConceptId` doesn't match any extracted concept **or existing graph concept**, drop the relationship
 2. **Skip orphaned quiz items** — if `conceptId` doesn't match any extracted concept, drop the item
 3. Log what was skipped for debugging
 
@@ -98,9 +99,8 @@ When merging into a live graph with force-directed visualization:
 
 ### Anti-Patterns to Avoid
 
-- **Overly granular concepts**: Don't create a concept for every paragraph. 3-10 per document.
+- **Overly granular concepts**: Don't create a concept for every paragraph. Favor precision over volume.
 - **Trivial quiz items**: "What is X?" with answer "X is X." — test understanding, not definitions
-- **Cross-document relationships**: Only relate concepts extracted from the SAME document. Cross-document connections happen via concept ID reuse.
 - **Duplicate concepts**: Always check `existingConceptIds` before creating a new ID. If `kubernetes` already exists, reuse it.
 
 ## Sub-Concept Splitting

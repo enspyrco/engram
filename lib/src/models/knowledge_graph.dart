@@ -5,6 +5,7 @@ import 'concept.dart';
 import 'document_metadata.dart';
 import 'quiz_item.dart';
 import 'relationship.dart';
+import 'topic.dart';
 
 /// Result from a single document extraction.
 class ExtractionResult {
@@ -26,16 +27,19 @@ class KnowledgeGraph {
     List<Relationship> relationships = const [],
     List<QuizItem> quizItems = const [],
     List<DocumentMetadata> documentMetadata = const [],
+    List<Topic> topics = const [],
   })  : concepts = IList(concepts),
         relationships = IList(relationships),
         quizItems = IList(quizItems),
-        documentMetadata = IList(documentMetadata);
+        documentMetadata = IList(documentMetadata),
+        topics = IList(topics);
 
   const KnowledgeGraph._raw({
     required this.concepts,
     required this.relationships,
     required this.quizItems,
     required this.documentMetadata,
+    required this.topics,
   });
 
   factory KnowledgeGraph.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,10 @@ class KnowledgeGraph {
                   (e) => DocumentMetadata.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
+      topics: (json['topics'] as List<dynamic>?)
+              ?.map((e) => Topic.fromJson(e as Map<String, dynamic>))
+              .toIList() ??
+          const IListConst([]),
     );
   }
 
@@ -66,6 +74,7 @@ class KnowledgeGraph {
   final IList<Relationship> relationships;
   final IList<QuizItem> quizItems;
   final IList<DocumentMetadata> documentMetadata;
+  final IList<Topic> topics;
 
   /// Merge an extraction result into this graph, replacing data from the
   /// same document if it was previously ingested.
@@ -127,6 +136,7 @@ class KnowledgeGraph {
       relationships: newRelationships,
       quizItems: newQuizItems,
       documentMetadata: newMetadata,
+      topics: topics,
     );
   }
 
@@ -155,6 +165,7 @@ class KnowledgeGraph {
       relationships: relationships,
       quizItems: quizItems,
       documentMetadata: documentMetadata.replace(idx, updated),
+      topics: topics,
     );
   }
 
@@ -167,6 +178,7 @@ class KnowledgeGraph {
       relationships: relationships,
       quizItems: quizItems.replace(idx, updated),
       documentMetadata: documentMetadata,
+      topics: topics,
     );
   }
 
@@ -183,6 +195,31 @@ class KnowledgeGraph {
       relationships: relationships.addAll(childRelationships),
       quizItems: quizItems.addAll(childQuizItems),
       documentMetadata: documentMetadata,
+      topics: topics,
+    );
+  }
+
+  /// Upsert a topic by ID. If a topic with the same ID exists, it is replaced.
+  KnowledgeGraph withTopic(Topic topic) {
+    final idx = topics.indexWhere((t) => t.id == topic.id);
+    final newTopics = idx >= 0 ? topics.replace(idx, topic) : topics.add(topic);
+    return KnowledgeGraph._raw(
+      concepts: concepts,
+      relationships: relationships,
+      quizItems: quizItems,
+      documentMetadata: documentMetadata,
+      topics: newTopics,
+    );
+  }
+
+  /// Remove a topic by ID.
+  KnowledgeGraph withoutTopic(String topicId) {
+    return KnowledgeGraph._raw(
+      concepts: concepts,
+      relationships: relationships,
+      quizItems: quizItems,
+      documentMetadata: documentMetadata,
+      topics: topics.removeWhere((t) => t.id == topicId),
     );
   }
 
@@ -191,5 +228,6 @@ class KnowledgeGraph {
         'relationships': relationships.map((r) => r.toJson()).toList(),
         'quizItems': quizItems.map((q) => q.toJson()).toList(),
         'documentMetadata': documentMetadata.map((m) => m.toJson()).toList(),
+        'topics': topics.map((t) => t.toJson()).toList(),
       };
 }

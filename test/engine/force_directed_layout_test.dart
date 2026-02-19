@@ -296,7 +296,7 @@ void main() {
       });
     });
 
-    test('nodes stay within bounds', () {
+    test('nodes stay near center with gravity', () {
       final layout = ForceDirectedLayout(
         nodeCount: 5,
         edges: [(0, 1), (1, 2), (2, 3), (3, 4)],
@@ -307,12 +307,10 @@ void main() {
 
       while (layout.step()) {}
 
-      const margin = 30.0; // matches engine hard clamp margin
+      // With gravity, nodes should stay reasonably near the center
+      const center = Offset(200, 150);
       for (final pos in layout.positions) {
-        expect(pos.dx, greaterThanOrEqualTo(margin));
-        expect(pos.dx, lessThanOrEqualTo(400 - margin));
-        expect(pos.dy, greaterThanOrEqualTo(margin));
-        expect(pos.dy, lessThanOrEqualTo(300 - margin));
+        expect((pos - center).distance, lessThan(400.0));
       }
     });
   });

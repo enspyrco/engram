@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:engram/src/models/concept.dart';
+import 'package:engram/src/models/document_metadata.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
+import 'package:engram/src/models/topic.dart';
 import 'package:engram/src/providers/graph_store_provider.dart';
 import 'package:engram/src/providers/knowledge_graph_provider.dart';
 import 'package:engram/src/providers/settings_provider.dart';
@@ -97,6 +99,137 @@ void main() {
       // Verify persisted to disk
       final reloaded = await store.load();
       expect(reloaded.quizItems.first.repetitions, 1);
+    });
+
+    test('auto-migrates collections to topics on first load', () async {
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c1',
+            name: 'Docker',
+            description: 'Container runtime',
+            sourceDocumentId: 'doc1',
+          ),
+          Concept(
+            id: 'c2',
+            name: 'Kubernetes',
+            description: 'Orchestration',
+            sourceDocumentId: 'doc2',
+          ),
+          Concept(
+            id: 'c3',
+            name: 'React',
+            description: 'UI library',
+            sourceDocumentId: 'doc3',
+          ),
+        ],
+        documentMetadata: [
+          const DocumentMetadata(
+            documentId: 'doc1',
+            title: 'Docker Guide',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-infra',
+            collectionName: 'Infrastructure',
+          ),
+          const DocumentMetadata(
+            documentId: 'doc2',
+            title: 'K8s Guide',
+            updatedAt: '2025-01-02',
+            ingestedAt: '2025-01-02',
+            collectionId: 'col-infra',
+            collectionName: 'Infrastructure',
+          ),
+          const DocumentMetadata(
+            documentId: 'doc3',
+            title: 'React Guide',
+            updatedAt: '2025-01-03',
+            ingestedAt: '2025-01-03',
+            collectionId: 'col-frontend',
+            collectionName: 'Frontend',
+          ),
+        ],
+        // No topics — triggers auto-migration
+      );
+
+      final container = createContainer(initial: graph);
+      final loaded =
+          await container.read(knowledgeGraphProvider.future);
+
+      // Should have 2 auto-generated topics (one per collection)
+      expect(loaded.topics, hasLength(2));
+
+      final infraTopic =
+          loaded.topics.where((t) => t.name == 'Infrastructure').first;
+      expect(infraTopic.id, 'auto-col-infra');
+      expect(infraTopic.documentIds, containsAll(['doc1', 'doc2']));
+      expect(infraTopic.description, 'Auto-migrated from collection');
+
+      final frontendTopic =
+          loaded.topics.where((t) => t.name == 'Frontend').first;
+      expect(frontendTopic.id, 'auto-col-frontend');
+      expect(frontendTopic.documentIds, contains('doc3'));
+    });
+
+    test('does not auto-migrate when topics already exist', () async {
+      final graph = KnowledgeGraph(
+        documentMetadata: [
+          const DocumentMetadata(
+            documentId: 'doc1',
+            title: 'Docker Guide',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            collectionId: 'col-1',
+            collectionName: 'Infra',
+          ),
+        ],
+        topics: [
+          Topic(
+            id: 'existing-topic',
+            name: 'Existing',
+            createdAt: '2025-01-01',
+          ),
+        ],
+      );
+
+      final container = createContainer(initial: graph);
+      final loaded =
+          await container.read(knowledgeGraphProvider.future);
+
+      // Should keep the existing topic and NOT add auto-migrated ones
+      expect(loaded.topics, hasLength(1));
+      expect(loaded.topics.first.id, 'existing-topic');
+    });
+
+    test('skips metadata without collectionId during auto-migration', () async {
+      final graph = KnowledgeGraph(
+        documentMetadata: [
+          const DocumentMetadata(
+            documentId: 'doc1',
+            title: 'No Collection',
+            updatedAt: '2025-01-01',
+            ingestedAt: '2025-01-01',
+            // No collectionId
+          ),
+          const DocumentMetadata(
+            documentId: 'doc2',
+            title: 'Has Collection',
+            updatedAt: '2025-01-02',
+            ingestedAt: '2025-01-02',
+            collectionId: 'col-1',
+            collectionName: 'Infra',
+          ),
+        ],
+      );
+
+      final container = createContainer(initial: graph);
+      final loaded =
+          await container.read(knowledgeGraphProvider.future);
+
+      // Only one topic for the metadata with a collectionId
+      expect(loaded.topics, hasLength(1));
+      expect(loaded.topics.first.documentIds, contains('doc2'));
+      expect(loaded.topics.first.documentIds, isNot(contains('doc1')));
     });
 
     test('ingestExtraction adds concepts and persists', () async {
