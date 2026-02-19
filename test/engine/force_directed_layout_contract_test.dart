@@ -289,7 +289,7 @@ void main() {
 
       expect(layout.isSettled, isTrue);
       // With gravity, nodes should cluster near center — not fly to infinity
-      final center = const Offset(400, 300);
+      const center = Offset(400, 300);
       for (final pos in layout.positions) {
         expect((pos - center).distance, lessThan(800.0));
       }

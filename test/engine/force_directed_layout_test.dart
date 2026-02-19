@@ -308,7 +308,7 @@ void main() {
       while (layout.step()) {}
 
       // With gravity, nodes should stay reasonably near the center
-      final center = const Offset(200, 150);
+      const center = Offset(200, 150);
       for (final pos in layout.positions) {
         expect((pos - center).distance, lessThan(400.0));
       }
