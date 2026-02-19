@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
-import 'clock_provider.dart';
+import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 
 /// State for the document diff viewer.
@@ -22,17 +22,17 @@ class DocumentDiffLoaded extends DocumentDiffState {
   const DocumentDiffLoaded({
     required this.oldText,
     required this.newText,
-    required this.revisionDate,
+    required this.ingestedAt,
   });
 
-  /// The document text at the revision closest to the last ingestion.
+  /// The document text at the time of last ingestion.
   final String oldText;
 
-  /// The current document text.
+  /// The current document text from the wiki.
   final String newText;
 
-  /// When the matched revision was created.
-  final DateTime revisionDate;
+  /// When the document was last ingested.
+  final DateTime ingestedAt;
 }
 
 class DocumentDiffError extends DocumentDiffState {
@@ -49,67 +49,42 @@ class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
   @override
   DocumentDiffState build() => const DocumentDiffIdle();
 
-  /// Fetch the current document and its revision history, then find the
-  /// revision closest to [ingestedAt] to use as the "old" text.
+  /// Fetch the current document text and compare it against the stored
+  /// [ingestedText] from [DocumentMetadata].
   Future<void> fetchDiff({
     required String documentId,
-    required String ingestedAt,
   }) async {
     state = const DocumentDiffLoading();
 
     try {
-      final client = ref.read(outlineClientProvider);
+      // Look up stored ingested text from the knowledge graph.
+      final graph = ref.read(knowledgeGraphProvider).valueOrNull;
+      final meta = graph?.documentMetadata
+          .where((m) => m.documentId == documentId)
+          .firstOrNull;
 
-      // Fetch current doc and revisions in parallel.
-      final docFuture = client.getDocument(documentId);
-      final revisionsFuture = client.listRevisions(documentId);
-      final (currentDoc, revisions) =
-          await (docFuture, revisionsFuture).wait;
-      final currentText = currentDoc['text'] as String? ?? '';
+      if (meta == null) {
+        state = const DocumentDiffError('Document metadata not found');
+        return;
+      }
 
-      if (revisions.isEmpty) {
-        state = DocumentDiffLoaded(
-          oldText: '',
-          newText: currentText,
-          revisionDate:
-              DateTime.tryParse(ingestedAt) ?? ref.read(clockProvider)(),
+      if (meta.ingestedText == null) {
+        state = const DocumentDiffError(
+          'No previous version stored. Re-ingest this document first to '
+          'enable diff viewing.',
         );
         return;
       }
 
-      final ingestedAtDt = DateTime.parse(ingestedAt);
-
-      // Find the revision closest to but not after ingestedAt.
-      Map<String, dynamic>? bestMatch;
-      DateTime? bestDate;
-
-      for (final rev in revisions) {
-        final createdAt = DateTime.parse(rev['createdAt'] as String);
-        if (createdAt.compareTo(ingestedAtDt) <= 0) {
-          if (bestDate == null || createdAt.isAfter(bestDate)) {
-            bestMatch = rev;
-            bestDate = createdAt;
-          }
-        }
-      }
-
-      // Fallback: if all revisions are newer, use the oldest one.
-      if (bestMatch == null) {
-        DateTime? oldestDate;
-        for (final rev in revisions) {
-          final createdAt = DateTime.parse(rev['createdAt'] as String);
-          if (oldestDate == null || createdAt.isBefore(oldestDate)) {
-            bestMatch = rev;
-            oldestDate = createdAt;
-          }
-        }
-        bestDate = oldestDate;
-      }
+      // Fetch current text from Outline.
+      final client = ref.read(outlineClientProvider);
+      final currentDoc = await client.getDocument(documentId);
+      final currentText = currentDoc['text'] as String? ?? '';
 
       state = DocumentDiffLoaded(
-        oldText: bestMatch!['text'] as String? ?? '',
+        oldText: meta.ingestedText!,
         newText: currentText,
-        revisionDate: bestDate!,
+        ingestedAt: DateTime.parse(meta.ingestedAt),
       );
     } catch (e) {
       state = DocumentDiffError('Diff fetch failed: $e');

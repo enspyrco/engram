@@ -222,6 +222,7 @@ class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
     required String updatedAt,
     String? collectionId,
     String? collectionName,
+    String? documentText,
   }) async {
     _graph = _graph.withNewExtraction(
       result,
@@ -230,6 +231,7 @@ class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
       updatedAt: updatedAt,
       collectionId: collectionId,
       collectionName: collectionName,
+      documentText: documentText,
     );
     state = AsyncData(_graph);
   }
@@ -242,6 +244,7 @@ class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
     required String updatedAt,
     String? collectionId,
     String? collectionName,
+    String? documentText,
     Duration delay = const Duration(milliseconds: 250),
     int batchSize = 3,
   }) async {

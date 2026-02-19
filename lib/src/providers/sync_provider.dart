@@ -154,6 +154,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
             documentId: docId,
             documentTitle: docTitle,
             updatedAt: updatedAt,
+            documentText: content,
           );
 
           graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;

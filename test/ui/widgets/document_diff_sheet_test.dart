@@ -15,7 +15,6 @@ class _TestDiffNotifier extends DocumentDiffNotifier {
   @override
   Future<void> fetchDiff({
     required String documentId,
-    required String ingestedAt,
   }) async {}
 }
 
@@ -49,7 +48,7 @@ void main() {
           DocumentDiffLoaded(
             oldText: '# Original',
             newText: '# Updated\nNew line.',
-            revisionDate: DateTime.utc(2026, 2, 17, 10),
+            ingestedAt: DateTime.utc(2026, 2, 17, 10),
           ),
         ),
       );

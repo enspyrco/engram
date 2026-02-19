@@ -86,6 +86,7 @@ class KnowledgeGraph {
     DateTime? now,
     String? collectionId,
     String? collectionName,
+    String? documentText,
   }) {
     // Remove old data from the same document
     final oldConceptIds = concepts
@@ -126,6 +127,7 @@ class KnowledgeGraph {
       ingestedAt: currentTime.toIso8601String(),
       collectionId: collectionId ?? existing?.collectionId,
       collectionName: collectionName ?? existing?.collectionName,
+      ingestedText: documentText ?? existing?.ingestedText,
     );
     final newMetadata = existingIndex >= 0
         ? documentMetadata.replace(existingIndex, meta)

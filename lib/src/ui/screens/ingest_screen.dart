@@ -343,15 +343,8 @@ class _CollectionSection extends ConsumerWidget {
   final ISet<String> selectedIds;
 
   void _showDiff(BuildContext context, WidgetRef ref, String documentId) {
-    final graph = ref.read(knowledgeGraphProvider).valueOrNull;
-    final meta = graph?.documentMetadata
-        .where((m) => m.documentId == documentId)
-        .firstOrNull;
-    if (meta == null) return;
-
     ref.read(documentDiffProvider.notifier).fetchDiff(
           documentId: documentId,
-          ingestedAt: meta.ingestedAt,
         );
 
     showModalBottomSheet<void>(

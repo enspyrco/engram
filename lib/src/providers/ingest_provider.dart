@@ -325,6 +325,7 @@ class IngestNotifier extends Notifier<IngestState> {
             updatedAt: updatedAt,
             collectionId: collectionId,
             collectionName: collectionName,
+            documentText: content,
           ).timeout(const Duration(minutes: 2),
               onTimeout: () => throw TimeoutException(
                   'Staggered ingestion timed out after 2 min'));
@@ -514,6 +515,7 @@ class IngestNotifier extends Notifier<IngestState> {
             updatedAt: updatedAt,
             collectionId: collectionId,
             collectionName: collectionName,
+            documentText: content,
           ).timeout(const Duration(minutes: 2),
               onTimeout: () => throw TimeoutException(
                   'Staggered ingestion timed out after 2 min'));

@@ -156,7 +156,6 @@ class _SyncBanner extends ConsumerWidget {
   ) {
     ref.read(documentDiffProvider.notifier).fetchDiff(
           documentId: doc['id']!,
-          ingestedAt: doc['ingestedAt']!,
         );
 
     showModalBottomSheet<void>(

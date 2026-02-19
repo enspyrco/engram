@@ -47,11 +47,11 @@ class DocumentDiffSheet extends ConsumerWidget {
             ],
           ),
         ),
-      DocumentDiffLoaded(:final oldText, :final newText, :final revisionDate) =>
+      DocumentDiffLoaded(:final oldText, :final newText, :final ingestedAt) =>
         _LoadedDiff(
           oldText: oldText,
           newText: newText,
-          revisionDate: revisionDate,
+          ingestedAt: ingestedAt,
           scrollController: scrollController,
         ),
     };
@@ -62,13 +62,13 @@ class _LoadedDiff extends StatelessWidget {
   const _LoadedDiff({
     required this.oldText,
     required this.newText,
-    required this.revisionDate,
+    required this.ingestedAt,
     this.scrollController,
   });
 
   final String oldText;
   final String newText;
-  final DateTime revisionDate;
+  final DateTime ingestedAt;
   final ScrollController? scrollController;
 
   @override
@@ -87,7 +87,7 @@ class _LoadedDiff extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Since ${_formatDate(revisionDate)}',
+            'Since ${_formatDate(ingestedAt)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

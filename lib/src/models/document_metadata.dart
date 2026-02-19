@@ -9,6 +9,7 @@ class DocumentMetadata {
     required this.ingestedAt,
     this.collectionId,
     this.collectionName,
+    this.ingestedText,
   });
 
   factory DocumentMetadata.fromJson(Map<String, dynamic> json) {
@@ -19,6 +20,7 @@ class DocumentMetadata {
       ingestedAt: json['ingestedAt'] as String,
       collectionId: json['collectionId'] as String?,
       collectionName: json['collectionName'] as String?,
+      ingestedText: json['ingestedText'] as String?,
     );
   }
 
@@ -29,7 +31,15 @@ class DocumentMetadata {
   final String? collectionId;
   final String? collectionName;
 
-  DocumentMetadata withUpdatedAt(String updatedAt, {DateTime? now}) {
+  /// The document markdown text at the time of last ingestion.
+  /// Used for diffing when the document is updated in the wiki.
+  final String? ingestedText;
+
+  DocumentMetadata withUpdatedAt(
+    String updatedAt, {
+    DateTime? now,
+    String? ingestedText,
+  }) {
     final currentTime = now ?? DateTime.now().toUtc();
     return DocumentMetadata(
       documentId: documentId,
@@ -38,6 +48,7 @@ class DocumentMetadata {
       ingestedAt: currentTime.toIso8601String(),
       collectionId: collectionId,
       collectionName: collectionName,
+      ingestedText: ingestedText ?? this.ingestedText,
     );
   }
 
@@ -48,6 +59,7 @@ class DocumentMetadata {
         'ingestedAt': ingestedAt,
         if (collectionId != null) 'collectionId': collectionId,
         if (collectionName != null) 'collectionName': collectionName,
+        if (ingestedText != null) 'ingestedText': ingestedText,
       };
 
   @override
