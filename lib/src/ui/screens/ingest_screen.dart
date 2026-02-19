@@ -6,11 +6,13 @@ import '../../models/ingest_document.dart';
 import '../../models/ingest_state.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/topic.dart';
+import '../../providers/document_diff_provider.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/topic_provider.dart';
 import '../graph/force_directed_graph_widget.dart';
+import '../widgets/document_diff_sheet.dart';
 
 class IngestScreen extends ConsumerWidget {
   const IngestScreen({super.key});
@@ -340,6 +342,33 @@ class _CollectionSection extends ConsumerWidget {
   final List<IngestDocument> documents;
   final ISet<String> selectedIds;
 
+  void _showDiff(BuildContext context, WidgetRef ref, String documentId) {
+    final graph = ref.read(knowledgeGraphProvider).valueOrNull;
+    final meta = graph?.documentMetadata
+        .where((m) => m.documentId == documentId)
+        .firstOrNull;
+    if (meta == null) return;
+
+    ref.read(documentDiffProvider.notifier).fetchDiff(
+          documentId: documentId,
+          ingestedAt: meta.ingestedAt,
+        );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        builder: (context, scrollController) => const DocumentDiffSheet(),
+      ),
+    ).whenComplete(() {
+      ref.read(documentDiffProvider.notifier).reset();
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -370,7 +399,12 @@ class _CollectionSection extends ConsumerWidget {
                 .read(ingestProvider.notifier)
                 .toggleDocument(doc.id),
             title: Text(doc.title),
-            subtitle: _StatusChip(status: doc.status),
+            subtitle: _StatusChip(
+              status: doc.status,
+              onViewChanges: doc.status == IngestDocumentStatus.changed
+                  ? () => _showDiff(context, ref, doc.id)
+                  : null,
+            ),
             dense: true,
           ),
       ],
@@ -379,8 +413,9 @@ class _CollectionSection extends ConsumerWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+  const _StatusChip({required this.status, this.onViewChanges});
   final IngestDocumentStatus status;
+  final VoidCallback? onViewChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +435,19 @@ class _StatusChip extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
+        if (onViewChanges != null) ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onViewChanges,
+            child: Text(
+              'View changes',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+            ),
+          ),
+        ],
       ],
     );
   }

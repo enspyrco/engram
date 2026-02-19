@@ -95,6 +95,17 @@ class OutlineClient {
     return result['data'] as Map<String, dynamic>;
   }
 
+  /// List revision history for a document, newest first.
+  Future<List<Map<String, dynamic>>> listRevisions(
+    String documentId,
+  ) async {
+    final result = await _post('/api/documents.revisions', {
+      'id': documentId,
+    });
+    final data = result['data'] as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
+  }
+
   void close() => _httpClient.close();
 }
 

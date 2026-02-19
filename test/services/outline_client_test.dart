@@ -166,6 +166,45 @@ void main() {
       );
     });
 
+    test('listRevisions returns revision data', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/api/documents.revisions');
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['id'], 'doc-1');
+
+        return http.Response(
+          jsonEncode({
+            'data': [
+              {
+                'id': 'rev-2',
+                'documentId': 'doc-1',
+                'text': '# Updated',
+                'createdAt': '2026-02-19T10:00:00Z',
+              },
+              {
+                'id': 'rev-1',
+                'documentId': 'doc-1',
+                'text': '# Original',
+                'createdAt': '2026-02-18T10:00:00Z',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final client = OutlineClient(
+        apiUrl: 'https://wiki.example.com',
+        apiKey: 'test-key',
+        httpClient: mockClient,
+      );
+
+      final revisions = await client.listRevisions('doc-1');
+      expect(revisions.length, 2);
+      expect(revisions[0]['id'], 'rev-2');
+      expect(revisions[1]['text'], '# Original');
+    });
+
     test('strips trailing slash from apiUrl', () async {
       final mockClient = MockClient((request) async {
         expect(
