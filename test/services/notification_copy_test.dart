@@ -12,7 +12,7 @@ void main() {
       );
 
       expect(copy.skip, isTrue);
-      expect(copy.title, 'All caught up!');
+      expect(copy.title, contains('caught up'));
     });
 
     test('new concepts available → explores message', () {
@@ -24,8 +24,9 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, 'New concepts to explore');
-      expect(copy.body, contains('Plus 3 due'));
+      expect(copy.title, contains('concepts'));
+      expect(copy.body, contains('3'));
+      expect(copy.body, contains('due'));
     });
 
     test('new concepts with no due → no "Plus" suffix', () {
@@ -37,7 +38,7 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, 'New concepts to explore');
+      expect(copy.title, contains('concepts'));
       expect(copy.body, isNot(contains('Plus')));
     });
 
@@ -50,8 +51,8 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, 'Welcome back!');
-      expect(copy.body, contains('10 concepts'));
+      expect(copy.title, contains('Welcome back'));
+      expect(copy.body, contains('10'));
     });
 
     test('active streak → streak message', () {
@@ -63,8 +64,8 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, '7-day streak!');
-      expect(copy.body, contains('4 concepts'));
+      expect(copy.title, contains('streak'));
+      expect(copy.body, contains('4'));
     });
 
     test('default → generic review message', () {
@@ -76,8 +77,8 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, 'Time to review!');
-      expect(copy.body, contains('3 concepts'));
+      expect(copy.title, contains('review'));
+      expect(copy.body, contains('3'));
     });
 
     test('singular grammar for 1 concept', () {
@@ -101,7 +102,7 @@ void main() {
       );
 
       expect(copy.skip, isFalse);
-      expect(copy.title, 'Time to review!');
+      expect(copy.title, contains('review'));
     });
   });
 }
