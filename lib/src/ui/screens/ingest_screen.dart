@@ -6,7 +6,6 @@ import '../../models/ingest_document.dart';
 import '../../models/ingest_state.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/topic.dart';
-import '../../providers/document_diff_provider.dart';
 import '../../providers/ingest_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -342,27 +341,6 @@ class _CollectionSection extends ConsumerWidget {
   final List<IngestDocument> documents;
   final ISet<String> selectedIds;
 
-  void _showDiff(BuildContext context, WidgetRef ref, String documentId) {
-    ref.read(documentDiffProvider.notifier).fetchDiff(
-          documentId: documentId,
-        );
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        builder: (context, scrollController) =>
-            DocumentDiffSheet(scrollController: scrollController),
-      ),
-    ).whenComplete(() {
-      ref.read(documentDiffProvider.notifier).reset();
-    });
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -396,7 +374,8 @@ class _CollectionSection extends ConsumerWidget {
             subtitle: _StatusChip(
               status: doc.status,
               onViewChanges: doc.status == IngestDocumentStatus.changed
-                  ? () => _showDiff(context, ref, doc.id)
+                  ? () => DocumentDiffSheet.show(context, ref,
+                      documentId: doc.id)
                   : null,
             ),
             dense: true,

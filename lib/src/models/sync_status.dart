@@ -1,6 +1,8 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
+import 'stale_document.dart';
+
 enum SyncPhase { idle, checking, updatesAvailable, syncing, upToDate, error }
 
 @immutable
@@ -9,7 +11,7 @@ class SyncStatus {
     this.phase = SyncPhase.idle,
     this.staleDocumentCount = 0,
     List<String> staleCollectionIds = const [],
-    List<Map<String, String>> staleDocuments = const [],
+    List<StaleDocument> staleDocuments = const [],
     List<Map<String, String>> newCollections = const [],
     this.errorMessage = '',
   })  : staleCollectionIds = IList(staleCollectionIds),
@@ -32,9 +34,9 @@ class SyncStatus {
   final IList<String> staleCollectionIds;
 
   /// Individual stale documents with enough info to show diffs.
-  /// Each entry has 'id', 'title', and optionally 'ingestedAt' (absent for
-  /// new documents that have never been ingested).
-  final IList<Map<String, String>> staleDocuments;
+  /// [StaleDocument.ingestedAt] is absent for new documents that have never
+  /// been ingested.
+  final IList<StaleDocument> staleDocuments;
 
   /// Collections found in Outline that haven't been ingested yet.
   /// Each entry is a map with 'id' and 'name' keys.
@@ -45,7 +47,7 @@ class SyncStatus {
     SyncPhase? phase,
     int? staleDocumentCount,
     IList<String>? staleCollectionIds,
-    IList<Map<String, String>>? staleDocuments,
+    IList<StaleDocument>? staleDocuments,
     IList<Map<String, String>>? newCollections,
     String? errorMessage,
   }) {

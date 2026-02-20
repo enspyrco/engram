@@ -57,8 +57,9 @@ void main() {
       expect(find.text('Added'), findsOneWidget);
       expect(find.text('Removed'), findsOneWidget);
 
-      // Subtitle with revision date
+      // Subtitle with locale-aware revision date (intl DateFormat.yMMMd)
       expect(find.textContaining('Since'), findsOneWidget);
+      expect(find.textContaining('Feb'), findsOneWidget);
 
       // The PrettyDiffText renders as RichText — verify it's present
       expect(find.byType(RichText), findsWidgets);

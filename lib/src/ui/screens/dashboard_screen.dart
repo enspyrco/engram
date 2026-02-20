@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/dashboard_stats.dart';
+import '../../models/stale_document.dart';
 import '../../models/sync_status.dart';
 import '../../providers/catastrophe_provider.dart';
 import '../../providers/collection_filter_provider.dart';
 import '../../providers/dashboard_stats_provider.dart';
-import '../../providers/document_diff_provider.dart';
 import '../../providers/filtered_graph_provider.dart';
 import '../../providers/graph_structure_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
@@ -109,9 +109,8 @@ class _SyncBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final staleCount = syncStatus.staleDocumentCount;
-    // Only changed docs (those with ingestedAt) can show a diff.
     final changedDocs = syncStatus.staleDocuments
-        .where((d) => d.containsKey('ingestedAt'))
+        .where((d) => d.hasBeenIngested)
         .toList();
 
     return MaterialBanner(
@@ -140,44 +139,19 @@ class _SyncBanner extends ConsumerWidget {
   void _showChanges(
     BuildContext context,
     WidgetRef ref,
-    List<Map<String, String>> changedDocs,
+    List<StaleDocument> changedDocs,
   ) {
     if (changedDocs.length == 1) {
-      _openDiffSheet(context, ref, changedDocs.first);
+      DocumentDiffSheet.show(context, ref, documentId: changedDocs.first.id);
     } else {
       _openDocPicker(context, ref, changedDocs);
     }
   }
 
-  void _openDiffSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, String> doc,
-  ) {
-    ref.read(documentDiffProvider.notifier).fetchDiff(
-          documentId: doc['id']!,
-        );
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        builder: (context, scrollController) =>
-            DocumentDiffSheet(scrollController: scrollController),
-      ),
-    ).whenComplete(() {
-      ref.read(documentDiffProvider.notifier).reset();
-    });
-  }
-
   void _openDocPicker(
     BuildContext context,
     WidgetRef ref,
-    List<Map<String, String>> changedDocs,
+    List<StaleDocument> changedDocs,
   ) {
     showModalBottomSheet<void>(
       context: context,
@@ -194,11 +168,11 @@ class _SyncBanner extends ConsumerWidget {
           for (final doc in changedDocs)
             ListTile(
               leading: const Icon(Icons.description),
-              title: Text(doc['title'] ?? doc['id']!),
+              title: Text(doc.title),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).pop();
-                _openDiffSheet(context, ref, doc);
+                DocumentDiffSheet.show(context, ref, documentId: doc.id);
               },
             ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:pretty_diff_text/pretty_diff_text.dart';
 
 import '../../providers/document_diff_provider.dart';
@@ -16,6 +17,34 @@ class DocumentDiffSheet extends ConsumerWidget {
   /// scroll controller so that scrolling the diff content also controls
   /// the sheet size.
   final ScrollController? scrollController;
+
+  /// Convenience method to fetch a diff and present it in a draggable
+  /// bottom sheet.  Call from any screen to avoid duplicating the
+  /// boilerplate.
+  static void show(
+    BuildContext context,
+    WidgetRef ref, {
+    required String documentId,
+  }) {
+    ref.read(documentDiffProvider.notifier).fetchDiff(
+          documentId: documentId,
+        );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        builder: (context, scrollController) =>
+            DocumentDiffSheet(scrollController: scrollController),
+      ),
+    ).whenComplete(() {
+      ref.read(documentDiffProvider.notifier).reset();
+    });
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,7 +116,7 @@ class _LoadedDiff extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Since ${_formatDate(ingestedAt)}',
+            'Since ${DateFormat.yMMMd().format(ingestedAt)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -132,10 +161,6 @@ class _LoadedDiff extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }
 

@@ -24,6 +24,12 @@ class DocumentMetadata {
     );
   }
 
+  /// Maximum size (in characters) of [ingestedText] to store. Documents
+  /// larger than this are truncated to avoid bloating Firestore/local JSON.
+  /// 100 KB of UTF-8 text is ~100K characters, well within Firestore's 1 MB
+  /// document limit while leaving room for the rest of the graph.
+  static const maxIngestedTextLength = 100000;
+
   final String documentId;
   final String title;
   final String updatedAt;
@@ -33,7 +39,15 @@ class DocumentMetadata {
 
   /// The document markdown text at the time of last ingestion.
   /// Used for diffing when the document is updated in the wiki.
+  /// Truncated to [maxIngestedTextLength] characters to prevent storage bloat.
   final String? ingestedText;
+
+  /// Truncate [text] to [maxIngestedTextLength] if it exceeds the limit.
+  static String? capText(String? text) {
+    if (text == null) return null;
+    if (text.length <= maxIngestedTextLength) return text;
+    return text.substring(0, maxIngestedTextLength);
+  }
 
   DocumentMetadata withUpdatedAt(
     String updatedAt, {

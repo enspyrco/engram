@@ -127,7 +127,8 @@ class KnowledgeGraph {
       ingestedAt: currentTime.toIso8601String(),
       collectionId: collectionId ?? existing?.collectionId,
       collectionName: collectionName ?? existing?.collectionName,
-      ingestedText: documentText ?? existing?.ingestedText,
+      ingestedText: DocumentMetadata.capText(documentText) ??
+          existing?.ingestedText,
     );
     final newMetadata = existingIndex >= 0
         ? documentMetadata.replace(existingIndex, meta)

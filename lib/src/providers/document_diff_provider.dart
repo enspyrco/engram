@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
 import 'knowledge_graph_provider.dart';
@@ -86,6 +89,12 @@ class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
         newText: currentText,
         ingestedAt: DateTime.parse(meta.ingestedAt),
       );
+    } on http.ClientException catch (e) {
+      state = DocumentDiffError('Network error: $e');
+    } on SocketException catch (e) {
+      state = DocumentDiffError('Connection failed: ${e.message}');
+    } on FormatException catch (e) {
+      state = DocumentDiffError('Invalid response format: ${e.message}');
     } catch (e) {
       state = DocumentDiffError('Diff fetch failed: $e');
     }

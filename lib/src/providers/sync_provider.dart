@@ -1,6 +1,7 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/stale_document.dart';
 import '../models/sync_status.dart';
 import 'clock_provider.dart';
 import 'knowledge_graph_provider.dart';
@@ -48,7 +49,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
       // --- Check for stale documents in ingested collections ---
       var staleCount = 0;
       final staleCollections = <String>[];
-      final staleDocs = <Map<String, String>>[];
+      final staleDocs = <StaleDocument>[];
 
       if (ingestedIds.isNotEmpty && graph.documentMetadata.isNotEmpty) {
         for (final collectionId in ingestedIds) {
@@ -68,11 +69,11 @@ class SyncNotifier extends Notifier<SyncStatus> {
             if (existing == null || existing.updatedAt != updatedAt) {
               staleCount++;
               collectionHasStale = true;
-              staleDocs.add({
-                'id': docId,
-                'title': docTitle,
-                if (existing != null) 'ingestedAt': existing.ingestedAt,
-              });
+              staleDocs.add(StaleDocument(
+                id: docId,
+                title: docTitle,
+                ingestedAt: existing?.ingestedAt,
+              ));
             }
           }
 
