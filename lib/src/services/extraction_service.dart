@@ -9,14 +9,22 @@ import '../models/sub_concept_suggestion.dart';
 const _systemPrompt = '''
 You are a knowledge extraction engine. Given a wiki document, extract:
 1. **Concepts**: Key ideas, terms, entities, or principles. Each gets a unique ID.
-2. **Relationships**: How concepts connect (e.g. "depends on", "is a type of", "enables").
+2. **Relationships**: How concepts connect, using typed relationships.
 3. **Quiz items**: Flashcard-style questions that test understanding of each concept.
 
 Guidelines:
 - Extract all significant concepts. Let document density guide quantity — a brief glossary may yield 2-3, a dense technical article may yield 15-20. Favor precision over volume.
 - Concept IDs must be canonical lowercase kebab-case based on the concept name (e.g. "docker-compose", "dependency-injection"). If existing concept IDs are provided, reuse them for the same concepts instead of creating new IDs.
 - Create relationships between concepts. You may reference existing concept IDs to build cross-document connections.
-- For prerequisite relationships (concept A requires understanding concept B first), use the label "depends on". Reserve other labels like "is a type of", "enables", "related to" for non-prerequisite relationships.
+- Each relationship must have a `type` from this taxonomy:
+  - `prerequisite`: A cannot be understood without B. Drives concept unlocking order.
+  - `generalization`: A is a subtype or specific instance of B.
+  - `composition`: A is a component or part of B.
+  - `enables`: A makes B possible or practical, but B can be understood without A.
+  - `analogy`: Cross-discipline semantic similarity between A and B.
+  - `contrast`: Explicit difference between similar concepts A and B.
+  - `relatedTo`: General association when no other type fits. Use sparingly.
+- The `label` field should be a natural-language description (e.g. "depends on", "is a type of"), while `type` is the canonical enum value.
 - Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
 - Use clear, concise language. Answers should be 1-3 sentences.
 - For each quiz item, predict its difficulty on a 1-10 scale:
@@ -68,7 +76,13 @@ const _extractionTool = Tool.custom(
         'description': 'How concepts relate to each other.',
         'items': {
           'type': 'object',
-          'required': ['id', 'fromConceptId', 'toConceptId', 'label'],
+          'required': [
+            'id',
+            'fromConceptId',
+            'toConceptId',
+            'label',
+            'type',
+          ],
           'properties': {
             'id': {
               'type': 'string',
@@ -85,7 +99,20 @@ const _extractionTool = Tool.custom(
             'label': {
               'type': 'string',
               'description':
-                  'Relationship type, e.g. "depends on", "enables", "is a type of"',
+                  'Natural-language description, e.g. "depends on", "enables", "is a type of"',
+            },
+            'type': {
+              'type': 'string',
+              'enum': [
+                'prerequisite',
+                'generalization',
+                'composition',
+                'enables',
+                'analogy',
+                'contrast',
+                'relatedTo',
+              ],
+              'description': 'The semantic type of the relationship',
             },
             'description': {
               'type': 'string',
@@ -423,6 +450,10 @@ class ExtractionService {
         toConceptId: toId,
         label: map['label'] as String,
         description: map['description'] as String?,
+        type: switch (map['type'] as String?) {
+          final s? => RelationshipType.tryParse(s),
+          null => null,
+        },
       ));
     }
 

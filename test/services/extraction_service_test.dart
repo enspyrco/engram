@@ -1,4 +1,5 @@
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
+import 'package:engram/src/models/relationship.dart';
 import 'package:engram/src/services/extraction_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -248,6 +249,101 @@ void main() {
 
       expect(result.relationships, hasLength(1));
       expect(result.relationships.first.id, 'r1');
+    });
+  });
+
+  group('ExtractionService typed relationships', () {
+    test('parses explicit type from extraction result', () async {
+      when(() => mockClient.createMessage(request: any(named: 'request')))
+          .thenAnswer((_) async => _toolUseMessage({
+                'concepts': [
+                  {
+                    'id': 'c1',
+                    'name': 'C1',
+                    'description': 'D1',
+                  },
+                  {
+                    'id': 'c2',
+                    'name': 'C2',
+                    'description': 'D2',
+                  },
+                ],
+                'relationships': [
+                  {
+                    'id': 'r1',
+                    'fromConceptId': 'c1',
+                    'toConceptId': 'c2',
+                    'label': 'depends on',
+                    'type': 'prerequisite',
+                  },
+                  {
+                    'id': 'r2',
+                    'fromConceptId': 'c1',
+                    'toConceptId': 'c2',
+                    'label': 'is a type of',
+                    'type': 'generalization',
+                  },
+                  {
+                    'id': 'r3',
+                    'fromConceptId': 'c1',
+                    'toConceptId': 'c2',
+                    'label': 'analogous to',
+                    'type': 'analogy',
+                  },
+                ],
+                'quizItems': [],
+              }));
+
+      final result = await service.extract(
+        documentTitle: 'Test Doc',
+        documentContent: 'Test content',
+      );
+
+      expect(result.relationships, hasLength(3));
+      expect(result.relationships[0].type, RelationshipType.prerequisite);
+      expect(result.relationships[1].type, RelationshipType.generalization);
+      expect(result.relationships[2].type, RelationshipType.analogy);
+    });
+
+    test('handles missing type field gracefully (falls back to inference)',
+        () async {
+      when(() => mockClient.createMessage(request: any(named: 'request')))
+          .thenAnswer((_) async => _toolUseMessage({
+                'concepts': [
+                  {
+                    'id': 'c1',
+                    'name': 'C1',
+                    'description': 'D1',
+                  },
+                  {
+                    'id': 'c2',
+                    'name': 'C2',
+                    'description': 'D2',
+                  },
+                ],
+                'relationships': [
+                  {
+                    'id': 'r1',
+                    'fromConceptId': 'c1',
+                    'toConceptId': 'c2',
+                    'label': 'enables',
+                    // no 'type' field
+                  },
+                ],
+                'quizItems': [],
+              }));
+
+      final result = await service.extract(
+        documentTitle: 'Test Doc',
+        documentContent: 'Test content',
+      );
+
+      expect(result.relationships, hasLength(1));
+      expect(result.relationships.first.type, isNull);
+      expect(
+        result.relationships.first.resolvedType,
+        RelationshipType.enables,
+      );
     });
   });
 }

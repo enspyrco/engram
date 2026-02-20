@@ -17,12 +17,14 @@ Relationship _rel(
   String from,
   String to, {
   String label = 'depends on',
+  RelationshipType? type,
 }) =>
     Relationship(
       id: '$from-$to',
       fromConceptId: from,
       toConceptId: to,
       label: label,
+      type: type,
     );
 
 QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) =>
@@ -99,6 +101,36 @@ void main() {
         GraphAnalyzer.isDependencyEdge(_rel('a', 'b', label: 'related to')),
         isFalse,
       );
+    });
+
+    test('uses explicit type over label inference', () {
+      // Label says "related to" but type is prerequisite — should be dependency
+      expect(
+        GraphAnalyzer.isDependencyEdge(
+          _rel('a', 'b', label: 'related to', type: RelationshipType.prerequisite),
+        ),
+        isTrue,
+      );
+      // Label says "depends on" but type is relatedTo — should NOT be dependency
+      expect(
+        GraphAnalyzer.isDependencyEdge(
+          _rel('a', 'b', label: 'depends on', type: RelationshipType.relatedTo),
+        ),
+        isFalse,
+      );
+    });
+
+    test('works with all non-prerequisite types', () {
+      for (final type in RelationshipType.values) {
+        if (type == RelationshipType.prerequisite) continue;
+        expect(
+          GraphAnalyzer.isDependencyEdge(
+            _rel('a', 'b', label: 'x', type: type),
+          ),
+          isFalse,
+          reason: '$type should not be a dependency',
+        );
+      }
     });
   });
 

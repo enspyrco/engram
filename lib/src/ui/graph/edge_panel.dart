@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/relationship.dart';
 import 'graph_edge.dart';
 
 /// Tap card showing relationship details between two concepts.
@@ -12,9 +13,8 @@ class EdgePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = edge.isDependency
-        ? Colors.white.withValues(alpha: 0.9)
-        : Colors.white.withValues(alpha: 0.6);
+    final type = edge.type;
+    final visual = _visualForType(type);
 
     return Card(
       elevation: 4,
@@ -28,11 +28,7 @@ class EdgePanel extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  edge.isDependency ? Icons.arrow_forward : Icons.link,
-                  size: 14,
-                  color: color,
-                ),
+                Icon(visual.icon, size: 14, color: visual.color),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
@@ -40,7 +36,7 @@ class EdgePanel extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: color,
+                      color: visual.color,
                     ),
                   ),
                 ),
@@ -60,20 +56,78 @@ class EdgePanel extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (edge.isDependency) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Dependency',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.amber.shade300,
-                ),
+            const SizedBox(height: 4),
+            Text(
+              visual.badgeText,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: visual.color,
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Visual attributes for a relationship type in the [EdgePanel].
+class _EdgeVisual {
+  const _EdgeVisual({
+    required this.icon,
+    required this.color,
+    required this.badgeText,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String badgeText;
+}
+
+_EdgeVisual _visualForType(RelationshipType type) {
+  switch (type) {
+    case RelationshipType.prerequisite:
+      return _EdgeVisual(
+        icon: Icons.arrow_forward,
+        color: Colors.white.withValues(alpha: 0.9),
+        badgeText: 'Prerequisite',
+      );
+    case RelationshipType.generalization:
+      return const _EdgeVisual(
+        icon: Icons.account_tree,
+        color: Colors.cyan,
+        badgeText: 'Generalization',
+      );
+    case RelationshipType.composition:
+      return const _EdgeVisual(
+        icon: Icons.extension,
+        color: Colors.teal,
+        badgeText: 'Composition',
+      );
+    case RelationshipType.enables:
+      return const _EdgeVisual(
+        icon: Icons.bolt,
+        color: Colors.purple,
+        badgeText: 'Enables',
+      );
+    case RelationshipType.analogy:
+      return const _EdgeVisual(
+        icon: Icons.compare_arrows,
+        color: Colors.orange,
+        badgeText: 'Analogy',
+      );
+    case RelationshipType.contrast:
+      return const _EdgeVisual(
+        icon: Icons.swap_horiz,
+        color: Colors.pink,
+        badgeText: 'Contrast',
+      );
+    case RelationshipType.relatedTo:
+      return _EdgeVisual(
+        icon: Icons.link,
+        color: Colors.white.withValues(alpha: 0.6),
+        badgeText: 'Related',
+      );
   }
 }
