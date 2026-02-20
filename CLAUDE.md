@@ -98,7 +98,7 @@ When starting a new session, remind the user that there are open tech debt issue
 
 **Bug:** ~~#13~~ ✓ FIXED in PR #45
 **Performance:** #8 (topo sort O(n)), #11 (graph animation battery), #14 (migrator memory)
-**Architecture:** #6 (DateTime.now injectable — model methods fixed in PR #45, provider calls tracked in #47), #9 (startIngestion refactor), #12 (ensureSignedIn provider), #15 (destructive Firestore save)
+**Architecture:** ~~#6~~ ✓ FIXED in PRs #45, #79 (DateTime.now injectable — model methods + provider calls + UI layer), #9 (startIngestion refactor), #12 (ensureSignedIn provider), #15 (destructive Firestore save)
 **Quality:** #7 (mutable List on @immutable), #10 (magic numbers), #16 (auth_provider tests), #17 (test hygiene), #18 (bloated pubspec)
 
 ## Phase 6 Tech Debt (Issues #23–#31)
@@ -127,7 +127,7 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Phase 4a — guardian system, team goals, glory board (#42)
 - ✓ Quick wins #33-#35 — `fast_immutable_collections`, cached clusters, `graphs` package (#43)
 - ✓ Phase 4b — relay challenges, entropy storms (#44)
-- ✓ Tech debt sweep — #13, #27, #31, #6 model methods (#45, #46)
+- ✓ Tech debt sweep — #13, #27, #31, #6 model methods (#45, #46), #47 clockProvider for all DateTime.now() calls (#79)
 - ✓ Collection-scoped quiz sessions — `DocumentMetadata` collection fields, scheduler filter, quiz screen dropdown
 - ✓ Extraction knowledge graph skill — `.claude/skills/extracting-knowledge-graph/` encodes the full extraction workflow (prompts, tool schemas, relationship taxonomy, scheduling constraints) as a portable agent skill with progressive disclosure
 - ✓ Outline wiki updated — `kb.xdeca.com` (was `wiki.xdeca.com`), `.env` updated with new URL and API key. `OutlineClient` still read-only; collection/document creation done via direct API calls
@@ -145,8 +145,7 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Typed relationships — `RelationshipType` enum (prerequisite, generalization, composition, enables, analogy, contrast, relatedTo) with type-based graph visualization (color-coded edges, dashed lines, arrowheads) and `tryParse`/`inferFromLabel` backward compat (#80)
 
 ### Next up
-1. **#47** — `clockProvider` for all provider-level DateTime.now() calls
-2. **#61** — Preserve team node positions across graph rebuilds
+1. **#61** — Preserve team node positions across graph rebuilds
 
 ### Longer-term
 4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
