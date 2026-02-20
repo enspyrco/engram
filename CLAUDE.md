@@ -97,18 +97,18 @@ Could concept mastery data flow back into the wiki? e.g., tagging pages as "well
 When starting a new session, remind the user that there are open tech debt issues from cage-match code reviews. Key items by priority:
 
 **Bug:** ~~#13~~ ✓ FIXED in PR #45
-**Performance:** #8 (topo sort O(n)), #11 (graph animation battery), #14 (migrator memory)
-**Architecture:** ~~#6~~ ✓ FIXED in PRs #45, #79 (DateTime.now injectable — model methods + provider calls + UI layer), #9 (startIngestion refactor), #12 (ensureSignedIn provider), #15 (destructive Firestore save)
-**Quality:** #7 (mutable List on @immutable), #10 (magic numbers), #16 (auth_provider tests), #17 (test hygiene), #18 (bloated pubspec)
+**Performance:** ~~#8~~ ✓ FIXED in PR #43 (topo sort via `graphs` package), #11 (graph animation battery), #14 (migrator memory — deferred, blocked by #40)
+**Architecture:** ~~#6~~ ✓ FIXED in PRs #45, #79, ~~#9~~ ✓ FIXED in PR #83 (ingest helper extraction), ~~#12~~ ✓ FIXED in PR #82 (ensureSignedIn provider + googleSignIn provider), #15 (destructive Firestore save — deferred, blocked by #40)
+**Quality:** #7 (mutable List on @immutable), #10 (magic numbers), ~~#16~~ ✓ FIXED in PR #83 (auth_provider tests), ~~#17~~ ✓ FIXED in PR #82 (test hygiene), #18 (bloated pubspec — deferred, low impact)
 
 ## Phase 6 Tech Debt (Issues #23–#31)
 
 From cage-match reviews of the Firebase + Social PRs (#20–#22):
 
-**Architecture:** #23 (extract GoogleSignIn to provider for testability), #25 (DateTime instead of String for timestamps in models), #26 (inject clock into SocialRepository — extends #6), #29 (migrate AsyncNotifier stream patterns to StreamNotifier)
-**Security:** #30 (strip scheduling fields from challenge quiz item snapshot), ~~#31~~ ✓ FIXED in PR #45 (UUID for all entity IDs)
-**Robustness:** #24 (debug assertion for unconfigured firebase_options.dart), ~~#27~~ ✓ FIXED in PR #45 (normalizeWikiUrl strips http/https scheme)
-**UX:** #28 (consider explicit opt-in for wiki group friend discovery)
+**Architecture:** ~~#23~~ ✓ FIXED in PR #82 (GoogleSignIn provider), #25 (DateTime instead of String for timestamps — deferred, do with #40), #26 (inject clock into SocialRepository — extends #6), ~~#29~~ ✓ FIXED in PR #83 (StreamNotifier migration)
+**Security:** ~~#30~~ ✓ FIXED in PR #82 (toContentSnapshot strips scheduling fields), ~~#31~~ ✓ FIXED in PR #45 (UUID for all entity IDs)
+**Robustness:** ~~#24~~ ✓ FIXED in PR #82 (Firebase config debug assertion), ~~#27~~ ✓ FIXED in PR #45 (normalizeWikiUrl strips http/https scheme)
+**UX:** #28 (consider explicit opt-in for wiki group friend discovery — deferred, product decision)
 
 ## Architecture Evolution (Issues #33–#41)
 
@@ -144,6 +144,8 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Centering gravity + dashboard layout sizing + relationship tap — gravity prevents edge drift, LayoutBuilder for responsive sizing, shared EdgePanel, edge tap on animated graph (#70)
 - ✓ Typed relationships — `RelationshipType` enum (prerequisite, generalization, composition, enables, analogy, contrast, relatedTo) with type-based graph visualization (color-coded edges, dashed lines, arrowheads) and `tryParse`/`inferFromLabel` backward compat (#80)
 - ✓ Wiki group membership provider — shared `wikiGroupMembershipProvider` ensures `joinWikiGroup` before team Firestore listeners start, preventing permission-denied errors. `socialRepositoryProvider` extracted to own file. Missing Firestore rules added for relays/storms. `joinWikiGroup` uses `SetOptions(merge: true)` to preserve `joinedAt` (#81)
+- ✓ Tech debt sweep PR 1 — #8 closed (already fixed), #12 `ensureSignedInProvider`, #23 `googleSignInProvider`, #24 Firebase config assertion, #30 `toContentSnapshot()`, #17 test hygiene (#82)
+- ✓ Tech debt sweep PR 2 — #29 `StreamNotifier` migration (challenge + nudge), #9 ingest helper extraction, #16 auth_provider tests (#83)
 
 ### Next up
 1. **#61** — Preserve team node positions across graph rebuilds
