@@ -10,6 +10,7 @@ import '../../models/team_goal.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/catastrophe_provider.dart';
 import '../../providers/challenge_provider.dart';
+import '../../providers/clock_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/glory_board_provider.dart';
 import '../../providers/guardian_provider.dart';
@@ -235,7 +236,7 @@ class _FriendsTab extends ConsumerWidget {
                 message: messageController.text.isEmpty
                     ? null
                     : messageController.text,
-                createdAt: DateTime.now().toUtc().toIso8601String(),
+                createdAt: ref.read(clockProvider)().toIso8601String(),
               );
 
               await ref.read(nudgeProvider.notifier).sendNudge(nudge);
@@ -462,13 +463,14 @@ class _TeamTab extends ConsumerWidget {
 
   Future<void> _showScheduleStormDialog(BuildContext context, WidgetRef ref) async {
     // Default: start 24 hours from now
-    final defaultStart = DateTime.now().toUtc().add(const Duration(hours: 24));
+    final now = ref.read(clockProvider)();
+    final defaultStart = now.add(const Duration(hours: 24));
 
     final date = await showDatePicker(
       context: context,
       initialDate: defaultStart,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 30)),
     );
     if (date == null || !context.mounted) return;
 
@@ -549,8 +551,8 @@ class _TeamTab extends ConsumerWidget {
             FilledButton(
               onPressed: () async {
                 if (titleController.text.isEmpty) return;
-                final deadline = DateTime.now()
-                    .toUtc()
+                final deadline = ref
+                    .read(clockProvider)()
                     .add(const Duration(days: 7))
                     .toIso8601String();
                 await ref.read(teamGoalsProvider.notifier).createGoal(

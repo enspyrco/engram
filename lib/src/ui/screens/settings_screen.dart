@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/clock_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/settings_provider.dart';
 
@@ -203,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (timestamp == null) return 'Never synced';
     final date = DateTime.tryParse(timestamp);
     if (date == null) return 'Never synced';
-    final diff = DateTime.now().toUtc().difference(date);
+    final diff = ref.read(clockProvider)().difference(date);
     if (diff.inMinutes < 1) return 'Last synced: just now';
     if (diff.inHours < 1) return 'Last synced: ${diff.inMinutes}m ago';
     if (diff.inDays < 1) return 'Last synced: ${diff.inHours}h ago';
