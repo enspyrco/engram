@@ -7,6 +7,7 @@ import '../../models/concept.dart';
 import '../../models/friend.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/challenge_provider.dart';
+import '../../providers/clock_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/user_profile_provider.dart';
 
@@ -136,7 +137,7 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
         toUid: widget.friend.uid,
         quizItemSnapshot: quizItem.toJson(),
         conceptName: _selectedConcept!.name,
-        createdAt: DateTime.now().toUtc().toIso8601String(),
+        createdAt: ref.read(clockProvider)().toIso8601String(),
       );
 
       await ref.read(challengeProvider.notifier).sendChallenge(challenge);
