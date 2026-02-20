@@ -135,6 +135,18 @@ class QuizItem {
     );
   }
 
+  /// Returns only content fields, omitting scheduling state.
+  ///
+  /// Used for challenge snapshots where the recipient shouldn't see
+  /// the sender's SM-2/FSRS scheduling data.
+  Map<String, dynamic> toContentSnapshot() => {
+        'id': id,
+        'conceptId': conceptId,
+        'question': question,
+        'answer': answer,
+        if (difficulty != null) 'difficulty': difficulty,
+      };
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'conceptId': conceptId,

@@ -22,14 +22,21 @@ final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(firebaseAuthProvider).authStateChanges();
 });
 
+/// Provides the [GoogleSignIn] instance. Override in tests with a mock
+/// to avoid platform channel errors and verify sign-in behavior.
+final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+  return GoogleSignIn(scopes: ['email', 'profile']);
+});
+
 /// Signs in with Google. Returns the Firebase [User] or null on cancel.
 ///
 /// Google always provides displayName, email, and photoUrl on every sign-in.
 Future<User?> signInWithGoogle(
   FirebaseAuth auth, {
   required FirebaseFirestore firestore,
+  required GoogleSignIn googleSignIn,
 }) async {
-  final googleUser = await GoogleSignIn(scopes: ['email', 'profile']).signIn();
+  final googleUser = await googleSignIn.signIn();
   if (googleUser == null) return null; // User cancelled
 
   final googleAuth = await googleUser.authentication;
@@ -113,14 +120,15 @@ Future<User?> signInWithApple(
   return user;
 }
 
-/// Signs in anonymously. Dev/testing fallback.
-Future<String?> ensureSignedIn(FirebaseAuth auth) async {
-  if (auth.currentUser != null) {
-    return auth.currentUser!.uid;
-  }
+/// Ensures the user is signed in, falling back to anonymous auth.
+///
+/// Returns the user's UID, or null if sign-in failed.
+final ensureSignedInProvider = FutureProvider<String?>((ref) async {
+  final auth = ref.watch(firebaseAuthProvider);
+  if (auth.currentUser != null) return auth.currentUser!.uid;
   final credential = await auth.signInAnonymously();
   return credential.user?.uid;
-}
+});
 
 /// Signs out the current user.
 Future<void> signOut(FirebaseAuth auth) async {

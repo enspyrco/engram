@@ -135,7 +135,7 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
         fromUid: user.uid,
         fromName: profile?.displayName ?? 'Someone',
         toUid: widget.friend.uid,
-        quizItemSnapshot: quizItem.toJson(),
+        quizItemSnapshot: quizItem.toContentSnapshot(),
         conceptName: _selectedConcept!.name,
         createdAt: ref.read(clockProvider)().toIso8601String(),
       );

@@ -21,6 +21,16 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  assert(() {
+    final opts = DefaultFirebaseOptions.currentPlatform;
+    if (opts.apiKey.contains('YOUR') || opts.apiKey.isEmpty) {
+      throw StateError(
+        'Firebase not configured. Run `flutterfire configure` first.',
+      );
+    }
+    return true;
+  }());
+
   // Initialize notification service
   final notificationService = NotificationService();
   await notificationService.initialize();

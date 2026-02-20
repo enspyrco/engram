@@ -31,6 +31,12 @@ import 'package:test/test.dart';
 
 class MockExtractionService extends Mock implements ExtractionService {}
 
+/// A fixed "now" for all test graphs. Items with nextReview in the past are due.
+final _testNow = DateTime.utc(2026, 1, 15);
+final _pastReview = _testNow.subtract(const Duration(days: 1)).toIso8601String();
+final _ingestedAt = _testNow.subtract(const Duration(days: 14)).toIso8601String();
+final _docUpdatedAt = _testNow.subtract(const Duration(days: 15)).toIso8601String();
+
 /// Builds a graph modeling: Docker (foundational) → Kubernetes (depends on Docker)
 /// → Helm (depends on Kubernetes). This creates a 3-tier dependency chain.
 KnowledgeGraph buildDependencyGraph({
@@ -81,7 +87,7 @@ KnowledgeGraph buildDependencyGraph({
         easeFactor: 2.5,
         interval: 0,
         repetitions: dockerReps,
-        nextReview: '2020-01-01T00:00:00.000Z',
+        nextReview: _pastReview,
         lastReview: null,
       ),
       QuizItem(
@@ -92,10 +98,10 @@ KnowledgeGraph buildDependencyGraph({
         easeFactor: 2.5,
         interval: 0,
         repetitions: kubernetesReps,
-        nextReview: '2020-01-01T00:00:00.000Z',
+        nextReview: _pastReview,
         lastReview: null,
       ),
-      const QuizItem(
+      QuizItem(
         id: 'q-helm',
         conceptId: 'helm',
         question: 'What is Helm?',
@@ -103,16 +109,16 @@ KnowledgeGraph buildDependencyGraph({
         easeFactor: 2.5,
         interval: 0,
         repetitions: 0,
-        nextReview: '2020-01-01T00:00:00.000Z',
+        nextReview: _pastReview,
         lastReview: null,
       ),
     ],
-    documentMetadata: const [
+    documentMetadata: [
       DocumentMetadata(
         documentId: 'doc1',
         title: 'DevOps Guide',
-        updatedAt: '2025-01-01T00:00:00.000Z',
-        ingestedAt: '2025-01-01T12:00:00.000Z',
+        updatedAt: _docUpdatedAt,
+        ingestedAt: _ingestedAt,
       ),
     ],
   );
@@ -350,7 +356,7 @@ void main() {
                 {
                   'id': 'doc1',
                   'title': 'DevOps Guide',
-                  'updatedAt': '2025-06-01T00:00:00.000Z', // newer than graph
+                  'updatedAt': _testNow.toIso8601String(), // newer than graph
                 },
               ],
               'pagination': {'total': 1},
