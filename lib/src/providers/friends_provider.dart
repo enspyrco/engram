@@ -1,20 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/friend.dart';
-import '../storage/social_repository.dart';
-import 'auth_provider.dart';
+import 'social_repository_provider.dart';
 import 'wiki_group_membership_provider.dart';
-
-/// Provides the [SocialRepository] for the current user.
-final socialRepositoryProvider = Provider<SocialRepository?>((ref) {
-  final user = ref.watch(authStateProvider).valueOrNull;
-  if (user == null) return null;
-
-  return SocialRepository(
-    firestore: ref.watch(firestoreProvider),
-    userId: user.uid,
-  );
-});
 
 /// Manages friend discovery and the friends list.
 ///

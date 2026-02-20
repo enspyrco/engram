@@ -40,7 +40,7 @@ class SocialRepository {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'joinedAt': _clock().toIso8601String(),
-    });
+    }, SetOptions(merge: true));
   }
 
   /// List all members of a wiki group.

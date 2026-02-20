@@ -4,8 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_provider.dart';
-import 'friends_provider.dart';
 import 'settings_provider.dart';
+import 'social_repository_provider.dart';
 import 'user_profile_provider.dart';
 
 /// Normalizes a wiki URL for consistent hashing:
