@@ -1,7 +1,6 @@
 import 'package:engram/src/models/challenge.dart';
 import 'package:engram/src/models/friend.dart';
 import 'package:engram/src/models/nudge.dart';
-import 'package:engram/src/providers/friends_provider.dart';
 import 'package:engram/src/storage/social_repository.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:test/test.dart';
@@ -304,46 +303,6 @@ void main() {
             .get();
         expect(doc.data()!['status'], 'seen');
       });
-    });
-  });
-
-  group('hashWikiUrl', () {
-    test('normalizes URL before hashing', () {
-      final hash1 = hashWikiUrl('https://Wiki.Example.com/');
-      final hash2 = hashWikiUrl('https://wiki.example.com');
-      final hash3 = hashWikiUrl('  https://wiki.example.com//  ');
-
-      expect(hash1, hash2);
-      expect(hash2, hash3);
-    });
-
-    test('http and https produce the same hash', () {
-      final hash1 = hashWikiUrl('http://wiki.example.com');
-      final hash2 = hashWikiUrl('https://wiki.example.com');
-
-      expect(hash1, hash2);
-    });
-
-    test('http and https with trailing slash produce the same hash', () {
-      final hash1 = hashWikiUrl('http://wiki.example.com/');
-      final hash2 = hashWikiUrl('https://wiki.example.com/');
-      final hash3 = hashWikiUrl('https://Wiki.Example.com');
-
-      expect(hash1, hash2);
-      expect(hash2, hash3);
-    });
-
-    test('different URLs produce different hashes', () {
-      final hash1 = hashWikiUrl('https://wiki.alpha.com');
-      final hash2 = hashWikiUrl('https://wiki.beta.com');
-
-      expect(hash1, isNot(hash2));
-    });
-
-    test('returns 64-char hex string (SHA-256)', () {
-      final hash = hashWikiUrl('https://wiki.test.com');
-      expect(hash.length, 64);
-      expect(RegExp(r'^[0-9a-f]+$').hasMatch(hash), isTrue);
     });
   });
 }

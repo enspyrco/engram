@@ -5,19 +5,18 @@ import 'package:meta/meta.dart';
 import '../models/concept_cluster.dart';
 import '../storage/team_repository.dart';
 import 'auth_provider.dart';
-import 'friends_provider.dart';
 import 'network_health_provider.dart';
-import 'settings_provider.dart';
+import 'wiki_group_membership_provider.dart';
 
 /// Provides the [TeamRepository] for the current user's wiki group.
+///
+/// Depends on [wikiGroupMembershipProvider] to ensure the user has joined
+/// the wiki group before any Firestore listeners start. Returns `null`
+/// until membership is confirmed.
 final teamRepositoryProvider = Provider<TeamRepository?>((ref) {
-  final user = ref.watch(authStateProvider).valueOrNull;
-  if (user == null) return null;
+  final wikiHash = ref.watch(wikiGroupMembershipProvider).valueOrNull;
+  if (wikiHash == null) return null;
 
-  final config = ref.watch(settingsProvider);
-  if (config.outlineApiUrl.isEmpty) return null;
-
-  final wikiHash = hashWikiUrl(config.outlineApiUrl);
   return TeamRepository(
     firestore: ref.watch(firestoreProvider),
     wikiUrlHash: wikiHash,

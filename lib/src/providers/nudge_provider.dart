@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/nudge.dart';
-import 'friends_provider.dart';
+import 'social_repository_provider.dart';
 
 /// Watches incoming nudges for the current user.
 final nudgeProvider =
