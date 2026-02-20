@@ -1,4 +1,3 @@
-import '../../engine/graph_analyzer.dart';
 import '../../models/relationship.dart';
 import 'graph_node.dart';
 
@@ -9,12 +8,17 @@ class GraphEdge {
     required this.relationship,
     required this.source,
     required this.target,
-  }) : isDependency = GraphAnalyzer.isDependencyEdge(relationship);
+  });
 
   final Relationship relationship;
   final GraphNode source;
   final GraphNode target;
-  final bool isDependency;
+
+  /// The resolved semantic type of this edge's relationship.
+  RelationshipType get type => relationship.resolvedType;
+
+  /// Whether this edge represents a dependency (prerequisite).
+  bool get isDependency => type.isDependency;
 
   String get label => relationship.label;
 }

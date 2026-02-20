@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../engine/mastery_state.dart';
+import '../../models/relationship.dart';
 import 'graph_edge.dart';
 import 'graph_node.dart';
 import 'team_avatar_cache.dart';
@@ -144,22 +145,86 @@ class GraphPainter extends CustomPainter {
     }
   }
 
+  /// Dash length for analogy/contrast edges.
+  static const _dashLength = 6.0;
+
+  /// Gap between dashes for analogy/contrast edges.
+  static const _dashGap = 4.0;
+
   void _paintEdges(Canvas canvas) {
     for (final edge in edges) {
-      final paint = Paint()
-        ..color = edge.isDependency
-            ? Colors.white.withValues(alpha: 0.6)
-            : Colors.white.withValues(alpha: 0.25)
-        ..strokeWidth = edge.isDependency ? 2.0 : 1.0
-        ..style = PaintingStyle.stroke;
-
+      final paint = _paintForType(edge.type);
       final src = edge.source.position;
       final tgt = edge.target.position;
-      canvas.drawLine(src, tgt, paint);
+      final isDashed = edge.type == RelationshipType.analogy ||
+          edge.type == RelationshipType.contrast;
 
-      if (edge.isDependency) {
+      if (isDashed) {
+        _paintDashedLine(canvas, src, tgt, paint);
+      } else {
+        canvas.drawLine(src, tgt, paint);
+      }
+
+      if (_hasArrowhead(edge.type)) {
         _paintArrowhead(canvas, src, tgt, paint);
       }
+    }
+  }
+
+  /// Whether the given relationship type should render an arrowhead.
+  static bool _hasArrowhead(RelationshipType type) =>
+      type == RelationshipType.prerequisite ||
+      type == RelationshipType.enables;
+
+  /// Returns a [Paint] configured for the given [RelationshipType].
+  static Paint _paintForType(RelationshipType type) {
+    final paint = Paint()..style = PaintingStyle.stroke;
+    switch (type) {
+      case RelationshipType.prerequisite:
+        paint
+          ..color = Colors.white.withValues(alpha: 0.6)
+          ..strokeWidth = 2.0;
+      case RelationshipType.generalization:
+        paint
+          ..color = Colors.cyan.withValues(alpha: 0.5)
+          ..strokeWidth = 1.5;
+      case RelationshipType.composition:
+        paint
+          ..color = Colors.teal.withValues(alpha: 0.5)
+          ..strokeWidth = 1.5;
+      case RelationshipType.enables:
+        paint
+          ..color = Colors.purple.withValues(alpha: 0.5)
+          ..strokeWidth = 1.5;
+      case RelationshipType.analogy:
+        paint
+          ..color = Colors.orange.withValues(alpha: 0.35)
+          ..strokeWidth = 1.0;
+      case RelationshipType.contrast:
+        paint
+          ..color = Colors.pink.withValues(alpha: 0.35)
+          ..strokeWidth = 1.0;
+      case RelationshipType.relatedTo:
+        paint
+          ..color = Colors.white.withValues(alpha: 0.25)
+          ..strokeWidth = 1.0;
+    }
+    return paint;
+  }
+
+  /// Draws a dashed line between [from] and [to].
+  void _paintDashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {
+    final direction = to - from;
+    final dist = direction.distance;
+    if (dist < 1.0) return;
+
+    final unit = direction / dist;
+    var drawn = 0.0;
+    while (drawn < dist) {
+      final start = from + unit * drawn;
+      final end = from + unit * (drawn + _dashLength).clamp(0.0, dist);
+      canvas.drawLine(start, end, paint);
+      drawn += _dashLength + _dashGap;
     }
   }
 

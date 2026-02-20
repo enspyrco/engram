@@ -4,15 +4,6 @@ import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
 import '../models/relationship.dart';
 
-/// Labels (case-insensitive substrings) that indicate a dependency edge.
-const _dependencyKeywords = [
-  'depends on',
-  'requires',
-  'prerequisite',
-  'builds on',
-  'assumes',
-];
-
 /// Analyzes a [KnowledgeGraph] to compute dependency structure, mastery,
 /// and topological ordering. All graph computation lives here so that
 /// [KnowledgeGraph] stays immutable and purely data-oriented.
@@ -40,10 +31,8 @@ class GraphAnalyzer {
   };
 
   /// Whether [relationship] represents a dependency (prerequisite) edge.
-  static bool isDependencyEdge(Relationship relationship) {
-    final lower = relationship.label.toLowerCase();
-    return _dependencyKeywords.any((kw) => lower.contains(kw));
-  }
+  static bool isDependencyEdge(Relationship relationship) =>
+      relationship.resolvedType.isDependency;
 
   /// The concept IDs that [conceptId] directly depends on.
   Set<String> prerequisitesOf(String conceptId) =>

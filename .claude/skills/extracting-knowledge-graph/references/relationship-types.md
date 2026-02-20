@@ -2,7 +2,9 @@
 
 ## Core Relationship Types
 
-### `depends on` (Prerequisite)
+All relationships have an explicit `type` field from the `RelationshipType` enum, plus a natural-language `label` for display. Legacy data without a `type` field falls back to inference from the label via `RelationshipType.inferFromLabel()`.
+
+### `prerequisite`
 
 The most important relationship type. Drives **concept unlocking** — a concept cannot be unlocked for quiz sessions until all its prerequisites are mastered.
 
@@ -15,9 +17,11 @@ The most important relationship type. Drives **concept unlocking** — a concept
 - `sm2-ease-factor --depends on--> sm2-algorithm`
 - `react-hooks --depends on--> react-components`
 
-**Impact on learning:** The `GraphAnalyzer` performs topological sort on "depends on" edges. Concepts with no unsatisfied prerequisites are "unlocked" and eligible for quiz sessions. Getting this wrong breaks the learning order.
+**Impact on learning:** The `GraphAnalyzer` performs topological sort on prerequisite edges. Concepts with no unsatisfied prerequisites are "unlocked" and eligible for quiz sessions. Getting this wrong breaks the learning order.
 
-### `is a type of` (Taxonomy)
+**Visual:** Thick white line with arrowhead.
+
+### `generalization`
 
 Hierarchical classification. Does NOT create a prerequisite — both can be learned independently.
 
@@ -27,9 +31,23 @@ Hierarchical classification. Does NOT create a prerequisite — both can be lear
 - `binary-search --is a type of--> search-algorithm`
 - `postgresql --is a type of--> relational-database`
 
-### `enables` (Capability)
+**Visual:** Medium cyan line.
 
-Concept A makes Concept B possible or practical. Weaker than "depends on" — B can be understood without A, but A makes B achievable.
+### `composition`
+
+Part-of relationship. Concept A is a component of Concept B.
+
+**Use when:** Concept A is structurally part of Concept B.
+
+**Examples:**
+- `docker-volume --part of--> docker-compose`
+- `tcp-handshake --part of--> tcp-protocol`
+
+**Visual:** Medium teal line.
+
+### `enables`
+
+Concept A makes Concept B possible or practical. Weaker than prerequisite — B can be understood without A, but A makes B achievable.
 
 **Use when:** Learning A opens the door to doing B, but B's concept can be understood independently.
 
@@ -37,7 +55,33 @@ Concept A makes Concept B possible or practical. Weaker than "depends on" — B 
 - `docker-compose --enables--> microservice-deployment`
 - `ci-cd-pipeline --enables--> continuous-deployment`
 
-### `related to` (Association)
+**Visual:** Medium purple line with arrowhead.
+
+### `analogy`
+
+Cross-discipline semantic similarity. Connects concepts from different domains that share structural or functional similarities.
+
+**Use when:** Concepts from different fields exhibit similar patterns or mechanisms.
+
+**Examples:**
+- `thermodynamic-entropy --analogous to--> information-entropy`
+- `natural-selection --analogous to--> gradient-descent`
+
+**Visual:** Thin dashed orange line.
+
+### `contrast`
+
+Explicit difference between similar concepts. Helps learners distinguish easily confused ideas.
+
+**Use when:** Two concepts are frequently confused or have important differences worth highlighting.
+
+**Examples:**
+- `concurrency --contrasts with--> parallelism`
+- `authentication --contrasts with--> authorization`
+
+**Visual:** Thin dashed pink line.
+
+### `relatedTo`
 
 General semantic connection. Use sparingly — it's the catch-all when no other type fits.
 
@@ -46,34 +90,33 @@ General semantic connection. Use sparingly — it's the catch-all when no other 
 **Examples:**
 - `kubernetes --related to--> docker-compose` (both orchestrate containers, but neither depends on the other)
 
+**Visual:** Thin grey line.
+
 ## Guidelines
 
 ### Choosing the Right Type
 
 ```
 Can A be understood without B?
-  NO  --> "depends on"
+  NO  --> prerequisite
   YES --> Is A a subtype of B?
-    YES --> "is a type of"
-    NO  --> Does A make B practically achievable?
-      YES --> "enables"
-      NO  --> "related to"
+    YES --> generalization
+    NO  --> Is A a component of B?
+      YES --> composition
+      NO  --> Does A make B practically achievable?
+        YES --> enables
+        NO  --> Are A and B from different domains with similar structure?
+          YES --> analogy
+          NO  --> Are A and B easily confused / importantly different?
+            YES --> contrast
+            NO  --> relatedTo
 ```
 
 ### Common Mistakes
 
 | Mistake | Why It's Wrong | Correct |
 |---|---|---|
-| Everything "related to" | Loses prerequisite information, breaks unlock order | Use "depends on" for real prerequisites |
-| Circular "depends on" | Creates cycles, breaks topological sort | Check that A truly can't exist without B |
-| Cross-document relationships | May reference concepts not yet extracted | Only relate concepts from the SAME document |
+| Everything `relatedTo` | Loses prerequisite information, breaks unlock order | Use `prerequisite` for real prerequisites |
+| Circular prerequisites | Creates cycles, breaks topological sort | Check that A truly can't exist without B |
 | Reversed direction | `A depends on B` means A needs B, not B needs A | Think "A requires knowledge of B" |
-
-### Future: Typed Relationships (Issue #38)
-
-The current four types are intentionally simple. Issue #38 proposes expanding to include:
-- `analogy` — cross-discipline semantic connections
-- `contrast` — explicit differences between similar concepts
-- `composition` — part-of relationships
-
-These would enhance the knowledge graph visualization and enable cross-discipline discovery.
+| `enables` when `prerequisite` | If A truly can't be understood without B, that's a prerequisite | Reserve `enables` for "makes practical" |
