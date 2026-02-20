@@ -28,6 +28,8 @@ dependencies:
   fsrs: ^2.0.1
   graphs: ^2.3.2
   uuid: ^4.5.1
+  intl: ^0.19.0
+  pretty_diff_text: ^2.1.0
 
 dev_dependencies:
   flutter_test:

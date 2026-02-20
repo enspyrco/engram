@@ -9,6 +9,7 @@ class DocumentMetadata {
     required this.ingestedAt,
     this.collectionId,
     this.collectionName,
+    this.ingestedText,
   });
 
   factory DocumentMetadata.fromJson(Map<String, dynamic> json) {
@@ -19,8 +20,15 @@ class DocumentMetadata {
       ingestedAt: json['ingestedAt'] as String,
       collectionId: json['collectionId'] as String?,
       collectionName: json['collectionName'] as String?,
+      ingestedText: json['ingestedText'] as String?,
     );
   }
+
+  /// Maximum size (in characters) of [ingestedText] to store. Documents
+  /// larger than this are truncated to avoid bloating Firestore/local JSON.
+  /// 100 KB of UTF-8 text is ~100K characters, well within Firestore's 1 MB
+  /// document limit while leaving room for the rest of the graph.
+  static const maxIngestedTextLength = 100000;
 
   final String documentId;
   final String title;
@@ -29,7 +37,23 @@ class DocumentMetadata {
   final String? collectionId;
   final String? collectionName;
 
-  DocumentMetadata withUpdatedAt(String updatedAt, {DateTime? now}) {
+  /// The document markdown text at the time of last ingestion.
+  /// Used for diffing when the document is updated in the wiki.
+  /// Truncated to [maxIngestedTextLength] characters to prevent storage bloat.
+  final String? ingestedText;
+
+  /// Truncate [text] to [maxIngestedTextLength] if it exceeds the limit.
+  static String? capText(String? text) {
+    if (text == null) return null;
+    if (text.length <= maxIngestedTextLength) return text;
+    return text.substring(0, maxIngestedTextLength);
+  }
+
+  DocumentMetadata withUpdatedAt(
+    String updatedAt, {
+    DateTime? now,
+    String? ingestedText,
+  }) {
     final currentTime = now ?? DateTime.now().toUtc();
     return DocumentMetadata(
       documentId: documentId,
@@ -38,6 +62,7 @@ class DocumentMetadata {
       ingestedAt: currentTime.toIso8601String(),
       collectionId: collectionId,
       collectionName: collectionName,
+      ingestedText: ingestedText ?? this.ingestedText,
     );
   }
 
@@ -48,6 +73,7 @@ class DocumentMetadata {
         'ingestedAt': ingestedAt,
         if (collectionId != null) 'collectionId': collectionId,
         if (collectionName != null) 'collectionName': collectionName,
+        if (ingestedText != null) 'ingestedText': ingestedText,
       };
 
   @override

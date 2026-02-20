@@ -153,3 +153,10 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 5. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
 6. **#41** — CRDT sync layer (depends on #40; FSRS state needs LWW-Register per field)
 7. **#39** — Concept embeddings (depends on #38; embedding similarity could predict confusion-based difficulty for FSRS)
+
+### Learning Science Features (Issues #74–#78)
+8. **#74** — Video-synchronized knowledge graph highlighting — nodes light up in sync with video playback, connected nodes glow with relationship explanations. Based on Mayer's signaling principle (g=0.38–0.53) and temporal contiguity (d=1.22)
+9. **#75** — Cross-source semantic linking + expanded ingestion (podcasts, books) — embedding-based discovery of connections across sources, both at ingestion time and offline. Analogical encoding makes far transfer 3x more likely (Gentner et al., 2003). Depends on #38, #39
+10. **#76** — Elaborative interrogation (how/why deepening, d=0.56) + Ebbinghaus forgetting curve visualization — AI-guided Socratic follow-ups during quiz, plus visual sawtooth decay curves from FSRS retrievability. Depends on FSRS Phases 2-4
+11. **#77** — Dual coding — combine verbal quiz items with visual representations (diagrams, graph snippets, icons). Mayer's multimedia principle: d=1.35–1.67. Knowledge graph already provides spatial/visual encoding; extend to per-concept visuals
+12. **#78** — Interleaving — mix topics within quiz sessions instead of blocking by collection. Rohrer et al. (2020) classroom RCT: d=0.83, n=787. Random interleaving is a strong baseline. Metacognitive illusion: users prefer blocking, so default to interleaved

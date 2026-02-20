@@ -98,6 +98,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     required String updatedAt,
     String? collectionId,
     String? collectionName,
+    String? documentText,
   }) async {
     final current = await future;
 
@@ -108,6 +109,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       updatedAt: updatedAt,
       collectionId: collectionId,
       collectionName: collectionName,
+      documentText: documentText,
     );
     state = AsyncData(newGraph);
 
@@ -125,6 +127,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     required String updatedAt,
     String? collectionId,
     String? collectionName,
+    String? documentText,
     Duration delay = const Duration(milliseconds: 250),
     int batchSize = 3,
   }) async {
@@ -142,6 +145,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       updatedAt: updatedAt,
       collectionId: collectionId,
       collectionName: collectionName,
+      documentText: documentText,
     );
     state = AsyncData(cleared);
     await Future.delayed(delay);
@@ -177,6 +181,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
         updatedAt: updatedAt,
         collectionId: collectionId,
         collectionName: collectionName,
+        documentText: documentText,
       );
       state = AsyncData(graph);
       await Future.delayed(delay);

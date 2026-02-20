@@ -11,6 +11,7 @@ import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/topic_provider.dart';
 import '../graph/force_directed_graph_widget.dart';
+import '../widgets/document_diff_sheet.dart';
 
 class IngestScreen extends ConsumerWidget {
   const IngestScreen({super.key});
@@ -370,7 +371,13 @@ class _CollectionSection extends ConsumerWidget {
                 .read(ingestProvider.notifier)
                 .toggleDocument(doc.id),
             title: Text(doc.title),
-            subtitle: _StatusChip(status: doc.status),
+            subtitle: _StatusChip(
+              status: doc.status,
+              onViewChanges: doc.status == IngestDocumentStatus.changed
+                  ? () => DocumentDiffSheet.show(context, ref,
+                      documentId: doc.id)
+                  : null,
+            ),
             dense: true,
           ),
       ],
@@ -379,8 +386,9 @@ class _CollectionSection extends ConsumerWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+  const _StatusChip({required this.status, this.onViewChanges});
   final IngestDocumentStatus status;
+  final VoidCallback? onViewChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +408,19 @@ class _StatusChip extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
+        if (onViewChanges != null) ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onViewChanges,
+            child: Text(
+              'View changes',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+            ),
+          ),
+        ],
       ],
     );
   }

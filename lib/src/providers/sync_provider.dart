@@ -1,6 +1,7 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/stale_document.dart';
 import '../models/sync_status.dart';
 import 'clock_provider.dart';
 import 'knowledge_graph_provider.dart';
@@ -48,6 +49,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
       // --- Check for stale documents in ingested collections ---
       var staleCount = 0;
       final staleCollections = <String>[];
+      final staleDocs = <StaleDocument>[];
 
       if (ingestedIds.isNotEmpty && graph.documentMetadata.isNotEmpty) {
         for (final collectionId in ingestedIds) {
@@ -56,6 +58,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
 
           for (final doc in docs) {
             final docId = doc['id'] as String;
+            final docTitle = doc['title'] as String;
             final updatedAt = doc['updatedAt'] as String;
 
             final existing = graph.documentMetadata
@@ -66,6 +69,11 @@ class SyncNotifier extends Notifier<SyncStatus> {
             if (existing == null || existing.updatedAt != updatedAt) {
               staleCount++;
               collectionHasStale = true;
+              staleDocs.add(StaleDocument(
+                id: docId,
+                title: docTitle,
+                ingestedAt: existing?.ingestedAt,
+              ));
             }
           }
 
@@ -80,6 +88,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
           phase: SyncPhase.updatesAvailable,
           staleDocumentCount: staleCount,
           staleCollectionIds: IList(staleCollections),
+          staleDocuments: IList(staleDocs),
           newCollections: IList(newCollections),
         );
       } else {
@@ -146,6 +155,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
             documentId: docId,
             documentTitle: docTitle,
             updatedAt: updatedAt,
+            documentText: content,
           );
 
           graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;
