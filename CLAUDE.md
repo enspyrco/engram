@@ -8,7 +8,7 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Graph Analyzer**: Dependency-aware concept unlocking, topological sort, cycle detection
 - **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`); `SettingsRepository` — API keys via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
-- **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes
+- **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes. Wiki group membership flows through a provider dependency chain: `wikiGroupMembershipProvider` (ensures `joinWikiGroup` before any Firestore listener) → `teamRepositoryProvider` → all team notifiers (storms, relays, goals, guardians, glory board). `socialRepositoryProvider` lives in its own file to avoid circular imports
 - **Knowledge Graph**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay. Incremental layout: existing nodes are pinned as immovable anchors, new nodes animate into position via force simulation
 - **Network Health**: `NetworkHealthScorer` computes composite health from mastery + freshness + critical paths; `ClusterDetector` finds concept communities via label propagation
 - **Services**: `OutlineClient` (HTTP), `ExtractionService` (Claude API via `anthropic_sdk_dart`)
@@ -143,6 +143,7 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Ingest graph session filtering — live graph shows only concepts from current ingestion session (#69)
 - ✓ Centering gravity + dashboard layout sizing + relationship tap — gravity prevents edge drift, LayoutBuilder for responsive sizing, shared EdgePanel, edge tap on animated graph (#70)
 - ✓ Typed relationships — `RelationshipType` enum (prerequisite, generalization, composition, enables, analogy, contrast, relatedTo) with type-based graph visualization (color-coded edges, dashed lines, arrowheads) and `tryParse`/`inferFromLabel` backward compat (#80)
+- ✓ Wiki group membership provider — shared `wikiGroupMembershipProvider` ensures `joinWikiGroup` before team Firestore listeners start, preventing permission-denied errors. `socialRepositoryProvider` extracted to own file. Missing Firestore rules added for relays/storms. `joinWikiGroup` uses `SetOptions(merge: true)` to preserve `joinedAt` (#81)
 
 ### Next up
 1. **#61** — Preserve team node positions across graph rebuilds
