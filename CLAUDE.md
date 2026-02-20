@@ -81,7 +81,7 @@ Implemented in Phase 6 as wiki-URL-based friend discovery with challenge + nudge
 When a quiz card has multiple answers, users should be able to split the concept into sub-concepts and master each before unlocking the parent. This changes the graph structure during learning (not just at ingestion). Implementation should be local-first — restructuring is a personal, exploratory act that shouldn't require network connectivity.
 
 ### Cross-discipline semantic relationships
-The knowledge graph should surface connections across disciplines (e.g., "thermodynamic entropy relates to information-theoretic entropy"). Requires: typed relationships (analogy, contrast, prerequisite, composition), Claude-computed concept embeddings at extraction time, cosine similarity for "related concept" suggestions. See `docs/GRAPH_STATE_MANAGEMENT.md` for embedding analysis.
+The knowledge graph should surface connections across disciplines (e.g., "thermodynamic entropy relates to information-theoretic entropy"). Typed relationships now implemented (#80): `RelationshipType` enum includes analogy, contrast, composition, and 4 others. Remaining: Claude-computed concept embeddings at extraction time (#39), cosine similarity for "related concept" suggestions. See `docs/GRAPH_STATE_MANAGEMENT.md` for embedding analysis.
 
 ### Local-first migration
 Migrate from Firestore-primary to Drift/SQLite local-primary with CRDT sync. See `docs/LOCAL_FIRST.md` and `docs/CRDT_SYNC_ARCHITECTURE.md`. This is a multi-phase migration: dual-write → local-primary reads → CRDT sync → Firestore optional.
@@ -116,7 +116,7 @@ From the graph state management investigation and local-first architecture plann
 
 **Performance (quick wins):** #33 (`fast_immutable_collections` for O(1) structural sharing), #34 (cache ClusterDetector, only recompute on structural changes), #35 (adopt `graphs` Dart package for topo sort)
 **Architecture (provider splitting):** #36 (split `graphStructureProvider` from quiz item state — single highest-impact optimization)
-**Features (deep learning):** #37 (sub-concept splitting for multi-answer cards), #38 (typed relationships for cross-discipline connections), #39 (Claude-computed concept embeddings for semantic discovery)
+**Features (deep learning):** #37 (sub-concept splitting for multi-answer cards), ~~#38~~ ✓ DONE in PR #80 (typed relationships for cross-discipline connections), #39 (Claude-computed concept embeddings for semantic discovery)
 **Architecture (local-first):** #40 (Drift/SQLite as primary storage), #41 (CRDT sync layer for multi-device consistency)
 
 ## Implementation Roadmap
@@ -142,21 +142,21 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Circle initial placement + pre-settle — nodes start on a circle, 60-step simulation before first paint (#68)
 - ✓ Ingest graph session filtering — live graph shows only concepts from current ingestion session (#69)
 - ✓ Centering gravity + dashboard layout sizing + relationship tap — gravity prevents edge drift, LayoutBuilder for responsive sizing, shared EdgePanel, edge tap on animated graph (#70)
+- ✓ Typed relationships — `RelationshipType` enum (prerequisite, generalization, composition, enables, analogy, contrast, relatedTo) with type-based graph visualization (color-coded edges, dashed lines, arrowheads) and `tryParse`/`inferFromLabel` backward compat (#80)
 
 ### Next up
 1. **#47** — `clockProvider` for all provider-level DateTime.now() calls
-2. **#38** — Typed relationships (enhances knowledge graph and extraction quality; relationship types also inform FSRS difficulty prediction)
-3. **#61** — Preserve team node positions across graph rebuilds
+2. **#61** — Preserve team node positions across graph rebuilds
 
 ### Longer-term
 4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
 5. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
 6. **#41** — CRDT sync layer (depends on #40; FSRS state needs LWW-Register per field)
-7. **#39** — Concept embeddings (depends on #38; embedding similarity could predict confusion-based difficulty for FSRS)
+7. **#39** — Concept embeddings (#38 done; embedding similarity could predict confusion-based difficulty for FSRS)
 
 ### Learning Science Features (Issues #74–#78)
 8. **#74** — Video-synchronized knowledge graph highlighting — nodes light up in sync with video playback, connected nodes glow with relationship explanations. Based on Mayer's signaling principle (g=0.38–0.53) and temporal contiguity (d=1.22)
-9. **#75** — Cross-source semantic linking + expanded ingestion (podcasts, books) — embedding-based discovery of connections across sources, both at ingestion time and offline. Analogical encoding makes far transfer 3x more likely (Gentner et al., 2003). Depends on #38, #39
+9. **#75** — Cross-source semantic linking + expanded ingestion (podcasts, books) — embedding-based discovery of connections across sources, both at ingestion time and offline. Analogical encoding makes far transfer 3x more likely (Gentner et al., 2003). #38 done, depends on #39
 10. **#76** — Elaborative interrogation (how/why deepening, d=0.56) + Ebbinghaus forgetting curve visualization — AI-guided Socratic follow-ups during quiz, plus visual sawtooth decay curves from FSRS retrievability. Depends on FSRS Phases 2-4
 11. **#77** — Dual coding — combine verbal quiz items with visual representations (diagrams, graph snippets, icons). Mayer's multimedia principle: d=1.35–1.67. Knowledge graph already provides spatial/visual encoding; extend to per-concept visuals
 12. **#78** — Interleaving — mix topics within quiz sessions instead of blocking by collection. Rohrer et al. (2020) classroom RCT: d=0.83, n=787. Random interleaving is a strong baseline. Metacognitive illusion: users prefer blocking, so default to interleaved
