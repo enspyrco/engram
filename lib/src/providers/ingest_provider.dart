@@ -7,7 +7,10 @@ import 'package:uuid/uuid.dart';
 
 import '../models/ingest_document.dart';
 import '../models/ingest_state.dart';
+import '../models/knowledge_graph.dart';
 import '../models/topic.dart';
+import '../services/extraction_service.dart';
+import '../services/outline_client.dart';
 import 'clock_provider.dart';
 import 'graph_store_provider.dart';
 import 'knowledge_graph_provider.dart';
@@ -174,6 +177,125 @@ class IngestNotifier extends Notifier<IngestState> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Shared ingestion helpers
+  // ---------------------------------------------------------------------------
+
+  /// Loads the current knowledge graph from storage with a timeout.
+  Future<KnowledgeGraph> _loadGraph() async {
+    debugPrint('[Ingest] Loading existing graph from storage...');
+    final graph = await ref.read(knowledgeGraphProvider.future).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw TimeoutException(
+            'Loading graph from storage timed out after 30s'));
+    debugPrint('[Ingest] Graph loaded: '
+        '${graph.concepts.length} concepts, '
+        '${graph.quizItems.length} quiz items');
+    return graph;
+  }
+
+  /// Fetches a document from Outline and extracts knowledge via Claude API.
+  ///
+  /// Returns `(ExtractionResult, documentText)`, or null if the document was
+  /// empty.
+  Future<(ExtractionResult, String)?> _fetchAndExtractDocument({
+    required OutlineClient client,
+    required ExtractionService extraction,
+    required String docId,
+    required String docTitle,
+    required List<String> existingConceptIds,
+  }) async {
+    state = state.copyWith(statusMessage: 'Fetching from Outline...');
+    debugPrint('[Ingest] Fetching "$docTitle" from Outline...');
+    final fullDoc = await client.getDocument(docId);
+    final content = fullDoc['text'] as String? ?? '';
+    debugPrint('[Ingest] Got ${content.length} chars for "$docTitle"');
+
+    if (content.trim().isEmpty) {
+      debugPrint('[Ingest] Skipping "$docTitle" (empty content)');
+      return null;
+    }
+
+    state = state.copyWith(
+      statusMessage: 'Extracting knowledge (${content.length} chars)...',
+    );
+    debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
+        '(${content.length} chars)...');
+    final stopwatch = Stopwatch()..start();
+    final result = await extraction
+        .extract(
+          documentTitle: docTitle,
+          documentContent: content,
+          existingConceptIds: existingConceptIds,
+        )
+        .timeout(const Duration(minutes: 3),
+            onTimeout: () => throw TimeoutException(
+                'Claude extraction timed out after 3 min for "$docTitle"'));
+    debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
+        '${result.concepts.length} concepts, '
+        '${result.relationships.length} relationships, '
+        '${result.quizItems.length} quiz items');
+
+    return (result, content);
+  }
+
+  /// Merges an extraction result into the graph with staggered animation.
+  Future<void> _mergeExtractionResult({
+    required KnowledgeGraphNotifier graphNotifier,
+    required ExtractionResult result,
+    required String docId,
+    required String docTitle,
+    required String updatedAt,
+    required String collectionId,
+    required String? collectionName,
+    required String documentText,
+  }) async {
+    state = state.copyWith(
+      statusMessage: 'Adding ${result.concepts.length} concepts...',
+      sessionConceptIds: state.sessionConceptIds
+          .addAll(result.concepts.map((c) => c.id)),
+    );
+    debugPrint('[Ingest] Adding concepts to graph...');
+    try {
+      await graphNotifier
+          .staggeredIngestExtraction(
+            result,
+            documentId: docId,
+            documentTitle: docTitle,
+            updatedAt: updatedAt,
+            collectionId: collectionId,
+            collectionName: collectionName,
+            documentText: documentText,
+          )
+          .timeout(const Duration(minutes: 2),
+              onTimeout: () => throw TimeoutException(
+                  'Staggered ingestion timed out after 2 min'));
+      debugPrint('[Ingest] Saved successfully');
+    } on TimeoutException {
+      debugPrint('[Ingest] Storage save timed out — '
+          'data is in memory, will retry on next save');
+      state = state.copyWith(
+        statusMessage: 'Save timed out (data kept in memory)',
+      );
+    }
+  }
+
+  /// Batch-persists any backfilled collection info if documents were skipped.
+  void _batchSaveBackfill(int skipped) {
+    if (skipped == 0) return;
+    final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
+    if (currentGraph != null) {
+      final repo = ref.read(graphRepositoryProvider);
+      unawaited(repo.save(currentGraph).catchError((e) {
+        debugPrint('[Ingest] Backfill batch save failed: $e');
+      }));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public ingestion methods
+  // ---------------------------------------------------------------------------
+
   /// Start topic-aware ingestion for selected documents.
   Future<void> startTopicIngestion({bool forceReExtract = false}) async {
     if (state.selectedDocumentIds.isEmpty) return;
@@ -224,16 +346,7 @@ class IngestNotifier extends Notifier<IngestState> {
 
       state = state.copyWith(totalDocuments: docsToProcess.length);
 
-      debugPrint('[Ingest] Loading existing graph from storage...');
-      final initialGraph = await ref.read(knowledgeGraphProvider.future)
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException(
-                  'Loading graph from storage timed out after 30s'));
-      debugPrint('[Ingest] Graph loaded: '
-          '${initialGraph.concepts.length} concepts, '
-          '${initialGraph.quizItems.length} quiz items');
-
-      var graph = initialGraph;
+      var graph = await _loadGraph();
       var extracted = 0;
       var skipped = 0;
 
@@ -271,15 +384,15 @@ class IngestNotifier extends Notifier<IngestState> {
           continue;
         }
 
-        // Fetch full document
-        state = state.copyWith(statusMessage: 'Fetching from Outline...');
-        debugPrint('[Ingest] Fetching "$docTitle" from Outline...');
-        final fullDoc = await client.getDocument(docId);
-        final content = fullDoc['text'] as String? ?? '';
-        debugPrint('[Ingest] Got ${content.length} chars for "$docTitle"');
+        final fetchResult = await _fetchAndExtractDocument(
+          client: client,
+          extraction: extraction,
+          docId: docId,
+          docTitle: docTitle,
+          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
+        );
 
-        if (content.trim().isEmpty) {
-          debugPrint('[Ingest] Skipping "$docTitle" (empty content)');
+        if (fetchResult == null) {
           skipped++;
           state = state.copyWith(
             processedDocuments: extracted + skipped,
@@ -289,54 +402,18 @@ class IngestNotifier extends Notifier<IngestState> {
           continue;
         }
 
-        // Extract knowledge via Claude API — pass ALL existing concept IDs
-        // (full graph, not just topic) so Claude can create cross-document
-        // relationships.
-        state = state.copyWith(
-          statusMessage: 'Extracting knowledge (${content.length} chars)...',
-        );
-        debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
-            '(${content.length} chars)...');
-        final stopwatch = Stopwatch()..start();
-        final result = await extraction.extract(
-          documentTitle: docTitle,
-          documentContent: content,
-          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
-        ).timeout(const Duration(minutes: 3),
-            onTimeout: () => throw TimeoutException(
-                'Claude extraction timed out after 3 min for "$docTitle"'));
-        debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
-            '${result.concepts.length} concepts, '
-            '${result.relationships.length} relationships, '
-            '${result.quizItems.length} quiz items');
+        final (result, documentText) = fetchResult;
 
-        // Merge into graph with staggered animation
-        state = state.copyWith(
-          statusMessage: 'Adding ${result.concepts.length} concepts...',
-          sessionConceptIds: state.sessionConceptIds
-              .addAll(result.concepts.map((c) => c.id)),
+        await _mergeExtractionResult(
+          graphNotifier: graphNotifier,
+          result: result,
+          docId: docId,
+          docTitle: docTitle,
+          updatedAt: updatedAt,
+          collectionId: collectionId,
+          collectionName: collectionName,
+          documentText: documentText,
         );
-        debugPrint('[Ingest] Adding concepts to graph...');
-        try {
-          await graphNotifier.staggeredIngestExtraction(
-            result,
-            documentId: docId,
-            documentTitle: docTitle,
-            updatedAt: updatedAt,
-            collectionId: collectionId,
-            collectionName: collectionName,
-            documentText: content,
-          ).timeout(const Duration(minutes: 2),
-              onTimeout: () => throw TimeoutException(
-                  'Staggered ingestion timed out after 2 min'));
-          debugPrint('[Ingest] Saved successfully');
-        } on TimeoutException {
-          debugPrint('[Ingest] Storage save timed out — '
-              'data is in memory, will retry on next save');
-          state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
-          );
-        }
 
         graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;
         extracted++;
@@ -347,14 +424,7 @@ class IngestNotifier extends Notifier<IngestState> {
         );
       }
 
-      // Batch-persist any backfilled collection info
-      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
-      if (currentGraph != null && skipped > 0) {
-        final repo = ref.read(graphRepositoryProvider);
-        unawaited(repo.save(currentGraph).catchError((e) {
-          debugPrint('[Ingest] Backfill batch save failed: $e');
-        }));
-      }
+      _batchSaveBackfill(skipped);
 
       // Save the topic to the graph
       final finishedTopic = topic.withLastIngestedAt(
@@ -414,16 +484,7 @@ class IngestNotifier extends Notifier<IngestState> {
         statusMessage: 'Loading existing graph...',
       );
 
-      debugPrint('[Ingest] Loading existing graph from storage...');
-      final initialGraph = await ref.read(knowledgeGraphProvider.future)
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException(
-                  'Loading graph from storage timed out after 30s'));
-      debugPrint('[Ingest] Graph loaded: '
-          '${initialGraph.concepts.length} concepts, '
-          '${initialGraph.quizItems.length} quiz items');
-
-      var graph = initialGraph;
+      var graph = await _loadGraph();
       var extracted = 0;
       var skipped = 0;
 
@@ -461,15 +522,15 @@ class IngestNotifier extends Notifier<IngestState> {
           continue;
         }
 
-        // Fetch full document
-        state = state.copyWith(statusMessage: 'Fetching from Outline...');
-        debugPrint('[Ingest] Fetching "$docTitle" from Outline...');
-        final fullDoc = await client.getDocument(docId);
-        final content = fullDoc['text'] as String? ?? '';
-        debugPrint('[Ingest] Got ${content.length} chars for "$docTitle"');
+        final fetchResult = await _fetchAndExtractDocument(
+          client: client,
+          extraction: extraction,
+          docId: docId,
+          docTitle: docTitle,
+          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
+        );
 
-        if (content.trim().isEmpty) {
-          debugPrint('[Ingest] Skipping "$docTitle" (empty content)');
+        if (fetchResult == null) {
           skipped++;
           state = state.copyWith(
             processedDocuments: extracted + skipped,
@@ -479,54 +540,18 @@ class IngestNotifier extends Notifier<IngestState> {
           continue;
         }
 
-        // Extract knowledge via Claude API
-        state = state.copyWith(
-          statusMessage: 'Extracting knowledge (${content.length} chars)...',
-        );
-        debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
-            '(${content.length} chars)...');
-        final stopwatch = Stopwatch()..start();
-        final result = await extraction.extract(
-          documentTitle: docTitle,
-          documentContent: content,
-          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
-        ).timeout(const Duration(minutes: 3),
-            onTimeout: () => throw TimeoutException(
-                'Claude extraction timed out after 3 min for "$docTitle"'));
-        debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
-            '${result.concepts.length} concepts, '
-            '${result.relationships.length} relationships, '
-            '${result.quizItems.length} quiz items');
+        final (result, documentText) = fetchResult;
 
-        // Merge into graph — staggered for live knowledge graph animation.
-        // Register session concept IDs first so the live graph filter can
-        // show nodes as they appear during staggered ingestion.
-        state = state.copyWith(
-          statusMessage: 'Adding ${result.concepts.length} concepts...',
-          sessionConceptIds: state.sessionConceptIds
-              .addAll(result.concepts.map((c) => c.id)),
+        await _mergeExtractionResult(
+          graphNotifier: graphNotifier,
+          result: result,
+          docId: docId,
+          docTitle: docTitle,
+          updatedAt: updatedAt,
+          collectionId: collectionId,
+          collectionName: collectionName,
+          documentText: documentText,
         );
-        debugPrint('[Ingest] Adding concepts to graph...');
-        try {
-          await graphNotifier.staggeredIngestExtraction(
-            result,
-            documentId: docId,
-            documentTitle: docTitle,
-            updatedAt: updatedAt,
-            collectionId: collectionId,
-            collectionName: collectionName,
-            documentText: content,
-          ).timeout(const Duration(minutes: 2),
-              onTimeout: () => throw TimeoutException(
-                  'Staggered ingestion timed out after 2 min'));
-          debugPrint('[Ingest] Saved successfully');
-        } on TimeoutException {
-          debugPrint('[Ingest] Storage save timed out — '
-              'data is in memory, will retry on next save');
-          state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
-          );
-        }
 
         graph = ref.read(knowledgeGraphProvider).valueOrNull ?? graph;
         extracted++;
@@ -537,15 +562,7 @@ class IngestNotifier extends Notifier<IngestState> {
         );
       }
 
-      // Batch-persist any backfilled collection info (single save instead
-      // of N individual writes).
-      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
-      if (currentGraph != null && skipped > 0) {
-        final repo = ref.read(graphRepositoryProvider);
-        unawaited(repo.save(currentGraph).catchError((e) {
-          debugPrint('[Ingest] Backfill batch save failed: $e');
-        }));
-      }
+      _batchSaveBackfill(skipped);
 
       // Record the collection ID for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);

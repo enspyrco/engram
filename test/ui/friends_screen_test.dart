@@ -25,7 +25,7 @@ class _PreloadedChallengeNotifier extends ChallengeNotifier {
   final List<Challenge> _challenges;
 
   @override
-  Future<List<Challenge>> build() async => _challenges;
+  Stream<List<Challenge>> build() => Stream.value(_challenges);
 }
 
 class _PreloadedNudgeNotifier extends NudgeNotifier {
@@ -33,7 +33,7 @@ class _PreloadedNudgeNotifier extends NudgeNotifier {
   final List<Nudge> _nudges;
 
   @override
-  Future<List<Nudge>> build() async => _nudges;
+  Stream<List<Nudge>> build() => Stream.value(_nudges);
 }
 
 void main() {

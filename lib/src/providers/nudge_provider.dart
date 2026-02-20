@@ -5,21 +5,14 @@ import 'social_repository_provider.dart';
 
 /// Watches incoming nudges for the current user.
 final nudgeProvider =
-    AsyncNotifierProvider<NudgeNotifier, List<Nudge>>(NudgeNotifier.new);
+    StreamNotifierProvider<NudgeNotifier, List<Nudge>>(NudgeNotifier.new);
 
-class NudgeNotifier extends AsyncNotifier<List<Nudge>> {
+class NudgeNotifier extends StreamNotifier<List<Nudge>> {
   @override
-  Future<List<Nudge>> build() async {
+  Stream<List<Nudge>> build() {
     final socialRepo = ref.watch(socialRepositoryProvider);
-    if (socialRepo == null) return [];
-
-    final subscription = socialRepo.watchIncomingNudges().listen((nudges) {
-      state = AsyncData(nudges);
-    });
-
-    ref.onDispose(subscription.cancel);
-
-    return await socialRepo.watchIncomingNudges().first;
+    if (socialRepo == null) return const Stream.empty();
+    return socialRepo.watchIncomingNudges();
   }
 
   Future<void> sendNudge(Nudge nudge) async {
