@@ -56,6 +56,16 @@ service cloud.firestore {
       allow read, write: if isGroupMember(groupId);
     }
 
+    // Relay challenges: group members can read/write.
+    match /wikiGroups/{groupId}/relays/{relayId} {
+      allow read, write: if isGroupMember(groupId);
+    }
+
+    // Entropy storms: group members can read/write.
+    match /wikiGroups/{groupId}/storms/{stormId} {
+      allow read, write: if isGroupMember(groupId);
+    }
+
     // Member mastery snapshots: group members can read all,
     // but only the owner can write their own snapshot.
     match /wikiGroups/{groupId}/memberSnapshots/{uid} {
