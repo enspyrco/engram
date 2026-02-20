@@ -99,6 +99,19 @@ void main() {
     });
   });
 
+  group('RelationshipType.tryParse', () {
+    test('parses all valid enum names', () {
+      for (final type in RelationshipType.values) {
+        expect(RelationshipType.tryParse(type.name), type);
+      }
+    });
+
+    test('returns null for unknown strings', () {
+      expect(RelationshipType.tryParse('unknownType'), isNull);
+      expect(RelationshipType.tryParse(''), isNull);
+    });
+  });
+
   group('RelationshipType.isDependency', () {
     test('prerequisite is a dependency', () {
       expect(RelationshipType.prerequisite.isDependency, isTrue);

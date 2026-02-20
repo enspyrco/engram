@@ -450,7 +450,10 @@ class ExtractionService {
         toConceptId: toId,
         label: map['label'] as String,
         description: map['description'] as String?,
-        type: _parseRelationshipType(map['type'] as String?),
+        type: switch (map['type'] as String?) {
+          final s? => RelationshipType.tryParse(s),
+          null => null,
+        },
       ));
     }
 
@@ -478,16 +481,6 @@ class ExtractionService {
       quizItems: quizItems,
     );
   }
-}
-
-/// Parse a relationship type string, returning `null` for unrecognized values
-/// (which lets [Relationship.resolvedType] fall back to label inference).
-RelationshipType? _parseRelationshipType(String? value) {
-  if (value == null) return null;
-  for (final t in RelationshipType.values) {
-    if (t.name == value) return t;
-  }
-  return null;
 }
 
 class ExtractionException implements Exception {

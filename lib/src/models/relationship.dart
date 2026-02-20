@@ -29,6 +29,14 @@ enum RelationshipType {
   /// Whether this type represents a dependency edge for concept unlocking.
   bool get isDependency => this == prerequisite;
 
+  /// Parse a [RelationshipType] from its [name] string, or `null` if unknown.
+  static RelationshipType? tryParse(String value) {
+    for (final t in RelationshipType.values) {
+      if (t.name == value) return t;
+    }
+    return null;
+  }
+
   /// Infer a [RelationshipType] from a legacy free-text label string.
   ///
   /// Used for backward compatibility with relationships that don't have
@@ -70,7 +78,9 @@ class Relationship {
       toConceptId: json['toConceptId'] as String,
       label: label,
       description: json['description'] as String?,
-      type: typeStr != null ? _parseType(typeStr) : null,
+      type: typeStr != null
+          ? RelationshipType.tryParse(typeStr) ?? RelationshipType.relatedTo
+          : null,
     );
   }
 
@@ -105,12 +115,4 @@ class Relationship {
 
   @override
   String toString() => 'Relationship($fromConceptId --$label--> $toConceptId)';
-
-  /// Parse a type string to [RelationshipType], with fallback to [relatedTo].
-  static RelationshipType _parseType(String value) {
-    for (final t in RelationshipType.values) {
-      if (t.name == value) return t;
-    }
-    return RelationshipType.relatedTo;
-  }
 }
