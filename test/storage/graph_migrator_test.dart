@@ -13,6 +13,8 @@ void main() {
   group('GraphMigrator', () {
     test('migrates local → Firestore', () async {
       final tmpDir = Directory.systemTemp.createTempSync('engram_migrate_');
+      addTearDown(() => tmpDir.deleteSync(recursive: true));
+
       final local = LocalGraphRepository(dataDir: tmpDir.path);
       final firestore = FirestoreGraphRepository(
         firestore: FakeFirebaseFirestore(),
@@ -40,12 +42,12 @@ void main() {
       final loaded = await firestore.load();
       expect(loaded.concepts, hasLength(1));
       expect(loaded.concepts.first.id, 'c1');
-
-      tmpDir.deleteSync(recursive: true);
     });
 
     test('migrates graph with only relationships', () async {
       final tmpDir = Directory.systemTemp.createTempSync('engram_migrate_');
+      addTearDown(() => tmpDir.deleteSync(recursive: true));
+
       final local = LocalGraphRepository(dataDir: tmpDir.path);
       final firestore = FirestoreGraphRepository(
         firestore: FakeFirebaseFirestore(),
@@ -72,12 +74,12 @@ void main() {
       final loaded = await firestore.load();
       expect(loaded.relationships, hasLength(1));
       expect(loaded.relationships.first.id, 'r1');
-
-      tmpDir.deleteSync(recursive: true);
     });
 
     test('skips migration for empty graph', () async {
       final tmpDir = Directory.systemTemp.createTempSync('engram_migrate_');
+      addTearDown(() => tmpDir.deleteSync(recursive: true));
+
       final local = LocalGraphRepository(dataDir: tmpDir.path);
       final firestore = FirestoreGraphRepository(
         firestore: FakeFirebaseFirestore(),
@@ -88,8 +90,6 @@ void main() {
       final result = await migrator.migrate();
 
       expect(result.concepts, isEmpty);
-
-      tmpDir.deleteSync(recursive: true);
     });
   });
 }

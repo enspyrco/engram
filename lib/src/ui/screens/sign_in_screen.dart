@@ -24,7 +24,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       final auth = ref.read(firebaseAuthProvider);
       final firestore = ref.read(firestoreProvider);
-      await signInWithGoogle(auth, firestore: firestore);
+      final googleSignIn = ref.read(googleSignInProvider);
+      await signInWithGoogle(auth,
+          firestore: firestore, googleSignIn: googleSignIn);
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString());
