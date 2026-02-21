@@ -203,6 +203,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     for (final node in _nodes) {
       oldPositions[node.id] = node.position;
     }
+    for (final teamNode in widget.teamNodes) {
+      oldPositions[teamNode.id] = teamNode.position;
+    }
 
     final graph = widget.graph;
     final analyzer = GraphAnalyzer(graph);
@@ -277,12 +280,14 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     final totalCount = _nodes.length + teamNodes.length;
     final initialPositions = List<Offset?>.generate(totalCount, (i) {
       if (i < _nodes.length) return oldPositions[_nodes[i].id];
-      return null; // team nodes get fresh positions — see #61
+      return oldPositions[teamNodes[i - _nodes.length].id];
     });
     final hasOldPositions = initialPositions.any((p) => p != null);
     final pinnedIndices = <int>{
       for (var i = 0; i < _nodes.length; i++)
         if (oldPositions.containsKey(_nodes[i].id)) i,
+      for (var i = 0; i < teamNodes.length; i++)
+        if (oldPositions.containsKey(teamNodes[i].id)) _teamNodeStartIndex + i,
     };
 
     // Scale layout area with node count so large graphs have room to breathe.
