@@ -64,7 +64,7 @@ All tracked in GitHub. Key groupings:
 
 **Tech debt:** #14 (migrator memory), #15 (destructive Firestore save), #18 (bloated pubspec), #25 (DateTime timestamps), #28 (friend discovery opt-in)
 **Architecture:** #39 (concept embeddings), #40 (local-first Drift/SQLite), #41 (CRDT sync)
-**Graph:** #51 (incremental ingestion), #55 (isolate layout), #61 (team node positions)
+**Graph:** #51 (incremental ingestion), #55 (isolate layout)
 **Features:** #48 (mobile + haptics), #49 (teach mode)
 **Learning science:** #74 (video sync), #75 (cross-source linking), #76 (elaborative interrogation), #77 (dual coding), #78 (interleaving)
 
@@ -95,15 +95,15 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Wiki group membership provider — shared `wikiGroupMembershipProvider` ensures `joinWikiGroup` before team Firestore listeners start, preventing permission-denied errors. `socialRepositoryProvider` extracted to own file. Missing Firestore rules added for relays/storms. `joinWikiGroup` uses `SetOptions(merge: true)` to preserve `joinedAt` (#81)
 - ✓ Tech debt sweep PR 1 — #8 closed (already fixed), #12 `ensureSignedInProvider`, #23 `googleSignInProvider`, #24 Firebase config assertion, #30 `toContentSnapshot()`, #17 test hygiene (#82)
 - ✓ Tech debt sweep PR 2 — #29 `StreamNotifier` migration (challenge + nudge), #9 ingest helper extraction, #16 auth_provider tests (#83)
+- ✓ **#61** — Preserve team node positions across graph rebuilds (#85)
 
 ### Next up
-1. **#61** — Preserve team node positions across graph rebuilds
+1. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
 
 ### Longer-term
-4. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
-5. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
-6. **#41** — CRDT sync layer (depends on #40; FSRS state needs LWW-Register per field)
-7. **#39** — Concept embeddings (#38 done; embedding similarity could predict confusion-based difficulty for FSRS)
+2. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
+3. **#41** — CRDT sync layer (depends on #40; FSRS state needs LWW-Register per field)
+4. **#39** — Concept embeddings (#38 done; embedding similarity could predict confusion-based difficulty for FSRS)
 
 ### Learning Science Features (Issues #74–#78)
 8. **#74** — Video-synchronized knowledge graph highlighting — nodes light up in sync with video playback, connected nodes glow with relationship explanations. Based on Mayer's signaling principle (g=0.38–0.53) and temporal contiguity (d=1.22)
