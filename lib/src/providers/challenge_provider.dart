@@ -5,24 +5,16 @@ import 'social_repository_provider.dart';
 
 /// Watches incoming challenges for the current user.
 final challengeProvider =
-    AsyncNotifierProvider<ChallengeNotifier, List<Challenge>>(
+    StreamNotifierProvider<ChallengeNotifier, List<Challenge>>(
   ChallengeNotifier.new,
 );
 
-class ChallengeNotifier extends AsyncNotifier<List<Challenge>> {
+class ChallengeNotifier extends StreamNotifier<List<Challenge>> {
   @override
-  Future<List<Challenge>> build() async {
+  Stream<List<Challenge>> build() {
     final socialRepo = ref.watch(socialRepositoryProvider);
-    if (socialRepo == null) return [];
-
-    final subscription =
-        socialRepo.watchIncomingChallenges().listen((challenges) {
-      state = AsyncData(challenges);
-    });
-
-    ref.onDispose(subscription.cancel);
-
-    return await socialRepo.watchIncomingChallenges().first;
+    if (socialRepo == null) return const Stream.empty();
+    return socialRepo.watchIncomingChallenges();
   }
 
   Future<void> sendChallenge(Challenge challenge) async {
