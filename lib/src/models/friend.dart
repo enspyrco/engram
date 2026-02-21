@@ -31,6 +31,8 @@ class Friend {
   final String displayName;
   final String? photoUrl;
   final MasterySnapshot? masterySnapshot;
+
+  /// Firestore passthrough — kept as String since it's only used for display.
   final String? lastActiveAt;
 
   Map<String, dynamic> toJson() => {
