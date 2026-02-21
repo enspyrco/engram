@@ -17,7 +17,7 @@ void main() {
           const RelayLeg(conceptId: 'c2', conceptName: 'Branching'),
           const RelayLeg(conceptId: 'c3', conceptName: 'CI Pipelines'),
         ],
-        createdAt: '2025-06-14T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 14),
         createdByUid: 'creator1',
       );
     });
@@ -30,29 +30,31 @@ void main() {
       expect(leg.statusAt(now), RelayLegStatus.unclaimed);
 
       // No prior leg requirement for index 0
-      final canClaim = legIndex == 0 ||
-          relay.legs[legIndex - 1].completedAt != null;
+      final canClaim =
+          legIndex == 0 || relay.legs[legIndex - 1].completedAt != null;
       expect(canClaim, isTrue);
     });
 
     test('second leg cannot be claimed if first is not completed', () {
       const legIndex = 1;
-      final canClaim = legIndex == 0 ||
-          relay.legs[legIndex - 1].completedAt != null;
+      final canClaim =
+          legIndex == 0 || relay.legs[legIndex - 1].completedAt != null;
       expect(canClaim, isFalse);
     });
 
     test('second leg can be claimed after first is completed', () {
-      final updated = relay.withLegClaimed(
-        0,
-        uid: 'u1',
-        displayName: 'Alice',
-        timestamp: '2025-06-15T10:00:00.000Z',
-      ).withLegCompleted(0, '2025-06-15T12:00:00.000Z');
+      final updated = relay
+          .withLegClaimed(
+            0,
+            uid: 'u1',
+            displayName: 'Alice',
+            timestamp: DateTime.utc(2025, 6, 15, 10),
+          )
+          .withLegCompleted(0, DateTime.utc(2025, 6, 15, 12));
 
       const legIndex = 1;
-      final canClaim = legIndex == 0 ||
-          updated.legs[legIndex - 1].completedAt != null;
+      final canClaim =
+          legIndex == 0 || updated.legs[legIndex - 1].completedAt != null;
       expect(canClaim, isTrue);
     });
 
@@ -61,7 +63,7 @@ void main() {
         0,
         uid: 'u1',
         displayName: 'Alice',
-        timestamp: '2025-06-15T10:00:00.000Z',
+        timestamp: DateTime.utc(2025, 6, 15, 10),
       );
 
       final now = DateTime.utc(2025, 6, 15, 11); // 1h after claim
@@ -76,7 +78,7 @@ void main() {
     });
 
     test('stalled leg rescue awards 4 points', () {
-      final claimedAt = DateTime.utc(2025, 6, 14, 8).toIso8601String();
+      final claimedAt = DateTime.utc(2025, 6, 14, 8);
       final now = DateTime.utc(2025, 6, 15, 10); // 26h later
       final leg = RelayLeg(
         conceptId: 'c1',
@@ -96,27 +98,27 @@ void main() {
         id: 'r1',
         title: 'T',
         legs: [
-          const RelayLeg(
+          RelayLeg(
             conceptId: 'c1',
             conceptName: 'A',
             claimedByUid: 'u1',
             claimedByName: 'Alice',
-            claimedAt: '2025-06-15T10:00:00.000Z',
-            completedAt: '2025-06-15T12:00:00.000Z',
+            claimedAt: DateTime.utc(2025, 6, 15, 10),
+            completedAt: DateTime.utc(2025, 6, 15, 12),
           ),
-          const RelayLeg(
+          RelayLeg(
             conceptId: 'c2',
             conceptName: 'B',
             claimedByUid: 'u2',
             claimedByName: 'Bob',
-            claimedAt: '2025-06-15T14:00:00.000Z',
+            claimedAt: DateTime.utc(2025, 6, 15, 14),
           ),
         ],
-        createdAt: '2025-06-14T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 14),
         createdByUid: 'u1',
       );
 
-      relay = relay.withLegCompleted(1, '2025-06-15T16:00:00.000Z');
+      relay = relay.withLegCompleted(1, DateTime.utc(2025, 6, 15, 16));
       final isLastLeg = relay.completedLegs == relay.legs.length;
       expect(isLastLeg, isTrue);
     });
@@ -124,8 +126,9 @@ void main() {
 
   group('Stall detection', () {
     test('identifies overdue legs with debounce check', () {
-      final oldClaim =
-          DateTime.now().toUtc().subtract(const Duration(hours: 25)).toIso8601String();
+      final oldClaim = DateTime.now().toUtc().subtract(
+        const Duration(hours: 25),
+      );
       final relay = RelayChallenge(
         id: 'r1',
         title: 'T',
@@ -138,7 +141,7 @@ void main() {
             claimedAt: oldClaim,
           ),
         ],
-        createdAt: '2025-06-14T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 14),
         createdByUid: 'u1',
       );
 
@@ -149,10 +152,12 @@ void main() {
     });
 
     test('respects 6h debounce on stall nudges', () {
-      final oldClaim =
-          DateTime.now().toUtc().subtract(const Duration(hours: 25)).toIso8601String();
-      final recentNudge =
-          DateTime.now().toUtc().subtract(const Duration(hours: 3)).toIso8601String();
+      final oldClaim = DateTime.now().toUtc().subtract(
+        const Duration(hours: 25),
+      );
+      final recentNudge = DateTime.now().toUtc().subtract(
+        const Duration(hours: 3),
+      );
 
       final leg = RelayLeg(
         conceptId: 'c1',
@@ -167,7 +172,7 @@ void main() {
       expect(leg.isOverdueAt(now), isTrue);
 
       // Should not nudge — last nudge was only 3h ago
-      final lastNudge = DateTime.parse(leg.lastStallNudgeAt!);
+      final lastNudge = leg.lastStallNudgeAt!;
       final shouldNudge = now.difference(lastNudge).inHours >= 6;
       expect(shouldNudge, isFalse);
     });

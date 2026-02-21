@@ -120,7 +120,11 @@ void main() {
     test('all other types are not dependencies', () {
       for (final type in RelationshipType.values) {
         if (type == RelationshipType.prerequisite) continue;
-        expect(type.isDependency, isFalse, reason: '$type should not be a dependency');
+        expect(
+          type.isDependency,
+          isFalse,
+          reason: '$type should not be a dependency',
+        );
       }
     });
   });

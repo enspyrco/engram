@@ -35,10 +35,10 @@ class DashboardStats {
   bool get isEmpty => conceptCount == 0;
 
   MasterySnapshot toMasterySnapshot({int streak = 0}) => MasterySnapshot(
-        totalConcepts: conceptCount,
-        mastered: masteredCount,
-        learning: learningCount,
-        newCount: newCount,
-        streak: streak,
-      );
+    totalConcepts: conceptCount,
+    mastered: masteredCount,
+    learning: learningCount,
+    newCount: newCount,
+    streak: streak,
+  );
 }

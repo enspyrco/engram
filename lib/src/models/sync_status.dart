@@ -14,9 +14,9 @@ class SyncStatus {
     List<StaleDocument> staleDocuments = const [],
     List<Map<String, String>> newCollections = const [],
     this.errorMessage = '',
-  })  : staleCollectionIds = IList(staleCollectionIds),
-        staleDocuments = IList(staleDocuments),
-        newCollections = IList(newCollections);
+  }) : staleCollectionIds = IList(staleCollectionIds),
+       staleDocuments = IList(staleDocuments),
+       newCollections = IList(newCollections);
 
   const SyncStatus._({
     this.phase = SyncPhase.idle,

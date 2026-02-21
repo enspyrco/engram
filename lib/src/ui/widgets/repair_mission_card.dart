@@ -7,11 +7,7 @@ import '../../models/repair_mission.dart';
 /// Shows a progress bar, remaining concept count, and the 1.5x bonus badge.
 /// Used on the dashboard and in catastrophe-related screens.
 class RepairMissionCard extends StatelessWidget {
-  const RepairMissionCard({
-    required this.mission,
-    this.onTap,
-    super.key,
-  });
+  const RepairMissionCard({required this.mission, this.onTap, super.key});
 
   final RepairMission mission;
   final VoidCallback? onTap;
@@ -60,8 +56,9 @@ class RepairMissionCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 8,
-                  backgroundColor: theme.colorScheme.onSurface
-                      .withValues(alpha: 0.1),
+                  backgroundColor: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.1,
+                  ),
                   color: _progressColor(progress),
                 ),
               ),
@@ -77,9 +74,10 @@ class RepairMissionCard extends StatelessWidget {
                     '$remaining remaining',
                     style: TextStyle(
                       fontSize: 12,
-                      color: remaining > 0
-                          ? theme.colorScheme.error
-                          : Colors.green,
+                      color:
+                          remaining > 0
+                              ? theme.colorScheme.error
+                              : Colors.green,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

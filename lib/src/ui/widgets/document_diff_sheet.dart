@@ -26,21 +26,21 @@ class DocumentDiffSheet extends ConsumerWidget {
     WidgetRef ref, {
     required String documentId,
   }) {
-    ref.read(documentDiffProvider.notifier).fetchDiff(
-          documentId: documentId,
-        );
+    ref.read(documentDiffProvider.notifier).fetchDiff(documentId: documentId);
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        builder: (context, scrollController) =>
-            DocumentDiffSheet(scrollController: scrollController),
-      ),
+      builder:
+          (_) => DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.6,
+            maxChildSize: 0.9,
+            minChildSize: 0.3,
+            builder:
+                (context, scrollController) =>
+                    DocumentDiffSheet(scrollController: scrollController),
+          ),
     ).whenComplete(() {
       ref.read(documentDiffProvider.notifier).reset();
     });
@@ -54,28 +54,27 @@ class DocumentDiffSheet extends ConsumerWidget {
     return switch (state) {
       DocumentDiffIdle() => const SizedBox.shrink(),
       DocumentDiffLoading() => const Padding(
-          padding: EdgeInsets.all(48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading diff...'),
-            ],
-          ),
+        padding: EdgeInsets.all(48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading diff...'),
+          ],
         ),
+      ),
       DocumentDiffError(:final message) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline,
-                  size: 48, color: theme.colorScheme.error),
-              const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center),
-            ],
-          ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
         ),
+      ),
       DocumentDiffLoaded(:final oldText, :final newText, :final ingestedAt) =>
         _LoadedDiff(
           oldText: oldText,
@@ -143,7 +142,8 @@ class _LoadedDiff extends StatelessWidget {
             child: PrettyDiffText(
               oldText: oldText,
               newText: newText,
-              defaultTextStyle: theme.textTheme.bodyMedium?.copyWith(
+              defaultTextStyle:
+                  theme.textTheme.bodyMedium?.copyWith(
                     fontFamily: 'monospace',
                   ) ??
                   const TextStyle(fontFamily: 'monospace'),

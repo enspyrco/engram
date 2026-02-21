@@ -34,15 +34,12 @@ void main() {
       settingsRepo = SettingsRepository(prefs);
     });
 
-    ProviderContainer createContainer({
-      required http.Client httpClient,
-    }) {
+    ProviderContainer createContainer({required http.Client httpClient}) {
       return ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           settingsRepositoryProvider.overrideWithValue(settingsRepo),
-          knowledgeGraphProvider
-              .overrideWith(() => _InMemoryGraphNotifier()),
+          knowledgeGraphProvider.overrideWith(() => _InMemoryGraphNotifier()),
           outlineClientProvider.overrideWithValue(
             OutlineClient(
               apiUrl: 'https://wiki.test.com',
@@ -140,38 +137,43 @@ void main() {
         return http.Response('{}', 200);
       });
 
-      when(() => mockExtraction.extract(
-            documentTitle: any(named: 'documentTitle'),
-            documentContent: any(named: 'documentContent'),
-            existingConceptIds: any(named: 'existingConceptIds'),
-          )).thenAnswer((_) async => ExtractionResult(
-            concepts: [
-              Concept(
-                id: 'docker',
-                name: 'Docker',
-                description: 'Container runtime',
-                sourceDocumentId: '',
-              ),
-            ],
-            relationships: const [],
-            quizItems: [
-              QuizItem.newCard(
-                id: 'q1',
-                conceptId: 'docker',
-                question: 'What is Docker?',
-                answer: 'A container runtime',
-              ),
-            ],
-          ));
+      when(
+        () => mockExtraction.extract(
+          documentTitle: any(named: 'documentTitle'),
+          documentContent: any(named: 'documentContent'),
+          existingConceptIds: any(named: 'existingConceptIds'),
+        ),
+      ).thenAnswer(
+        (_) async => ExtractionResult(
+          concepts: [
+            Concept(
+              id: 'docker',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: '',
+            ),
+          ],
+          relationships: const [],
+          quizItems: [
+            QuizItem.newCard(
+              id: 'q1',
+              conceptId: 'docker',
+              question: 'What is Docker?',
+              answer: 'A container runtime',
+            ),
+          ],
+        ),
+      );
 
       final container = createContainer(httpClient: mockHttpClient);
       // Wait for graph to load
       await container.read(knowledgeGraphProvider.future);
 
       // Select a collection
-      container.read(ingestProvider.notifier).selectCollection(
-        {'id': 'col1', 'name': 'Engineering'},
-      );
+      container.read(ingestProvider.notifier).selectCollection({
+        'id': 'col1',
+        'name': 'Engineering',
+      });
 
       await container.read(ingestProvider.notifier).startIngestion();
 
@@ -190,9 +192,10 @@ void main() {
       mockHttpClient = MockClient((_) async => http.Response('{}', 200));
       final container = createContainer(httpClient: mockHttpClient);
 
-      container.read(ingestProvider.notifier).selectCollection(
-        {'id': 'col1', 'name': 'Test'},
-      );
+      container.read(ingestProvider.notifier).selectCollection({
+        'id': 'col1',
+        'name': 'Test',
+      });
       container.read(ingestProvider.notifier).reset();
 
       final state = container.read(ingestProvider);

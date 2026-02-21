@@ -22,9 +22,11 @@ class Challenge {
       fromUid: json['fromUid'] as String,
       fromName: json['fromName'] as String,
       toUid: json['toUid'] as String,
-      quizItemSnapshot: Map<String, dynamic>.from(json['quizItemSnapshot'] as Map),
+      quizItemSnapshot: Map<String, dynamic>.from(
+        json['quizItemSnapshot'] as Map,
+      ),
       conceptName: json['conceptName'] as String,
-      createdAt: json['createdAt'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
       status: ChallengeStatus.values.firstWhere(
         (s) => s.name == json['status'],
         orElse: () => ChallengeStatus.pending,
@@ -39,31 +41,31 @@ class Challenge {
   final String toUid;
   final Map<String, dynamic> quizItemSnapshot;
   final String conceptName;
-  final String createdAt;
+  final DateTime createdAt;
   final ChallengeStatus status;
   final int? score;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'fromUid': fromUid,
-        'fromName': fromName,
-        'toUid': toUid,
-        'quizItemSnapshot': quizItemSnapshot,
-        'conceptName': conceptName,
-        'createdAt': createdAt,
-        'status': status.name,
-        'score': score,
-      };
+    'id': id,
+    'fromUid': fromUid,
+    'fromName': fromName,
+    'toUid': toUid,
+    'quizItemSnapshot': quizItemSnapshot,
+    'conceptName': conceptName,
+    'createdAt': createdAt.toIso8601String(),
+    'status': status.name,
+    'score': score,
+  };
 
   Challenge withStatus(ChallengeStatus newStatus, {int? score}) => Challenge(
-        id: id,
-        fromUid: fromUid,
-        fromName: fromName,
-        toUid: toUid,
-        quizItemSnapshot: quizItemSnapshot,
-        conceptName: conceptName,
-        createdAt: createdAt,
-        status: newStatus,
-        score: score ?? this.score,
-      );
+    id: id,
+    fromUid: fromUid,
+    fromName: fromName,
+    toUid: toUid,
+    quizItemSnapshot: quizItemSnapshot,
+    conceptName: conceptName,
+    createdAt: createdAt,
+    status: newStatus,
+    score: score ?? this.score,
+  );
 }

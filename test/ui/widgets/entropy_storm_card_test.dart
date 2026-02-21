@@ -8,14 +8,8 @@ void main() {
     testWidgets('shows scheduled state with opt-in button', (tester) async {
       final storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 24))
-            .toIso8601String(),
-        scheduledEnd: DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 72))
-            .toIso8601String(),
+        scheduledStart: DateTime.now().toUtc().add(const Duration(hours: 24)),
+        scheduledEnd: DateTime.now().toUtc().add(const Duration(hours: 72)),
         status: StormStatus.scheduled,
         participantUids: ['u1'],
         createdByUid: 'u1',
@@ -42,14 +36,8 @@ void main() {
     testWidgets('shows opt-out when already participating', (tester) async {
       final storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 24))
-            .toIso8601String(),
-        scheduledEnd: DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 72))
-            .toIso8601String(),
+        scheduledStart: DateTime.now().toUtc().add(const Duration(hours: 24)),
+        scheduledEnd: DateTime.now().toUtc().add(const Duration(hours: 72)),
         status: StormStatus.scheduled,
         participantUids: ['u1'],
         createdByUid: 'u1',
@@ -74,14 +62,10 @@ void main() {
     testWidgets('shows active state with threshold', (tester) async {
       final storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: DateTime.now()
-            .toUtc()
-            .subtract(const Duration(hours: 12))
-            .toIso8601String(),
-        scheduledEnd: DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 36))
-            .toIso8601String(),
+        scheduledStart: DateTime.now().toUtc().subtract(
+          const Duration(hours: 12),
+        ),
+        scheduledEnd: DateTime.now().toUtc().add(const Duration(hours: 36)),
         status: StormStatus.active,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
@@ -91,10 +75,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: EntropyStormCard(
-              storm: storm,
-              currentUid: 'u1',
-            ),
+            body: EntropyStormCard(storm: storm, currentUid: 'u1'),
           ),
         ),
       );
@@ -107,8 +88,8 @@ void main() {
     testWidgets('shows survived state', (tester) async {
       final storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.survived,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
@@ -118,10 +99,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: EntropyStormCard(
-              storm: storm,
-              currentUid: 'u1',
-            ),
+            body: EntropyStormCard(storm: storm, currentUid: 'u1'),
           ),
         ),
       );
@@ -133,8 +111,8 @@ void main() {
     testWidgets('shows failed state', (tester) async {
       final storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.failed,
         participantUids: ['u1'],
         createdByUid: 'u1',
@@ -144,10 +122,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: EntropyStormCard(
-              storm: storm,
-              currentUid: 'u1',
-            ),
+            body: EntropyStormCard(storm: storm, currentUid: 'u1'),
           ),
         ),
       );

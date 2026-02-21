@@ -18,8 +18,8 @@ import 'settings_provider.dart';
 
 final quizSessionProvider =
     NotifierProvider<QuizSessionNotifier, QuizSessionState>(
-  QuizSessionNotifier.new,
-);
+      QuizSessionNotifier.new,
+    );
 
 class QuizSessionNotifier extends Notifier<QuizSessionState> {
   @override
@@ -106,8 +106,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
         inMission ? (result.interval * 1.5).round() : result.interval;
 
     final now = ref.read(clockProvider)();
-    final nextReview =
-        now.add(Duration(days: effectiveInterval)).toIso8601String();
+    final nextReview = now.add(Duration(days: effectiveInterval));
 
     final updated = item.withReview(
       easeFactor: result.easeFactor,
@@ -145,7 +144,9 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
 
     // Record mission progress and award glory points.
     if (inMission) {
-      ref.read(catastropheProvider.notifier).recordMissionReview(item.conceptId);
+      ref
+          .read(catastropheProvider.notifier)
+          .recordMissionReview(item.conceptId);
       final teamRepo = ref.read(teamRepositoryProvider);
       final uid = ref.read(authStateProvider).valueOrNull?.uid;
       if (teamRepo != null && uid != null) {
@@ -200,18 +201,18 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
         if (leg.completedAt != null) continue;
 
         // Check if ALL quiz items for this concept are mastered
-        final conceptItems =
-            graph.quizItems.where((q) => q.conceptId == conceptId);
+        final conceptItems = graph.quizItems.where(
+          (q) => q.conceptId == conceptId,
+        );
         final allMastered = conceptItems.every((q) {
           // Use the updated item's interval if this is the one we just reviewed
-          final interval = q.id == updatedItem.id ? updatedItem.interval : q.interval;
+          final interval =
+              q.id == updatedItem.id ? updatedItem.interval : q.interval;
           return interval >= 21;
         });
 
         if (allMastered) {
-          unawaited(
-            ref.read(relayProvider.notifier).completeLeg(relay.id, i),
-          );
+          unawaited(ref.read(relayProvider.notifier).completeLeg(relay.id, i));
         }
       }
     }

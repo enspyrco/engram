@@ -22,49 +22,52 @@ class SplitConceptSheet extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: switch (state.phase) {
             SplitPhase.loading || SplitPhase.applying => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 32),
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.phase == SplitPhase.loading
-                        ? 'Generating sub-concepts...'
-                        : 'Applying split...',
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                ],
-              ),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 32),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  state.phase == SplitPhase.loading
+                      ? 'Generating sub-concepts...'
+                      : 'Applying split...',
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ],
+            ),
             SplitPhase.reviewing => _ReviewingView(
-                scrollController: scrollController,
-              ),
+              scrollController: scrollController,
+            ),
             SplitPhase.error => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 16),
-                  Icon(Icons.error_outline, size: 48,
-                      color: theme.colorScheme.error),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Failed to generate suggestions',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    state.errorMessage ?? 'Unknown error',
-                    style: theme.textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      ref.read(splitConceptProvider.notifier).reset();
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Failed to generate suggestions',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  state.errorMessage ?? 'Unknown error',
+                  style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    ref.read(splitConceptProvider.notifier).reset();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
             _ => const SizedBox.shrink(),
           },
         );
@@ -108,9 +111,10 @@ class _ReviewingView extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 8),
                 child: CheckboxListTile(
                   value: isSelected,
-                  onChanged: (_) => ref
-                      .read(splitConceptProvider.notifier)
-                      .toggleSubConcept(index),
+                  onChanged:
+                      (_) => ref
+                          .read(splitConceptProvider.notifier)
+                          .toggleSubConcept(index),
                   title: Text(entry.concept.name),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,17 +150,16 @@ class _ReviewingView extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: FilledButton(
-                onPressed: state.selectedIndices.isEmpty
-                    ? null
-                    : () async {
-                        await ref
-                            .read(splitConceptProvider.notifier)
-                            .applySplit();
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                child: Text(
-                  'Apply (${state.selectedIndices.length})',
-                ),
+                onPressed:
+                    state.selectedIndices.isEmpty
+                        ? null
+                        : () async {
+                          await ref
+                              .read(splitConceptProvider.notifier)
+                              .applySplit();
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                child: Text('Apply (${state.selectedIndices.length})'),
               ),
             ),
           ],

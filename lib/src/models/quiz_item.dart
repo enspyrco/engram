@@ -36,7 +36,7 @@ class QuizItem {
       easeFactor: 2.5,
       interval: 0,
       repetitions: 0,
-      nextReview: currentTime.toIso8601String(),
+      nextReview: currentTime,
       lastReview: null,
       difficulty: predictedDifficulty?.clamp(1.0, 10.0),
     );
@@ -51,8 +51,11 @@ class QuizItem {
       easeFactor: (json['easeFactor'] as num).toDouble(),
       interval: json['interval'] as int,
       repetitions: json['repetitions'] as int,
-      nextReview: json['nextReview'] as String,
-      lastReview: json['lastReview'] as String?,
+      nextReview: DateTime.parse(json['nextReview'] as String),
+      lastReview:
+          json['lastReview'] != null
+              ? DateTime.parse(json['lastReview'] as String)
+              : null,
       difficulty: (json['difficulty'] as num?)?.toDouble(),
       stability: (json['stability'] as num?)?.toDouble(),
       fsrsState: json['fsrsState'] as int?,
@@ -67,8 +70,8 @@ class QuizItem {
   final double easeFactor;
   final int interval;
   final int repetitions;
-  final String nextReview;
-  final String? lastReview;
+  final DateTime nextReview;
+  final DateTime? lastReview;
 
   /// FSRS difficulty (1.0-10.0). Null for legacy SM-2-only cards.
   /// Seeded by Claude's predicted difficulty at extraction time.
@@ -87,7 +90,7 @@ class QuizItem {
     required double easeFactor,
     required int interval,
     required int repetitions,
-    required String nextReview,
+    required DateTime nextReview,
     DateTime? now,
   }) {
     final currentTime = now ?? DateTime.now().toUtc();
@@ -100,7 +103,7 @@ class QuizItem {
       interval: interval,
       repetitions: repetitions,
       nextReview: nextReview,
-      lastReview: currentTime.toIso8601String(),
+      lastReview: currentTime,
       difficulty: difficulty,
       stability: stability,
       fsrsState: fsrsState,
@@ -114,7 +117,7 @@ class QuizItem {
     required int fsrsState,
     required int lapses,
     required int interval,
-    required String nextReview,
+    required DateTime nextReview,
     DateTime? now,
   }) {
     final currentTime = now ?? DateTime.now().toUtc();
@@ -127,7 +130,7 @@ class QuizItem {
       interval: interval,
       repetitions: repetitions,
       nextReview: nextReview,
-      lastReview: currentTime.toIso8601String(),
+      lastReview: currentTime,
       difficulty: difficulty,
       stability: stability,
       fsrsState: fsrsState,
@@ -140,28 +143,28 @@ class QuizItem {
   /// Used for challenge snapshots where the recipient shouldn't see
   /// the sender's SM-2/FSRS scheduling data.
   Map<String, dynamic> toContentSnapshot() => {
-        'id': id,
-        'conceptId': conceptId,
-        'question': question,
-        'answer': answer,
-        if (difficulty != null) 'difficulty': difficulty,
-      };
+    'id': id,
+    'conceptId': conceptId,
+    'question': question,
+    'answer': answer,
+    if (difficulty != null) 'difficulty': difficulty,
+  };
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'conceptId': conceptId,
-        'question': question,
-        'answer': answer,
-        'easeFactor': easeFactor,
-        'interval': interval,
-        'repetitions': repetitions,
-        'nextReview': nextReview,
-        'lastReview': lastReview,
-        if (difficulty != null) 'difficulty': difficulty,
-        if (stability != null) 'stability': stability,
-        if (fsrsState != null) 'fsrsState': fsrsState,
-        if (lapses != null) 'lapses': lapses,
-      };
+    'id': id,
+    'conceptId': conceptId,
+    'question': question,
+    'answer': answer,
+    'easeFactor': easeFactor,
+    'interval': interval,
+    'repetitions': repetitions,
+    'nextReview': nextReview.toIso8601String(),
+    'lastReview': lastReview?.toIso8601String(),
+    if (difficulty != null) 'difficulty': difficulty,
+    if (stability != null) 'stability': stability,
+    if (fsrsState != null) 'fsrsState': fsrsState,
+    if (lapses != null) 'lapses': lapses,
+  };
 
   @override
   bool operator ==(Object other) =>

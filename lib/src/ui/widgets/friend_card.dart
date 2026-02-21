@@ -29,12 +29,14 @@ class FriendCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: friend.photoUrl != null
-                  ? NetworkImage(friend.photoUrl!)
-                  : null,
-              onBackgroundImageError: friend.photoUrl != null
-                  ? (_, __) {} // Silently fall back to child
-                  : null,
+              backgroundImage:
+                  friend.photoUrl != null
+                      ? NetworkImage(friend.photoUrl!)
+                      : null,
+              onBackgroundImageError:
+                  friend.photoUrl != null
+                      ? (_, __) {} // Silently fall back to child
+                      : null,
               child: Text(
                 friend.displayName.isNotEmpty
                     ? friend.displayName[0].toUpperCase()
@@ -47,10 +49,7 @@ class FriendCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    friend.displayName,
-                    style: theme.textTheme.titleSmall,
-                  ),
+                  Text(friend.displayName, style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
                   if (snapshot != null) ...[
                     Row(

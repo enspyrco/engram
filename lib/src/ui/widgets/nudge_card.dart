@@ -4,11 +4,7 @@ import '../../models/nudge.dart';
 
 /// Card showing an incoming nudge on the friends screen.
 class NudgeCard extends StatelessWidget {
-  const NudgeCard({
-    super.key,
-    required this.nudge,
-    required this.onReviewNow,
-  });
+  const NudgeCard({super.key, required this.nudge, required this.onReviewNow});
 
   final Nudge nudge;
   final VoidCallback onReviewNow;

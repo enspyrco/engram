@@ -16,8 +16,10 @@ final availableTopicsProvider = Provider<IList<Topic>>((ref) {
 final selectedTopicIdProvider = StateProvider<String?>((ref) => null);
 
 /// Graph filtered to concepts from a topic's document set.
-final topicFilteredGraphProvider =
-    Provider.family<KnowledgeGraph?, String>((ref, topicId) {
+final topicFilteredGraphProvider = Provider.family<KnowledgeGraph?, String>((
+  ref,
+  topicId,
+) {
   final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
   if (graph == null) return null;
 
@@ -25,26 +27,28 @@ final topicFilteredGraphProvider =
   if (topic == null) return graph;
 
   final docIds = topic.documentIds;
-  final conceptIds = graph.concepts
-      .where((c) => docIds.contains(c.sourceDocumentId))
-      .map((c) => c.id)
-      .toSet();
+  final conceptIds =
+      graph.concepts
+          .where((c) => docIds.contains(c.sourceDocumentId))
+          .map((c) => c.id)
+          .toSet();
 
   return KnowledgeGraph(
-    concepts: graph.concepts
-        .where((c) => conceptIds.contains(c.id))
-        .toList(),
-    relationships: graph.relationships
-        .where((r) =>
-            conceptIds.contains(r.fromConceptId) &&
-            conceptIds.contains(r.toConceptId))
-        .toList(),
-    quizItems: graph.quizItems
-        .where((q) => conceptIds.contains(q.conceptId))
-        .toList(),
-    documentMetadata: graph.documentMetadata
-        .where((m) => docIds.contains(m.documentId))
-        .toList(),
+    concepts: graph.concepts.where((c) => conceptIds.contains(c.id)).toList(),
+    relationships:
+        graph.relationships
+            .where(
+              (r) =>
+                  conceptIds.contains(r.fromConceptId) &&
+                  conceptIds.contains(r.toConceptId),
+            )
+            .toList(),
+    quizItems:
+        graph.quizItems.where((q) => conceptIds.contains(q.conceptId)).toList(),
+    documentMetadata:
+        graph.documentMetadata
+            .where((m) => docIds.contains(m.documentId))
+            .toList(),
     topics: graph.topics.toList(),
   );
 });

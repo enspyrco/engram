@@ -43,8 +43,7 @@ class SplitState {
   }
 }
 
-final splitConceptProvider =
-    NotifierProvider<SplitConceptNotifier, SplitState>(
+final splitConceptProvider = NotifierProvider<SplitConceptNotifier, SplitState>(
   SplitConceptNotifier.new,
 );
 
@@ -61,10 +60,7 @@ class SplitConceptNotifier extends Notifier<SplitState> {
     required String quizQuestion,
     required String quizAnswer,
   }) async {
-    state = SplitState(
-      phase: SplitPhase.loading,
-      parentConceptId: conceptId,
-    );
+    state = SplitState(phase: SplitPhase.loading, parentConceptId: conceptId);
 
     try {
       final service = ref.read(extractionServiceProvider);
@@ -130,12 +126,14 @@ class SplitConceptNotifier extends Notifier<SplitState> {
       childQuizItems.addAll(entry.quizItems);
 
       // "is part of" relationship from child to parent
-      childRelationships.add(Relationship(
-        id: '${entry.concept.id}-part-of-$parentId',
-        fromConceptId: entry.concept.id,
-        toConceptId: parentId,
-        label: 'is part of',
-      ));
+      childRelationships.add(
+        Relationship(
+          id: '${entry.concept.id}-part-of-$parentId',
+          fromConceptId: entry.concept.id,
+          toConceptId: parentId,
+          label: 'is part of',
+        ),
+      );
     }
 
     final notifier = ref.read(knowledgeGraphProvider.notifier);

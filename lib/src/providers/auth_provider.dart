@@ -112,7 +112,9 @@ Future<User?> signInWithApple(
         await Future<void>.delayed(const Duration(seconds: 1));
       } else {
         // Log but don't block sign-in — the user is already authenticated
-        debugPrint('CRITICAL: Failed to write Apple profile for ${user.uid}: $e');
+        debugPrint(
+          'CRITICAL: Failed to write Apple profile for ${user.uid}: $e',
+        );
         break;
       }
     }
@@ -157,7 +159,7 @@ Future<void> _writeProfile({
     if (existing.exists) return;
   }
 
-  final timestamp = (now ?? DateTime.now().toUtc()).toIso8601String();
+  final timestamp = now ?? DateTime.now().toUtc();
   final profile = UserProfile(
     uid: uid,
     displayName: displayName,

@@ -1,7 +1,8 @@
 import 'package:engram/src/providers/auth_provider.dart';
 import 'package:engram/src/ui/screens/sign_in_screen.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,9 +17,7 @@ void main() {
 
     Widget buildApp() {
       return ProviderScope(
-        overrides: [
-          firebaseAuthProvider.overrideWithValue(mockAuth),
-        ],
+        overrides: [firebaseAuthProvider.overrideWithValue(mockAuth)],
         child: const MaterialApp(home: SignInScreen()),
       );
     }

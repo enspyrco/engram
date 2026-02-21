@@ -35,8 +35,8 @@ class GloryBoard extends StatelessWidget {
                 'Guard clusters, complete missions, and contribute to goals to earn glory.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -76,22 +76,25 @@ class _GloryEntryTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      color: isTopContributor
-          ? const Color(0xFFFFD700).withValues(alpha: 0.12)
-          : null,
+      color:
+          isTopContributor
+              ? const Color(0xFFFFD700).withValues(alpha: 0.12)
+              : null,
       child: ListTile(
         leading: Stack(
           clipBehavior: Clip.none,
           children: [
             CircleAvatar(
-              backgroundImage: entry.photoUrl != null
-                  ? NetworkImage(entry.photoUrl!)
-                  : null,
-              child: entry.photoUrl == null
-                  ? Text(entry.displayName.isNotEmpty
-                      ? entry.displayName[0].toUpperCase()
-                      : '?')
-                  : null,
+              backgroundImage:
+                  entry.photoUrl != null ? NetworkImage(entry.photoUrl!) : null,
+              child:
+                  entry.photoUrl == null
+                      ? Text(
+                        entry.displayName.isNotEmpty
+                            ? entry.displayName[0].toUpperCase()
+                            : '?',
+                      )
+                      : null,
             ),
             if (isTopContributor)
               const Positioned(
@@ -177,10 +180,7 @@ class _PointBadge extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 2),
-        Text(
-          '$count',
-          style: theme.textTheme.labelSmall,
-        ),
+        Text('$count', style: theme.textTheme.labelSmall),
       ],
     );
   }

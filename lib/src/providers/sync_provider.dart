@@ -8,8 +8,9 @@ import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
 
-final syncProvider =
-    NotifierProvider<SyncNotifier, SyncStatus>(SyncNotifier.new);
+final syncProvider = NotifierProvider<SyncNotifier, SyncStatus>(
+  SyncNotifier.new,
+);
 
 class SyncNotifier extends Notifier<SyncStatus> {
   @override
@@ -39,10 +40,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
       for (final col in allCollections) {
         final id = col['id'] as String;
         if (!ingestedSet.contains(id)) {
-          newCollections.add({
-            'id': id,
-            'name': col['name'] as String,
-          });
+          newCollections.add({'id': id, 'name': col['name'] as String});
         }
       }
 
@@ -61,19 +59,22 @@ class SyncNotifier extends Notifier<SyncStatus> {
             final docTitle = doc['title'] as String;
             final updatedAt = doc['updatedAt'] as String;
 
-            final existing = graph.documentMetadata
-                .where((m) => m.documentId == docId)
-                .firstOrNull;
+            final existing =
+                graph.documentMetadata
+                    .where((m) => m.documentId == docId)
+                    .firstOrNull;
 
             // Count as stale if: new document (not yet ingested) OR updated since ingestion
             if (existing == null || existing.updatedAt != updatedAt) {
               staleCount++;
               collectionHasStale = true;
-              staleDocs.add(StaleDocument(
-                id: docId,
-                title: docTitle,
-                ingestedAt: existing?.ingestedAt,
-              ));
+              staleDocs.add(
+                StaleDocument(
+                  id: docId,
+                  title: docTitle,
+                  ingestedAt: existing?.ingestedAt.toIso8601String(),
+                ),
+              );
             }
           }
 
@@ -96,7 +97,9 @@ class SyncNotifier extends Notifier<SyncStatus> {
           phase: SyncPhase.upToDate,
           newCollections: const IListConst([]),
         );
-        await repo.setLastSyncTimestamp(ref.read(clockProvider)().toIso8601String());
+        await repo.setLastSyncTimestamp(
+          ref.read(clockProvider)().toIso8601String(),
+        );
       }
     } catch (e) {
       state = state.copyWith(
@@ -132,9 +135,10 @@ class SyncNotifier extends Notifier<SyncStatus> {
           final updatedAt = doc['updatedAt'] as String;
 
           // Skip unchanged documents (same delta logic as ingest_provider)
-          final existing = graph.documentMetadata
-              .where((m) => m.documentId == docId)
-              .firstOrNull;
+          final existing =
+              graph.documentMetadata
+                  .where((m) => m.documentId == docId)
+                  .firstOrNull;
           if (existing != null && existing.updatedAt == updatedAt) {
             continue;
           }
@@ -163,7 +167,9 @@ class SyncNotifier extends Notifier<SyncStatus> {
       }
 
       final repo = ref.read(settingsRepositoryProvider);
-      await repo.setLastSyncTimestamp(ref.read(clockProvider)().toIso8601String());
+      await repo.setLastSyncTimestamp(
+        ref.read(clockProvider)().toIso8601String(),
+      );
 
       state = SyncStatus.empty.copyWith(phase: SyncPhase.upToDate);
     } catch (e) {

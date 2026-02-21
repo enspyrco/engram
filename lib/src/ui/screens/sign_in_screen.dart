@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,8 +26,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final auth = ref.read(firebaseAuthProvider);
       final firestore = ref.read(firestoreProvider);
       final googleSignIn = ref.read(googleSignInProvider);
-      await signInWithGoogle(auth,
-          firestore: firestore, googleSignIn: googleSignIn);
+      await signInWithGoogle(
+        auth,
+        firestore: firestore,
+        googleSignIn: googleSignIn,
+      );
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString());
@@ -57,7 +61,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isApplePlatform = defaultTargetPlatform == TargetPlatform.iOS ||
+    final isApplePlatform =
+        defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
 
     return Scaffold(
@@ -95,12 +100,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   SignInButton(
                     label: 'Continue with Apple',
                     icon: const Icon(Icons.apple, size: 24),
-                    backgroundColor: theme.brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                    foregroundColor: theme.brightness == Brightness.dark
-                        ? Colors.black
-                        : Colors.white,
+                    backgroundColor:
+                        theme.brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                    foregroundColor:
+                        theme.brightness == Brightness.dark
+                            ? Colors.black
+                            : Colors.white,
                     onPressed: _handleAppleSignIn,
                   ),
                 ],

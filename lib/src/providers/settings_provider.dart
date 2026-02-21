@@ -16,8 +16,9 @@ final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => SettingsRepository(ref.watch(sharedPreferencesProvider)),
 );
 
-final settingsProvider =
-    NotifierProvider<SettingsNotifier, EngramConfig>(SettingsNotifier.new);
+final settingsProvider = NotifierProvider<SettingsNotifier, EngramConfig>(
+  SettingsNotifier.new,
+);
 
 class SettingsNotifier extends Notifier<EngramConfig> {
   @override
@@ -44,5 +45,4 @@ class SettingsNotifier extends Notifier<EngramConfig> {
     await repo.setAnthropicApiKey(value);
     state = state.copyWith(anthropicApiKey: value);
   }
-
 }

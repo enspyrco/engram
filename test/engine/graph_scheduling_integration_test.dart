@@ -10,37 +10,36 @@ import 'package:test/test.dart';
 /// compose → containers → images, then verify scheduling respects it.
 
 Concept _concept(String id) => Concept(
-      id: id,
-      name: id,
-      description: 'desc',
-      sourceDocumentId: 'doc1',
-      tags: const [],
-    );
+  id: id,
+  name: id,
+  description: 'desc',
+  sourceDocumentId: 'doc1',
+  tags: const [],
+);
 
 Relationship _dep(String from, String to) => Relationship(
-      id: '$from-$to',
-      fromConceptId: from,
-      toConceptId: to,
-      label: 'depends on',
-    );
+  id: '$from-$to',
+  fromConceptId: from,
+  toConceptId: to,
+  label: 'depends on',
+);
 
 QuizItem _quiz(
   String id,
   String conceptId, {
   int repetitions = 0,
-  String nextReview = '2025-06-01T00:00:00.000Z',
-}) =>
-    QuizItem(
-      id: id,
-      conceptId: conceptId,
-      question: 'Q about $conceptId?',
-      answer: 'A about $conceptId.',
-      easeFactor: 2.5,
-      interval: 1,
-      repetitions: repetitions,
-      nextReview: nextReview,
-      lastReview: null,
-    );
+  DateTime? nextReview,
+}) => QuizItem(
+  id: id,
+  conceptId: conceptId,
+  question: 'Q about $conceptId?',
+  answer: 'A about $conceptId.',
+  easeFactor: 2.5,
+  interval: 1,
+  repetitions: repetitions,
+  nextReview: nextReview ?? DateTime.utc(2025, 6, 1),
+  lastReview: null,
+);
 
 void main() {
   final now = DateTime.utc(2025, 6, 15, 12, 0);
@@ -145,10 +144,7 @@ void main() {
 
       expect(sorted, isNotNull);
       expect(sorted!.indexOf('images'), lessThan(sorted.indexOf('containers')));
-      expect(
-        sorted.indexOf('containers'),
-        lessThan(sorted.indexOf('compose')),
-      );
+      expect(sorted.indexOf('containers'), lessThan(sorted.indexOf('compose')));
     });
 
     test('non-dependency edges do not affect scheduling', () {
@@ -165,11 +161,7 @@ void main() {
             label: 'is a type of',
           ),
         ],
-        quizItems: [
-          _quiz('q-a', 'a'),
-          _quiz('q-b', 'b'),
-          _quiz('q-c', 'c'),
-        ],
+        quizItems: [_quiz('q-a', 'a'), _quiz('q-b', 'b'), _quiz('q-c', 'c')],
       );
 
       final due = scheduleDueItems(graph, now: now);

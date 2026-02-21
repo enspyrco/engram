@@ -21,8 +21,8 @@ class CatastropheState {
     List<CatastropheEvent> activeEvents = const [],
     List<RepairMission> activeMissions = const [],
     this.latestTransition,
-  })  : activeEvents = IList(activeEvents),
-        activeMissions = IList(activeMissions);
+  }) : activeEvents = IList(activeEvents),
+       activeMissions = IList(activeMissions);
 
   const CatastropheState._raw({
     required this.previousTier,
@@ -86,8 +86,8 @@ class TierTransition {
 /// with the worst freshness in the affected cluster.
 final catastropheProvider =
     NotifierProvider<CatastropheNotifier, CatastropheState>(
-  CatastropheNotifier.new,
-);
+      CatastropheNotifier.new,
+    );
 
 class CatastropheNotifier extends Notifier<CatastropheState> {
   @override
@@ -129,14 +129,14 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
 
   void _onWorseningTransition(TierTransition transition, NetworkHealth health) {
     final now = ref.read(clockProvider)();
-    final nowStr = now.toIso8601String();
 
     // Find the worst cluster (for labeling the event)
     String? worstCluster;
     if (health.clusterHealth.isNotEmpty) {
-      worstCluster = health.clusterHealth.entries
-          .reduce((a, b) => a.value < b.value ? a : b)
-          .key;
+      worstCluster =
+          health.clusterHealth.entries
+              .reduce((a, b) => a.value < b.value ? a : b)
+              .key;
     }
 
     // Create catastrophe event
@@ -144,7 +144,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
       id: 'catastrophe_${_uuid.v4()}',
       tier: transition.to,
       affectedConceptIds: _findAtRiskConceptIds(),
-      createdAt: nowStr,
+      createdAt: now,
       clusterLabel: worstCluster,
     );
 
@@ -159,7 +159,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
         final mission = RepairMission(
           id: 'mission_${_uuid.v4()}',
           conceptIds: missionConcepts,
-          createdAt: nowStr,
+          createdAt: now,
           catastropheEventId: event.id,
         );
         updatedMissions = updatedMissions.add(mission);
@@ -178,9 +178,7 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
     // Resolve events whose tier is now above the current tier
     final resolvedEvents = state.activeEvents.map((event) {
       if (!event.isResolved && event.tier.index > transition.to.index) {
-        return event.withResolved(
-          ref.read(clockProvider)().toIso8601String(),
-        );
+        return event.withResolved(ref.read(clockProvider)());
       }
       return event;
     });
@@ -220,10 +218,11 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
     final health = ref.read(networkHealthProvider);
 
     // Find concepts in the weakest clusters
-    final weakClusterLabels = health.clusterHealth.entries
-        .where((e) => e.value < 0.5)
-        .map((e) => e.key)
-        .toSet();
+    final weakClusterLabels =
+        health.clusterHealth.entries
+            .where((e) => e.value < 0.5)
+            .map((e) => e.key)
+            .toSet();
 
     final atRisk = <String>[];
     for (final cluster in clusters) {
@@ -250,8 +249,9 @@ class CatastropheNotifier extends Notifier<CatastropheState> {
       return graph.concepts.map((c) => c.id).toList();
     }
 
-    final weakest = health.clusterHealth.entries
-        .reduce((a, b) => a.value < b.value ? a : b);
+    final weakest = health.clusterHealth.entries.reduce(
+      (a, b) => a.value < b.value ? a : b,
+    );
 
     final targetCluster =
         clusters.where((c) => c.label == weakest.key).firstOrNull;

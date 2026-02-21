@@ -76,18 +76,9 @@ const _extractionTool = Tool.custom(
         'description': 'How concepts relate to each other.',
         'items': {
           'type': 'object',
-          'required': [
-            'id',
-            'fromConceptId',
-            'toConceptId',
-            'label',
-            'type',
-          ],
+          'required': ['id', 'fromConceptId', 'toConceptId', 'label', 'type'],
           'properties': {
-            'id': {
-              'type': 'string',
-              'description': 'Unique relationship ID',
-            },
+            'id': {'type': 'string', 'description': 'Unique relationship ID'},
             'fromConceptId': {
               'type': 'string',
               'description': 'Source concept ID',
@@ -128,10 +119,7 @@ const _extractionTool = Tool.custom(
           'type': 'object',
           'required': ['id', 'conceptId', 'question', 'answer'],
           'properties': {
-            'id': {
-              'type': 'string',
-              'description': 'Unique quiz item ID',
-            },
+            'id': {'type': 'string', 'description': 'Unique quiz item ID'},
             'conceptId': {
               'type': 'string',
               'description': 'ID of the concept being tested',
@@ -240,8 +228,8 @@ class ExtractionService {
     required String apiKey,
     AnthropicClient? client,
     String model = defaultExtractionModel,
-  })  : _client = client ?? AnthropicClient(apiKey: apiKey),
-        _model = model;
+  }) : _client = client ?? AnthropicClient(apiKey: apiKey),
+       _model = model;
 
   final AnthropicClient _client;
   final String _model;
@@ -251,11 +239,12 @@ class ExtractionService {
     required String documentContent,
     List<String> existingConceptIds = const [],
   }) async {
-    final existingIdsNote = existingConceptIds.isNotEmpty
-        ? '\n\nExisting concept IDs in the knowledge graph (reuse these '
-            'when referring to the same concepts):\n'
-            '${existingConceptIds.join(', ')}\n'
-        : '';
+    final existingIdsNote =
+        existingConceptIds.isNotEmpty
+            ? '\n\nExisting concept IDs in the knowledge graph (reuse these '
+                'when referring to the same concepts):\n'
+                '${existingConceptIds.join(', ')}\n'
+            : '';
 
     final response = await _client.createMessage(
       request: CreateMessageRequest(
@@ -385,17 +374,18 @@ class ExtractionService {
       );
 
       final quizItemsList = map['quizItems'] as List<dynamic>? ?? [];
-      final quizItems = quizItemsList.map((q) {
-        final qMap = q as Map<String, dynamic>;
-        return QuizItem.newCard(
-          id: qMap['id'] as String,
-          conceptId: conceptId,
-          question: qMap['question'] as String,
-          answer: qMap['answer'] as String,
-          predictedDifficulty:
-              (qMap['predictedDifficulty'] as num?)?.toDouble(),
-        );
-      }).toList();
+      final quizItems =
+          quizItemsList.map((q) {
+            final qMap = q as Map<String, dynamic>;
+            return QuizItem.newCard(
+              id: qMap['id'] as String,
+              conceptId: conceptId,
+              question: qMap['question'] as String,
+              answer: qMap['answer'] as String,
+              predictedDifficulty:
+                  (qMap['predictedDifficulty'] as num?)?.toDouble(),
+            );
+          }).toList();
 
       entries.add(SubConceptEntry(concept: concept, quizItems: quizItems));
     }
@@ -415,21 +405,23 @@ class ExtractionService {
     // Build a set of valid concept IDs: newly extracted + existing graph
     final extractedIds = <String>{};
 
-    final concepts = conceptsList.map((c) {
-      final map = c as Map<String, dynamic>;
-      final id = map['id'] as String;
-      extractedIds.add(id);
-      return Concept(
-        id: id,
-        name: map['name'] as String,
-        description: map['description'] as String,
-        sourceDocumentId: '', // Will be set by caller via withNewExtraction
-        tags: (map['tags'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const [],
-      );
-    }).toList();
+    final concepts =
+        conceptsList.map((c) {
+          final map = c as Map<String, dynamic>;
+          final id = map['id'] as String;
+          extractedIds.add(id);
+          return Concept(
+            id: id,
+            name: map['name'] as String,
+            description: map['description'] as String,
+            sourceDocumentId: '', // Will be set by caller via withNewExtraction
+            tags:
+                (map['tags'] as List<dynamic>?)
+                    ?.map((e) => e as String)
+                    .toList() ??
+                const [],
+          );
+        }).toList();
 
     final validIds = {...extractedIds, ...existingConceptIds};
 
@@ -444,17 +436,19 @@ class ExtractionService {
         continue;
       }
 
-      relationships.add(Relationship(
-        id: map['id'] as String,
-        fromConceptId: fromId,
-        toConceptId: toId,
-        label: map['label'] as String,
-        description: map['description'] as String?,
-        type: switch (map['type'] as String?) {
-          final s? => RelationshipType.tryParse(s),
-          null => null,
-        },
-      ));
+      relationships.add(
+        Relationship(
+          id: map['id'] as String,
+          fromConceptId: fromId,
+          toConceptId: toId,
+          label: map['label'] as String,
+          description: map['description'] as String?,
+          type: switch (map['type'] as String?) {
+            final s? => RelationshipType.tryParse(s),
+            null => null,
+          },
+        ),
+      );
     }
 
     final quizItems = <QuizItem>[];
@@ -466,13 +460,15 @@ class ExtractionService {
         continue;
       }
 
-      quizItems.add(QuizItem.newCard(
-        id: map['id'] as String,
-        conceptId: conceptId,
-        question: map['question'] as String,
-        answer: map['answer'] as String,
-        predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
-      ));
+      quizItems.add(
+        QuizItem.newCard(
+          id: map['id'] as String,
+          conceptId: conceptId,
+          question: map['question'] as String,
+          answer: map['answer'] as String,
+          predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
+        ),
+      );
     }
 
     return ExtractionResult(

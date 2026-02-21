@@ -11,19 +11,41 @@ void main() {
     testWidgets('renders and settles with pumpAndSettle', (tester) async {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'Docker', description: 'Containers', sourceDocumentId: 'doc1'),
-          Concept(id: 'c2', name: 'K8s', description: 'Orchestration', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'Docker',
+            description: 'Containers',
+            sourceDocumentId: 'doc1',
+          ),
+          Concept(
+            id: 'c2',
+            name: 'K8s',
+            description: 'Orchestration',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'c2', toConceptId: 'c1', label: 'depends on'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'c2',
+            toConceptId: 'c1',
+            label: 'depends on',
+          ),
         ],
         quizItems: [
-          QuizItem.newCard(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.'),
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
         ],
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ForceDirectedGraphWidget(graph: graph))),
+        MaterialApp(
+          home: Scaffold(body: ForceDirectedGraphWidget(graph: graph)),
+        ),
       );
 
       // This is the key test: pumpAndSettle() works because the ticker
@@ -37,20 +59,34 @@ void main() {
     testWidgets('shows node panel on tap', (tester) async {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'Docker', description: 'Container runtime', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'Docker',
+            description: 'Container runtime',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem.newCard(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.'),
+          QuizItem.newCard(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
         ],
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ForceDirectedGraphWidget(graph: graph))),
+        MaterialApp(
+          home: Scaffold(body: ForceDirectedGraphWidget(graph: graph)),
+        ),
       );
       await tester.pumpAndSettle();
 
       // Tap in the center of the widget (the single node should be nearby)
-      await tester.tapAt(tester.getCenter(find.byType(ForceDirectedGraphWidget)));
+      await tester.tapAt(
+        tester.getCenter(find.byType(ForceDirectedGraphWidget)),
+      );
       await tester.pumpAndSettle();
 
       // The overlay may or may not appear depending on exact node position,
@@ -58,7 +94,9 @@ void main() {
       expect(find.byType(ForceDirectedGraphWidget), findsOneWidget);
     });
 
-    testWidgets('long-press drag does not crash and re-settles', (tester) async {
+    testWidgets('long-press drag does not crash and re-settles', (
+      tester,
+    ) async {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(id: 'c1', name: 'A', description: '', sourceDocumentId: 'd1'),
@@ -89,7 +127,9 @@ void main() {
       // are likely to be after force-directed layout settles).
       final center = tester.getCenter(find.byType(ForceDirectedGraphWidget));
       final gesture = await tester.startGesture(center);
-      await tester.pump(const Duration(milliseconds: 600)); // trigger long press
+      await tester.pump(
+        const Duration(milliseconds: 600),
+      ); // trigger long press
       await gesture.moveBy(const Offset(50, 30));
       await tester.pump();
       await gesture.moveBy(const Offset(20, -10));

@@ -4,17 +4,17 @@ import 'package:test/test.dart';
 void main() {
   group('TeamGoal', () {
     test('fromJson/toJson round-trip', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'goal_1',
         title: 'Master CI/CD',
         description: 'Get all CI/CD concepts to 80% mastery',
         type: GoalType.clusterMastery,
         targetCluster: 'CI/CD',
         targetValue: 0.8,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
-        contributions: {'user1': 0.3, 'user2': 0.2},
+        contributions: const {'user1': 0.3, 'user2': 0.2},
       );
 
       final json = goal.toJson();
@@ -49,14 +49,14 @@ void main() {
     });
 
     test('totalProgress sums contributions', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
         contributions: {'user1': 0.3, 'user2': 0.5},
       );
@@ -65,14 +65,14 @@ void main() {
     });
 
     test('progressFraction is clamped to 1.0', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 0.5,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
         contributions: {'user1': 0.6},
       );
@@ -81,14 +81,14 @@ void main() {
     });
 
     test('progressFraction is zero when no contributions', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 0.5,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
       );
 
@@ -96,14 +96,14 @@ void main() {
     });
 
     test('withContribution adds to existing contribution', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.streakTarget,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
         contributions: {'user1': 0.3},
       );
@@ -116,14 +116,14 @@ void main() {
     });
 
     test('withContribution adds new contributor', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
       );
 
@@ -132,20 +132,20 @@ void main() {
     });
 
     test('withCompleted sets completedAt', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
       );
 
-      final completed = goal.withCompleted('2025-06-05T12:00:00.000Z');
+      final completed = goal.withCompleted(DateTime.utc(2025, 6, 5, 12));
       expect(completed.isComplete, isTrue);
-      expect(completed.completedAt, '2025-06-05T12:00:00.000Z');
+      expect(completed.completedAt, DateTime.utc(2025, 6, 5, 12));
       expect(goal.isComplete, isFalse);
     });
 
@@ -157,8 +157,8 @@ void main() {
           description: '',
           type: type,
           targetValue: 1.0,
-          createdAt: '2025-06-01T00:00:00.000Z',
-          deadline: '2025-06-08T00:00:00.000Z',
+          createdAt: DateTime.utc(2025, 6, 1),
+          deadline: DateTime.utc(2025, 6, 8),
           createdByUid: 'user1',
         );
         final json = goal.toJson();

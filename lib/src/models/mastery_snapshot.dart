@@ -27,14 +27,13 @@ class MasterySnapshot {
   final int newCount;
   final int streak;
 
-  double get masteryRatio =>
-      totalConcepts > 0 ? mastered / totalConcepts : 0.0;
+  double get masteryRatio => totalConcepts > 0 ? mastered / totalConcepts : 0.0;
 
   Map<String, dynamic> toJson() => {
-        'totalConcepts': totalConcepts,
-        'mastered': mastered,
-        'learning': learning,
-        'newCount': newCount,
-        'streak': streak,
-      };
+    'totalConcepts': totalConcepts,
+    'mastered': mastered,
+    'learning': learning,
+    'newCount': newCount,
+    'streak': streak,
+  };
 }

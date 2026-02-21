@@ -10,6 +10,7 @@ import '../models/relationship.dart';
 abstract class GraphRepository {
   Future<KnowledgeGraph> load();
 
+  /// Persist [graph], upserting all entities and removing orphans.
   Future<void> save(KnowledgeGraph graph);
 
   /// Update a single quiz item. Local impl delegates to [save];

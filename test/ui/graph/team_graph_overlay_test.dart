@@ -16,26 +16,33 @@ void main() {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Containers',
-              sourceDocumentId: 'doc1'),
+            id: 'c1',
+            name: 'Docker',
+            description: 'Containers',
+            sourceDocumentId: 'doc1',
+          ),
           Concept(
-              id: 'c2',
-              name: 'K8s',
-              description: 'Orchestration',
-              sourceDocumentId: 'doc1'),
+            id: 'c2',
+            name: 'K8s',
+            description: 'Orchestration',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         relationships: [
           const Relationship(
-              id: 'r1',
-              fromConceptId: 'c2',
-              toConceptId: 'c1',
-              label: 'depends on'),
+            id: 'r1',
+            fromConceptId: 'c2',
+            toConceptId: 'c1',
+            label: 'depends on',
+          ),
         ],
         quizItems: [
           QuizItem.newCard(
-              id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.'),
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
         ],
       );
 
@@ -52,10 +59,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ForceDirectedGraphWidget(
-              graph: graph,
-              teamNodes: teamNodes,
-            ),
+            body: ForceDirectedGraphWidget(graph: graph, teamNodes: teamNodes),
           ),
         ),
       );
@@ -66,31 +70,39 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('team node positions preserved across graph rebuild',
-        (tester) async {
+    testWidgets('team node positions preserved across graph rebuild', (
+      tester,
+    ) async {
       final graph1 = KnowledgeGraph(
         concepts: [
           Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Containers',
-              sourceDocumentId: 'doc1'),
+            id: 'c1',
+            name: 'Docker',
+            description: 'Containers',
+            sourceDocumentId: 'doc1',
+          ),
           Concept(
-              id: 'c2',
-              name: 'K8s',
-              description: 'Orchestration',
-              sourceDocumentId: 'doc1'),
+            id: 'c2',
+            name: 'K8s',
+            description: 'Orchestration',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         relationships: [
           const Relationship(
-              id: 'r1',
-              fromConceptId: 'c2',
-              toConceptId: 'c1',
-              label: 'depends on'),
+            id: 'r1',
+            fromConceptId: 'c2',
+            toConceptId: 'c1',
+            label: 'depends on',
+          ),
         ],
         quizItems: [
           QuizItem.newCard(
-              id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.'),
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
         ],
       );
 
@@ -108,10 +120,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ForceDirectedGraphWidget(
-              graph: graph1,
-              teamNodes: teamNodes,
-            ),
+            body: ForceDirectedGraphWidget(graph: graph1, teamNodes: teamNodes),
           ),
         ),
       );
@@ -127,18 +136,20 @@ void main() {
         concepts: [
           ...graph1.concepts,
           Concept(
-              id: 'c3',
-              name: 'Helm',
-              description: 'Package manager',
-              sourceDocumentId: 'doc1'),
+            id: 'c3',
+            name: 'Helm',
+            description: 'Package manager',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         relationships: [
           ...graph1.relationships,
           const Relationship(
-              id: 'r2',
-              fromConceptId: 'c3',
-              toConceptId: 'c2',
-              label: 'depends on'),
+            id: 'r2',
+            fromConceptId: 'c3',
+            toConceptId: 'c2',
+            label: 'depends on',
+          ),
         ],
         quizItems: graph1.quizItems.toList(),
       );
@@ -147,10 +158,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ForceDirectedGraphWidget(
-              graph: graph2,
-              teamNodes: teamNodes,
-            ),
+            body: ForceDirectedGraphWidget(graph: graph2, teamNodes: teamNodes),
           ),
         ),
       );
@@ -164,27 +172,31 @@ void main() {
       );
     });
 
-    testWidgets('renders without team nodes (backward compatible)',
-        (tester) async {
+    testWidgets('renders without team nodes (backward compatible)', (
+      tester,
+    ) async {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Containers',
-              sourceDocumentId: 'doc1'),
+            id: 'c1',
+            name: 'Docker',
+            description: 'Containers',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
           QuizItem.newCard(
-              id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.'),
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+          ),
         ],
       );
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: ForceDirectedGraphWidget(graph: graph),
-          ),
+          home: Scaffold(body: ForceDirectedGraphWidget(graph: graph)),
         ),
       );
       await tester.pumpAndSettle();

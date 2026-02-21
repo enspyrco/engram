@@ -12,8 +12,8 @@ const _uuid = Uuid();
 /// CRUD operations for creating goals and recording contributions.
 final teamGoalsProvider =
     AsyncNotifierProvider<TeamGoalsNotifier, List<TeamGoal>>(
-  TeamGoalsNotifier.new,
-);
+      TeamGoalsNotifier.new,
+    );
 
 class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
   @override
@@ -36,7 +36,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
     required GoalType type,
     String? targetCluster,
     required double targetValue,
-    required String deadline,
+    required DateTime deadline,
   }) async {
     final teamRepo = ref.read(teamRepositoryProvider);
     final user = ref.read(authStateProvider).valueOrNull;
@@ -50,7 +50,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
       type: type,
       targetCluster: targetCluster,
       targetValue: targetValue,
-      createdAt: now.toIso8601String(),
+      createdAt: now,
       deadline: deadline,
       createdByUid: user.uid,
     );
@@ -72,7 +72,7 @@ class TeamGoalsNotifier extends AsyncNotifier<List<TeamGoal>> {
     if (goal != null) {
       final updatedProgress = goal.totalProgress + amount;
       if (updatedProgress >= goal.targetValue && !goal.isComplete) {
-        final now = ref.read(clockProvider)().toIso8601String();
+        final now = ref.read(clockProvider)();
         await teamRepo.completeGoal(goalId, now);
 
         // Award goal points to all contributors

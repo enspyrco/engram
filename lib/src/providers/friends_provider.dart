@@ -9,8 +9,9 @@ import 'wiki_group_membership_provider.dart';
 /// Watches the user's friends subcollection directly. Wiki group membership
 /// is handled by [wikiGroupMembershipProvider], which ensures `joinWikiGroup`
 /// is called before any team or social provider starts listening.
-final friendsProvider =
-    AsyncNotifierProvider<FriendsNotifier, List<Friend>>(FriendsNotifier.new);
+final friendsProvider = AsyncNotifierProvider<FriendsNotifier, List<Friend>>(
+  FriendsNotifier.new,
+);
 
 class FriendsNotifier extends AsyncNotifier<List<Friend>> {
   @override
@@ -23,22 +24,22 @@ class FriendsNotifier extends AsyncNotifier<List<Friend>> {
     if (wikiHash == null) return [];
 
     // Watch wiki group members and sync new ones to friends list
-    final membersSubscription =
-        socialRepo.watchWikiGroupMembers(wikiHash).listen((members) async {
-      final currentFriends = state.valueOrNull ?? [];
-      final currentUids = currentFriends.map((f) => f.uid).toSet();
-      // Only write friends we haven't already added
-      for (final member in members) {
-        if (!currentUids.contains(member.uid)) {
-          await socialRepo.addFriend(member);
-        }
-      }
-    });
+    final membersSubscription = socialRepo
+        .watchWikiGroupMembers(wikiHash)
+        .listen((members) async {
+          final currentFriends = state.valueOrNull ?? [];
+          final currentUids = currentFriends.map((f) => f.uid).toSet();
+          // Only write friends we haven't already added
+          for (final member in members) {
+            if (!currentUids.contains(member.uid)) {
+              await socialRepo.addFriend(member);
+            }
+          }
+        });
     ref.onDispose(membersSubscription.cancel);
 
     // Watch friends stream and update state directly (no invalidateSelf)
-    final friendsSubscription =
-        socialRepo.watchFriends().listen((friends) {
+    final friendsSubscription = socialRepo.watchFriends().listen((friends) {
       state = AsyncData(friends);
     });
     ref.onDispose(friendsSubscription.cancel);

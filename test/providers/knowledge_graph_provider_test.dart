@@ -36,8 +36,9 @@ void main() {
 
     return ProviderContainer(
       overrides: [
-        settingsProvider
-            .overrideWith(() => _FakeSettingsNotifier(tempDir.path)),
+        settingsProvider.overrideWith(
+          () => _FakeSettingsNotifier(tempDir.path),
+        ),
         graphRepositoryProvider.overrideWithValue(store),
       ],
     );
@@ -46,8 +47,7 @@ void main() {
   group('KnowledgeGraphNotifier', () {
     test('build loads empty graph when no file exists', () async {
       final container = createContainer();
-      final graph =
-          await container.read(knowledgeGraphProvider.future);
+      final graph = await container.read(knowledgeGraphProvider.future);
       expect(graph.concepts, isEmpty);
       expect(graph.quizItems, isEmpty);
     });
@@ -64,8 +64,7 @@ void main() {
         ],
       );
       final container = createContainer(initial: graph);
-      final loaded =
-          await container.read(knowledgeGraphProvider.future);
+      final loaded = await container.read(knowledgeGraphProvider.future);
       expect(loaded.concepts, hasLength(1));
       expect(loaded.concepts.first.id, 'c1');
     });
@@ -86,14 +85,13 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
       await container
           .read(knowledgeGraphProvider.notifier)
           .updateQuizItem(updated);
 
-      final newGraph =
-          await container.read(knowledgeGraphProvider.future);
+      final newGraph = await container.read(knowledgeGraphProvider.future);
       expect(newGraph.quizItems.first.repetitions, 1);
 
       // Verify persisted to disk
@@ -124,27 +122,27 @@ void main() {
           ),
         ],
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-infra',
             collectionName: 'Infrastructure',
           ),
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc2',
             title: 'K8s Guide',
             updatedAt: '2025-01-02',
-            ingestedAt: '2025-01-02',
+            ingestedAt: DateTime.utc(2025, 1, 2),
             collectionId: 'col-infra',
             collectionName: 'Infrastructure',
           ),
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc3',
             title: 'React Guide',
             updatedAt: '2025-01-03',
-            ingestedAt: '2025-01-03',
+            ingestedAt: DateTime.utc(2025, 1, 3),
             collectionId: 'col-frontend',
             collectionName: 'Frontend',
           ),
@@ -153,8 +151,7 @@ void main() {
       );
 
       final container = createContainer(initial: graph);
-      final loaded =
-          await container.read(knowledgeGraphProvider.future);
+      final loaded = await container.read(knowledgeGraphProvider.future);
 
       // Should have 2 auto-generated topics (one per collection)
       expect(loaded.topics, hasLength(2));
@@ -174,11 +171,11 @@ void main() {
     test('does not auto-migrate when topics already exist', () async {
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-1',
             collectionName: 'Infra',
           ),
@@ -187,14 +184,13 @@ void main() {
           Topic(
             id: 'existing-topic',
             name: 'Existing',
-            createdAt: '2025-01-01',
+            createdAt: DateTime.utc(2025),
           ),
         ],
       );
 
       final container = createContainer(initial: graph);
-      final loaded =
-          await container.read(knowledgeGraphProvider.future);
+      final loaded = await container.read(knowledgeGraphProvider.future);
 
       // Should keep the existing topic and NOT add auto-migrated ones
       expect(loaded.topics, hasLength(1));
@@ -204,18 +200,18 @@ void main() {
     test('skips metadata without collectionId during auto-migration', () async {
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'No Collection',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             // No collectionId
           ),
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc2',
             title: 'Has Collection',
             updatedAt: '2025-01-02',
-            ingestedAt: '2025-01-02',
+            ingestedAt: DateTime.utc(2025, 1, 2),
             collectionId: 'col-1',
             collectionName: 'Infra',
           ),
@@ -223,8 +219,7 @@ void main() {
       );
 
       final container = createContainer(initial: graph);
-      final loaded =
-          await container.read(knowledgeGraphProvider.future);
+      final loaded = await container.read(knowledgeGraphProvider.future);
 
       // Only one topic for the metadata with a collectionId
       expect(loaded.topics, hasLength(1));
@@ -272,8 +267,7 @@ void main() {
             updatedAt: '2025-01-01T00:00:00.000Z',
           );
 
-      final graph =
-          await container.read(knowledgeGraphProvider.future);
+      final graph = await container.read(knowledgeGraphProvider.future);
       expect(graph.concepts, hasLength(1));
       expect(graph.documentMetadata, hasLength(1));
 

@@ -3,11 +3,7 @@ import 'package:meta/meta.dart';
 /// A document whose wiki content has changed since last ingestion.
 @immutable
 class StaleDocument {
-  const StaleDocument({
-    required this.id,
-    required this.title,
-    this.ingestedAt,
-  });
+  const StaleDocument({required this.id, required this.title, this.ingestedAt});
 
   /// The Outline document ID.
   final String id;

@@ -51,15 +51,9 @@ class IncomingChallengeCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: onDecline,
-                  child: const Text('Decline'),
-                ),
+                TextButton(onPressed: onDecline, child: const Text('Decline')),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: onAccept,
-                  child: const Text('Accept'),
-                ),
+                FilledButton(onPressed: onAccept, child: const Text('Accept')),
               ],
             ),
           ],

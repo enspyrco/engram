@@ -33,23 +33,27 @@ void main() {
     final concepts = <Concept>[];
     final items = <QuizItem>[];
     for (var i = 0; i < count; i++) {
-      concepts.add(Concept(
-        id: 'c$i',
-        name: 'Concept $i',
-        description: 'Desc $i',
-        sourceDocumentId: 'doc1',
-      ));
-      items.add(QuizItem(
-        id: 'q$i',
-        conceptId: 'c$i',
-        question: 'Question $i?',
-        answer: 'Answer $i.',
-        easeFactor: 2.5,
-        interval: 0,
-        repetitions: 0,
-        nextReview: '2020-01-01T00:00:00.000Z',
-        lastReview: null,
-      ));
+      concepts.add(
+        Concept(
+          id: 'c$i',
+          name: 'Concept $i',
+          description: 'Desc $i',
+          sourceDocumentId: 'doc1',
+        ),
+      );
+      items.add(
+        QuizItem(
+          id: 'q$i',
+          conceptId: 'c$i',
+          question: 'Question $i?',
+          answer: 'Answer $i.',
+          easeFactor: 2.5,
+          interval: 0,
+          repetitions: 0,
+          nextReview: DateTime.utc(2020),
+          lastReview: null,
+        ),
+      );
     }
     return KnowledgeGraph(concepts: concepts, quizItems: items);
   }
@@ -66,8 +70,9 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        settingsProvider
-            .overrideWith(() => _FakeSettingsNotifier(tempDir.path)),
+        settingsProvider.overrideWith(
+          () => _FakeSettingsNotifier(tempDir.path),
+        ),
         graphRepositoryProvider.overrideWithValue(store),
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
@@ -100,29 +105,31 @@ void main() {
     });
 
     test('startSession with no due items goes to summary', () async {
-      final container = await createContainer(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'C',
-            description: 'D',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        quizItems: [
-          const QuizItem(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'Q?',
-            answer: 'A.',
-            easeFactor: 2.5,
-            interval: 6,
-            repetitions: 2,
-            nextReview: '2099-01-01T00:00:00.000Z',
-            lastReview: null,
-          ),
-        ],
-      ));
+      final container = await createContainer(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'C',
+              description: 'D',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+          quizItems: [
+            QuizItem(
+              id: 'q1',
+              conceptId: 'c1',
+              question: 'Q?',
+              answer: 'A.',
+              easeFactor: 2.5,
+              interval: 6,
+              repetitions: 2,
+              nextReview: DateTime.utc(2099),
+              lastReview: null,
+            ),
+          ],
+        ),
+      );
 
       await container.read(knowledgeGraphProvider.future);
       container.read(quizSessionProvider.notifier).startSession();
@@ -181,8 +188,7 @@ void main() {
       notifier.revealAnswer();
       await notifier.rateItem(5);
 
-      final graph =
-          await container.read(knowledgeGraphProvider.future);
+      final graph = await container.read(knowledgeGraphProvider.future);
       expect(graph.quizItems.first.repetitions, 1);
     });
 
@@ -214,9 +220,9 @@ void main() {
 
     test('comeback detected when last session > 3 days ago', () async {
       // Set last session to 5 days ago
-      final fiveDaysAgo = DateTime.now()
-          .toUtc()
-          .subtract(const Duration(days: 5));
+      final fiveDaysAgo = DateTime.now().toUtc().subtract(
+        const Duration(days: 5),
+      );
       final dateStr =
           '${fiveDaysAgo.year}-${fiveDaysAgo.month.toString().padLeft(2, '0')}-${fiveDaysAgo.day.toString().padLeft(2, '0')}';
 

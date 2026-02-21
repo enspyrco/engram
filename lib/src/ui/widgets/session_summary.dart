@@ -6,11 +6,7 @@ import '../../providers/graph_analysis_provider.dart';
 import '../../providers/graph_structure_provider.dart';
 
 class SessionSummary extends ConsumerWidget {
-  const SessionSummary({
-    required this.state,
-    required this.onDone,
-    super.key,
-  });
+  const SessionSummary({required this.state, required this.onDone, super.key});
 
   final QuizSessionState state;
   final VoidCallback onDone;
@@ -31,9 +27,8 @@ class SessionSummary extends ConsumerWidget {
             prereqs.where((p) => !analyzer.isConceptMastered(p)).toList();
         // If only 1-2 prerequisites remain unmastered, it's "close"
         if (unmasteredPrereqs.isNotEmpty && unmasteredPrereqs.length <= 2) {
-          final concept = graph.concepts
-              .where((c) => c.id == conceptId)
-              .firstOrNull;
+          final concept =
+              graph.concepts.where((c) => c.id == conceptId).firstOrNull;
           if (concept != null) {
             unlockingNext.add(concept.name);
           }
@@ -58,7 +53,9 @@ class SessionSummary extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                state.isComeback ? 'Great to have you back!' : 'Session Complete',
+                state.isComeback
+                    ? 'Great to have you back!'
+                    : 'Session Complete',
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
@@ -70,9 +67,8 @@ class SessionSummary extends ConsumerWidget {
               Text(
                 '${state.correctCount} correct (${state.correctPercent.round()}%)',
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: state.correctPercent >= 60
-                      ? Colors.green
-                      : Colors.orange,
+                  color:
+                      state.correctPercent >= 60 ? Colors.green : Colors.orange,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -83,13 +79,22 @@ class SessionSummary extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.lock_open, size: 16, color: theme.colorScheme.secondary),
+                    Icon(
+                      Icons.lock_open,
+                      size: 16,
+                      color: theme.colorScheme.secondary,
+                    ),
                     const SizedBox(width: 8),
-                    Text('Almost unlocking:', style: theme.textTheme.labelLarge),
+                    Text(
+                      'Almost unlocking:',
+                      style: theme.textTheme.labelLarge,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                ...unlockingNext.take(3).map(
+                ...unlockingNext
+                    .take(3)
+                    .map(
                       (name) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(name, style: theme.textTheme.bodyMedium),
@@ -97,10 +102,7 @@ class SessionSummary extends ConsumerWidget {
                     ),
               ],
               const SizedBox(height: 24),
-              FilledButton(
-                onPressed: onDone,
-                child: const Text('Done'),
-              ),
+              FilledButton(onPressed: onDone, child: const Text('Done')),
             ],
           ),
         ),

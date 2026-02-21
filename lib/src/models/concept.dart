@@ -27,9 +27,8 @@ class Concept {
       name: json['name'] as String,
       description: json['description'] as String,
       sourceDocumentId: json['sourceDocumentId'] as String,
-      tags: (json['tags'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toIList() ??
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toIList() ??
           const IListConst([]),
       parentConceptId: json['parentConceptId'] as String?,
     );
@@ -45,13 +44,13 @@ class Concept {
   bool get isSubConcept => parentConceptId != null;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'sourceDocumentId': sourceDocumentId,
-        'tags': tags.toList(),
-        if (parentConceptId != null) 'parentConceptId': parentConceptId,
-      };
+    'id': id,
+    'name': name,
+    'description': description,
+    'sourceDocumentId': sourceDocumentId,
+    'tags': tags.toList(),
+    if (parentConceptId != null) 'parentConceptId': parentConceptId,
+  };
 
   @override
   bool operator ==(Object other) =>

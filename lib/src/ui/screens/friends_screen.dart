@@ -70,11 +70,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          _FriendsTab(),
-          _TeamTab(),
-          _GloryTab(),
-        ],
+        children: const [_FriendsTab(), _TeamTab(), _GloryTab()],
       ),
     );
   }
@@ -92,13 +88,14 @@ class _FriendsTab extends ConsumerWidget {
     final nudgesAsync = ref.watch(nudgeProvider);
 
     return friendsAsync.when(
-      data: (friends) => _buildContent(
-        context,
-        ref,
-        friends: friends,
-        challenges: challengesAsync.valueOrNull ?? [],
-        nudges: nudgesAsync.valueOrNull ?? [],
-      ),
+      data:
+          (friends) => _buildContent(
+            context,
+            ref,
+            friends: friends,
+            challenges: challengesAsync.valueOrNull ?? [],
+            nudges: nudgesAsync.valueOrNull ?? [],
+          ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
     );
@@ -133,8 +130,8 @@ class _FriendsTab extends ConsumerWidget {
                 'Friends using the same Outline wiki will appear here automatically.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -151,12 +148,14 @@ class _FriendsTab extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: IncomingChallengeCard(
               challenge: challenge,
-              onAccept: () => ref
-                  .read(challengeProvider.notifier)
-                  .acceptChallenge(challenge.id),
-              onDecline: () => ref
-                  .read(challengeProvider.notifier)
-                  .declineChallenge(challenge.id),
+              onAccept:
+                  () => ref
+                      .read(challengeProvider.notifier)
+                      .acceptChallenge(challenge.id),
+              onDecline:
+                  () => ref
+                      .read(challengeProvider.notifier)
+                      .declineChallenge(challenge.id),
             ),
           ),
 
@@ -196,56 +195,54 @@ class _FriendsTab extends ConsumerWidget {
     );
   }
 
-  void _showNudgeDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Friend friend,
-  ) {
+  void _showNudgeDialog(BuildContext context, WidgetRef ref, Friend friend) {
     final messageController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Nudge ${friend.displayName}'),
-        content: TextField(
-          controller: messageController,
-          decoration: const InputDecoration(
-            labelText: 'Message (optional)',
-            hintText: 'Hey, time to review!',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final user = ref.read(authStateProvider).valueOrNull;
-              final profile = ref.read(userProfileProvider).valueOrNull;
-              if (user == null) return;
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text('Nudge ${friend.displayName}'),
+            content: TextField(
+              controller: messageController,
+              decoration: const InputDecoration(
+                labelText: 'Message (optional)',
+                hintText: 'Hey, time to review!',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final user = ref.read(authStateProvider).valueOrNull;
+                  final profile = ref.read(userProfileProvider).valueOrNull;
+                  if (user == null) return;
 
-              final nudge = Nudge(
-                id: 'nudge_${_uuid.v4()}',
-                fromUid: user.uid,
-                fromName: profile?.displayName ?? 'Someone',
-                toUid: friend.uid,
-                conceptName: 'general review',
-                message: messageController.text.isEmpty
-                    ? null
-                    : messageController.text,
-                createdAt: ref.read(clockProvider)().toIso8601String(),
-              );
+                  final nudge = Nudge(
+                    id: 'nudge_${_uuid.v4()}',
+                    fromUid: user.uid,
+                    fromName: profile?.displayName ?? 'Someone',
+                    toUid: friend.uid,
+                    conceptName: 'general review',
+                    message:
+                        messageController.text.isEmpty
+                            ? null
+                            : messageController.text,
+                    createdAt: ref.read(clockProvider)(),
+                  );
 
-              await ref.read(nudgeProvider.notifier).sendNudge(nudge);
-              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Send'),
+                  await ref.read(nudgeProvider.notifier).sendNudge(nudge);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Send'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -277,8 +274,8 @@ class _TeamTab extends ConsumerWidget {
               child: Text(
                 'No clusters detected yet. Ingest more concepts to form clusters.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           )
@@ -287,12 +284,18 @@ class _TeamTab extends ConsumerWidget {
             _GuardianClusterCard(
               cluster: cluster,
               isMyGuard: cluster.guardianUid == guardianState.currentUid,
-              onVolunteer: () => ref
-                  .read(guardianProvider.notifier)
-                  .volunteerAsGuardian('cluster_${guardianState.clusters.indexOf(cluster)}'),
-              onResign: () => ref
-                  .read(guardianProvider.notifier)
-                  .resignGuardian('cluster_${guardianState.clusters.indexOf(cluster)}'),
+              onVolunteer:
+                  () => ref
+                      .read(guardianProvider.notifier)
+                      .volunteerAsGuardian(
+                        'cluster_${guardianState.clusters.indexOf(cluster)}',
+                      ),
+              onResign:
+                  () => ref
+                      .read(guardianProvider.notifier)
+                      .resignGuardian(
+                        'cluster_${guardianState.clusters.indexOf(cluster)}',
+                      ),
             ),
 
         const SizedBox(height: 16),
@@ -319,8 +322,8 @@ class _TeamTab extends ConsumerWidget {
                   child: Text(
                     'No active goals. Create one to rally the team!',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               );
@@ -345,8 +348,8 @@ class _TeamTab extends ConsumerWidget {
               child: Text(
                 'No active repair missions. The network is holding steady!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           )
@@ -355,7 +358,9 @@ class _TeamTab extends ConsumerWidget {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.build),
-                title: Text('Repair Mission: ${mission.conceptIds.length} concepts'),
+                title: Text(
+                  'Repair Mission: ${mission.conceptIds.length} concepts',
+                ),
                 subtitle: LinearProgressIndicator(value: mission.progress),
                 trailing: Text('${mission.remaining} left'),
               ),
@@ -367,7 +372,10 @@ class _TeamTab extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Relay Challenges', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Relay Challenges',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             IconButton(
               icon: const Icon(Icons.add, size: 20),
               onPressed: () => _showCreateRelayDialog(context),
@@ -385,25 +393,29 @@ class _TeamTab extends ConsumerWidget {
                   child: Text(
                     'Create a relay to challenge the team to master a concept chain!',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               );
             }
             return Column(
-              children: relays
-                  .map((r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: RelayChallengeCard(
-                          relay: r,
-                          currentUid: currentUid,
-                          onClaimLeg: (legIndex) => ref
-                              .read(relayProvider.notifier)
-                              .claimLeg(r.id, legIndex),
+              children:
+                  relays
+                      .map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: RelayChallengeCard(
+                            relay: r,
+                            currentUid: currentUid,
+                            onClaimLeg:
+                                (legIndex) => ref
+                                    .read(relayProvider.notifier)
+                                    .claimLeg(r.id, legIndex),
+                          ),
                         ),
-                      ))
-                  .toList(),
+                      )
+                      .toList(),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -426,8 +438,8 @@ class _TeamTab extends ConsumerWidget {
                       Text(
                         'No storm scheduled. Brave enough to start one?',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.icon(
@@ -455,13 +467,13 @@ class _TeamTab extends ConsumerWidget {
   }
 
   void _showCreateRelayDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => const CreateRelayDialog(),
-    );
+    showDialog(context: context, builder: (_) => const CreateRelayDialog());
   }
 
-  Future<void> _showScheduleStormDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _showScheduleStormDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     // Default: start 24 hours from now
     final now = ref.read(clockProvider)();
     final defaultStart = now.add(const Duration(hours: 24));
@@ -480,13 +492,14 @@ class _TeamTab extends ConsumerWidget {
     );
     if (time == null) return;
 
-    final startTime = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    ).toUtc();
+    final startTime =
+        DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        ).toUtc();
     await ref.read(stormProvider.notifier).scheduleStorm(startTime);
   }
 
@@ -497,78 +510,84 @@ class _TeamTab extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Create Team Goal'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Master all CI/CD concepts',
-                    border: OutlineInputBorder(),
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: const Text('Create Team Goal'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                            labelText: 'Title',
+                            hintText: 'Master all CI/CD concepts',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<GoalType>(
+                          initialValue: selectedType,
+                          decoration: const InputDecoration(
+                            labelText: 'Goal Type',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              GoalType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text(t.name),
+                                );
+                              }).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setDialogState(() => selectedType = v);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () async {
+                        if (titleController.text.isEmpty) return;
+                        final deadline = ref
+                            .read(clockProvider)()
+                            .add(const Duration(days: 7));
+                        await ref
+                            .read(teamGoalsProvider.notifier)
+                            .createGoal(
+                              title: titleController.text,
+                              description: descriptionController.text,
+                              type: selectedType,
+                              targetValue: 0.8,
+                              deadline: deadline,
+                            );
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
+                      child: const Text('Create'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<GoalType>(
-                  initialValue: selectedType,
-                  decoration: const InputDecoration(
-                    labelText: 'Goal Type',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: GoalType.values.map((t) {
-                    return DropdownMenuItem(
-                      value: t,
-                      child: Text(t.name),
-                    );
-                  }).toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setDialogState(() => selectedType = v);
-                    }
-                  },
-                ),
-              ],
-            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (titleController.text.isEmpty) return;
-                final deadline = ref
-                    .read(clockProvider)()
-                    .add(const Duration(days: 7))
-                    .toIso8601String();
-                await ref.read(teamGoalsProvider.notifier).createGoal(
-                      title: titleController.text,
-                      description: descriptionController.text,
-                      type: selectedType,
-                      targetValue: 0.8,
-                      deadline: deadline,
-                    );
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -600,17 +619,15 @@ class _GuardianClusterCard extends StatelessWidget {
               ? (isMyGuard ? 'You are guardian' : 'Has guardian')
               : 'No guardian',
         ),
-        trailing: isMyGuard
-            ? TextButton(
-                onPressed: onResign,
-                child: const Text('Resign'),
-              )
-            : (!cluster.hasGuardian
-                ? FilledButton(
-                    onPressed: onVolunteer,
-                    child: const Text('Volunteer'),
-                  )
-                : null),
+        trailing:
+            isMyGuard
+                ? TextButton(onPressed: onResign, child: const Text('Resign'))
+                : (!cluster.hasGuardian
+                    ? FilledButton(
+                      onPressed: onVolunteer,
+                      child: const Text('Volunteer'),
+                    )
+                    : null),
       ),
     );
   }

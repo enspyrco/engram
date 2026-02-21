@@ -2,11 +2,11 @@ import 'package:meta/meta.dart';
 
 /// The four catastrophe tiers from the game design.
 enum HealthTier {
-  healthy,   // >= 70%
-  brownout,  // < 70%
-  cascade,   // < 50%
-  fracture,  // < 30%
-  collapse,  // < 10%
+  healthy, // >= 70%
+  brownout, // < 70%
+  cascade, // < 50%
+  fracture, // < 30%
+  collapse, // < 10%
 }
 
 /// Composite network health score for a team's knowledge graph.
@@ -32,7 +32,8 @@ class NetworkHealth {
       avgFreshness: (json['avgFreshness'] as num?)?.toDouble() ?? 0.0,
       atRiskCriticalPaths: json['atRiskCriticalPaths'] as int? ?? 0,
       totalCriticalPaths: json['totalCriticalPaths'] as int? ?? 0,
-      clusterHealth: (json['clusterHealth'] as Map<String, dynamic>?)?.map(
+      clusterHealth:
+          (json['clusterHealth'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, (v as num).toDouble()),
           ) ??
           const {},
@@ -73,13 +74,13 @@ class NetworkHealth {
   }
 
   Map<String, dynamic> toJson() => {
-        'score': score,
-        'tier': tier.name,
-        'masteryRatio': masteryRatio,
-        'learningRatio': learningRatio,
-        'avgFreshness': avgFreshness,
-        'atRiskCriticalPaths': atRiskCriticalPaths,
-        'totalCriticalPaths': totalCriticalPaths,
-        'clusterHealth': clusterHealth,
-      };
+    'score': score,
+    'tier': tier.name,
+    'masteryRatio': masteryRatio,
+    'learningRatio': learningRatio,
+    'avgFreshness': avgFreshness,
+    'atRiskCriticalPaths': atRiskCriticalPaths,
+    'totalCriticalPaths': totalCriticalPaths,
+    'clusterHealth': clusterHealth,
+  };
 }

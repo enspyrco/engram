@@ -63,10 +63,11 @@ class CatastrophePainter extends CustomPainter {
   /// Tier 1: Fading nodes flicker. Edges develop visual static.
   void _paintBrownout(Canvas canvas) {
     // Edge static: thin white noise lines near edges
-    final staticPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08 * animationProgress)
-      ..strokeWidth = 0.5
-      ..style = PaintingStyle.stroke;
+    final staticPaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.08 * animationProgress)
+          ..strokeWidth = 0.5
+          ..style = PaintingStyle.stroke;
 
     for (final edge in edges) {
       final src = edge.source.position;
@@ -76,7 +77,8 @@ class CatastrophePainter extends CustomPainter {
       final norm = perpendicular.distance;
       if (norm < 1.0) continue;
 
-      final offset = perpendicular / norm * 3.0 * sin(animationProgress * pi * 4);
+      final offset =
+          perpendicular / norm * 3.0 * sin(animationProgress * pi * 4);
       canvas.drawLine(mid + offset, mid - offset, staticPaint);
     }
 
@@ -99,14 +101,14 @@ class CatastrophePainter extends CustomPainter {
   /// Tier 2: Red fracture lines on stressed edges. Physical distortion feel.
   void _paintCascade(Canvas canvas) {
     // Jagged red lines on edges between low-freshness nodes
-    final fracturePaint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.6 * animationProgress)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
+    final fracturePaint =
+        Paint()
+          ..color = Colors.red.withValues(alpha: 0.6 * animationProgress)
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke;
 
     for (final edge in edges) {
-      final avgFreshness =
-          (edge.source.freshness + edge.target.freshness) / 2;
+      final avgFreshness = (edge.source.freshness + edge.target.freshness) / 2;
       if (avgFreshness > 0.5) continue;
 
       final src = edge.source.position;
@@ -118,8 +120,7 @@ class CatastrophePainter extends CustomPainter {
     for (final node in nodes) {
       if (node.freshness > 0.4) continue;
 
-      final pulseAlpha =
-          0.3 * sin(animationProgress * pi * 2).abs();
+      final pulseAlpha = 0.3 * sin(animationProgress * pi * 2).abs();
       canvas.drawCircle(
         node.position,
         node.radius * 1.8,
@@ -133,20 +134,23 @@ class CatastrophePainter extends CustomPainter {
   /// Tier 3: Bright crack propagation. The big one.
   void _paintFracture(Canvas canvas) {
     // Bright crack along weakest edges (lowest freshness)
-    final crackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9 * animationProgress)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
+    final crackPaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.9 * animationProgress)
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke;
 
-    final glowPaint = Paint()
-      ..color = const Color(0xFF64B5F6).withValues(alpha: 0.4 * animationProgress)
-      ..strokeWidth = 8.0
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final glowPaint =
+        Paint()
+          ..color = const Color(
+            0xFF64B5F6,
+          ).withValues(alpha: 0.4 * animationProgress)
+          ..strokeWidth = 8.0
+          ..style = PaintingStyle.stroke
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
     for (final edge in edges) {
-      final avgFreshness =
-          (edge.source.freshness + edge.target.freshness) / 2;
+      final avgFreshness = (edge.source.freshness + edge.target.freshness) / 2;
       if (avgFreshness > 0.3) continue;
 
       final src = edge.source.position;
@@ -163,8 +167,7 @@ class CatastrophePainter extends CustomPainter {
 
     // Electrical arc particles at crack tips
     for (final edge in edges) {
-      final avgFreshness =
-          (edge.source.freshness + edge.target.freshness) / 2;
+      final avgFreshness = (edge.source.freshness + edge.target.freshness) / 2;
       if (avgFreshness > 0.3) continue;
 
       final src = edge.source.position;
@@ -180,15 +183,15 @@ class CatastrophePainter extends CustomPainter {
     // Darken everything
     canvas.drawRect(
       const Rect.fromLTWH(0, 0, 2000, 2000),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.6 * animationProgress),
+      Paint()..color = Colors.black.withValues(alpha: 0.6 * animationProgress),
     );
 
     // Dashed edges (snapping)
-    final dashPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+    final dashPaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.15)
+          ..strokeWidth = 1.0
+          ..style = PaintingStyle.stroke;
 
     for (final edge in edges) {
       final src = edge.source.position;
@@ -207,14 +210,10 @@ class CatastrophePainter extends CustomPainter {
           sparkNode.position,
           pulseRadius,
           Paint()
-            ..shader = ui.Gradient.radial(
-              sparkNode.position,
-              pulseRadius,
-              [
-                Colors.amber.withValues(alpha: 0.8),
-                Colors.amber.withValues(alpha: 0.0),
-              ],
-            ),
+            ..shader = ui.Gradient.radial(sparkNode.position, pulseRadius, [
+              Colors.amber.withValues(alpha: 0.8),
+              Colors.amber.withValues(alpha: 0.0),
+            ]),
         );
 
         // Bright core
@@ -243,9 +242,8 @@ class CatastrophePainter extends CustomPainter {
     for (var i = 1; i <= segments; i++) {
       final t = i / segments;
       final basePoint = Offset.lerp(from, to, t)!;
-      final jitter = (i % 2 == 0 ? 1.0 : -1.0) *
-          3.0 *
-          sin(animationProgress * pi * 3 + i);
+      final jitter =
+          (i % 2 == 0 ? 1.0 : -1.0) * 3.0 * sin(animationProgress * pi * 3 + i);
       final point = basePoint + perpendicular * jitter;
 
       if (i < segments) {
@@ -272,15 +270,13 @@ class CatastrophePainter extends CustomPainter {
     var drawing = true;
 
     while (drawn < dist) {
-      final segmentEnd =
-          (drawn + (drawing ? dashLength : gapLength)).clamp(0.0, dist);
+      final segmentEnd = (drawn + (drawing ? dashLength : gapLength)).clamp(
+        0.0,
+        dist,
+      );
 
       if (drawing) {
-        canvas.drawLine(
-          from + unit * drawn,
-          from + unit * segmentEnd,
-          paint,
-        );
+        canvas.drawLine(from + unit * drawn, from + unit * segmentEnd, paint);
       }
 
       drawn = segmentEnd;
@@ -290,10 +286,11 @@ class CatastrophePainter extends CustomPainter {
 
   /// Paint small electrical arc sparks at a point.
   void _paintArcSparks(Canvas canvas, Offset center) {
-    final sparkPaint = Paint()
-      ..color = const Color(0xFF64B5F6).withValues(alpha: 0.8)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+    final sparkPaint =
+        Paint()
+          ..color = const Color(0xFF64B5F6).withValues(alpha: 0.8)
+          ..strokeWidth = 1.0
+          ..style = PaintingStyle.stroke;
 
     for (var i = 0; i < 4; i++) {
       final angle = (i / 4) * pi * 2 + animationProgress * pi;

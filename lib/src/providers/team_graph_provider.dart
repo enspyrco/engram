@@ -17,10 +17,7 @@ final teamGraphProvider = Provider<List<TeamNode>>((ref) {
   for (final friend in friends) {
     final snapshot = snapshots[friend.uid];
     if (snapshot == null || snapshot.conceptMastery.isEmpty) continue;
-    nodes.add(TeamNode(
-      friend: friend,
-      detailedSnapshot: snapshot,
-    ));
+    nodes.add(TeamNode(friend: friend, detailedSnapshot: snapshot));
   }
   return nodes;
 });
@@ -30,10 +27,10 @@ final teamGraphProvider = Provider<List<TeamNode>>((ref) {
 /// Updated when the social repository streams new snapshot data.
 /// In a real deployment, this watches Firestore streams from
 /// `wikiGroups/{hash}/memberSnapshots/{uid}`.
-final teamSnapshotsProvider =
-    NotifierProvider<TeamSnapshotsNotifier, Map<String, DetailedMasterySnapshot>>(
-  TeamSnapshotsNotifier.new,
-);
+final teamSnapshotsProvider = NotifierProvider<
+  TeamSnapshotsNotifier,
+  Map<String, DetailedMasterySnapshot>
+>(TeamSnapshotsNotifier.new);
 
 class TeamSnapshotsNotifier
     extends Notifier<Map<String, DetailedMasterySnapshot>> {

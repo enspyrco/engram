@@ -35,14 +35,18 @@ class TeamGoal {
       ),
       targetCluster: json['targetCluster'] as String?,
       targetValue: (json['targetValue'] as num).toDouble(),
-      createdAt: json['createdAt'] as String,
-      deadline: json['deadline'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      deadline: DateTime.parse(json['deadline'] as String),
       createdByUid: json['createdByUid'] as String,
-      contributions: (json['contributions'] as Map<String, dynamic>?)?.map(
+      contributions:
+          (json['contributions'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, (v as num).toDouble()),
           ) ??
           const {},
-      completedAt: json['completedAt'] as String?,
+      completedAt:
+          json['completedAt'] != null
+              ? DateTime.parse(json['completedAt'] as String)
+              : null,
     );
   }
 
@@ -57,14 +61,14 @@ class TeamGoal {
   /// Target value — e.g. 0.8 for 80% mastery.
   final double targetValue;
 
-  final String createdAt;
-  final String deadline;
+  final DateTime createdAt;
+  final DateTime deadline;
   final String createdByUid;
 
   /// UID → contribution score. Accumulates across review sessions.
   final Map<String, double> contributions;
 
-  final String? completedAt;
+  final DateTime? completedAt;
 
   bool get isComplete => completedAt != null;
 
@@ -98,31 +102,31 @@ class TeamGoal {
     );
   }
 
-  TeamGoal withCompleted(String timestamp) => TeamGoal(
-        id: id,
-        title: title,
-        description: description,
-        type: type,
-        targetCluster: targetCluster,
-        targetValue: targetValue,
-        createdAt: createdAt,
-        deadline: deadline,
-        createdByUid: createdByUid,
-        contributions: contributions,
-        completedAt: timestamp,
-      );
+  TeamGoal withCompleted(DateTime timestamp) => TeamGoal(
+    id: id,
+    title: title,
+    description: description,
+    type: type,
+    targetCluster: targetCluster,
+    targetValue: targetValue,
+    createdAt: createdAt,
+    deadline: deadline,
+    createdByUid: createdByUid,
+    contributions: contributions,
+    completedAt: timestamp,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'type': type.name,
-        'targetCluster': targetCluster,
-        'targetValue': targetValue,
-        'createdAt': createdAt,
-        'deadline': deadline,
-        'createdByUid': createdByUid,
-        'contributions': contributions,
-        'completedAt': completedAt,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'type': type.name,
+    'targetCluster': targetCluster,
+    'targetValue': targetValue,
+    'createdAt': createdAt.toIso8601String(),
+    'deadline': deadline.toIso8601String(),
+    'createdByUid': createdByUid,
+    'contributions': contributions,
+    'completedAt': completedAt?.toIso8601String(),
+  };
 }

@@ -13,9 +13,7 @@ class _TestDiffNotifier extends DocumentDiffNotifier {
   DocumentDiffState build() => _initial;
 
   @override
-  Future<void> fetchDiff({
-    required String documentId,
-  }) async {}
+  Future<void> fetchDiff({required String documentId}) async {}
 }
 
 void main() {
@@ -27,11 +25,7 @@ void main() {
             () => _TestDiffNotifier(initialState),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: DocumentDiffSheet(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: DocumentDiffSheet())),
       );
     }
 

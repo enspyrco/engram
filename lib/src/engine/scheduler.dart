@@ -29,32 +29,35 @@ List<QuizItem> scheduleDueItems(
   // Build concept filter based on topic or collection scope.
   Set<String>? scopedConceptIds;
   if (topicDocumentIds != null) {
-    scopedConceptIds = graph.concepts
-        .where((c) => topicDocumentIds.contains(c.sourceDocumentId))
-        .map((c) => c.id)
-        .toSet();
+    scopedConceptIds =
+        graph.concepts
+            .where((c) => topicDocumentIds.contains(c.sourceDocumentId))
+            .map((c) => c.id)
+            .toSet();
   } else if (collectionId != null) {
-    final collectionDocIds = graph.documentMetadata
-        .where((m) => m.collectionId == collectionId)
-        .map((m) => m.documentId)
-        .toSet();
-    scopedConceptIds = graph.concepts
-        .where((c) => collectionDocIds.contains(c.sourceDocumentId))
-        .map((c) => c.id)
-        .toSet();
+    final collectionDocIds =
+        graph.documentMetadata
+            .where((m) => m.collectionId == collectionId)
+            .map((m) => m.documentId)
+            .toSet();
+    scopedConceptIds =
+        graph.concepts
+            .where((c) => collectionDocIds.contains(c.sourceDocumentId))
+            .map((c) => c.id)
+            .toSet();
   }
 
-  final due = graph.quizItems.where((item) {
-    // Only include items from unlocked concepts
-    if (!unlockedIds.contains(item.conceptId)) return false;
-    // Filter by topic or collection when set
-    if (scopedConceptIds != null &&
-        !scopedConceptIds.contains(item.conceptId)) {
-      return false;
-    }
-    final nextReview = DateTime.parse(item.nextReview);
-    return !nextReview.isAfter(currentTime);
-  }).toList();
+  final due =
+      graph.quizItems.where((item) {
+        // Only include items from unlocked concepts
+        if (!unlockedIds.contains(item.conceptId)) return false;
+        // Filter by topic or collection when set
+        if (scopedConceptIds != null &&
+            !scopedConceptIds.contains(item.conceptId)) {
+          return false;
+        }
+        return !item.nextReview.isAfter(currentTime);
+      }).toList();
 
   // Sort: foundational first, then by due date within each tier
   due.sort((a, b) {

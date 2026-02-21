@@ -15,10 +15,7 @@ final graphRepositoryProvider = Provider<GraphRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
 
   if (user != null) {
-    return FirestoreGraphRepository(
-      firestore: firestore,
-      userId: user.uid,
-    );
+    return FirestoreGraphRepository(firestore: firestore, userId: user.uid);
   }
 
   return LocalGraphRepository(dataDir: config.dataDir);

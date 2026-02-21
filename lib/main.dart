@@ -17,9 +17,7 @@ Future<void> main() async {
   final dataDir = '${appDir.path}/engram';
 
   // Always initialize Firebase — auth + Firestore are core dependencies now
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   assert(() {
     final opts = DefaultFirebaseOptions.currentPlatform;

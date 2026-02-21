@@ -13,38 +13,66 @@ import 'package:flutter_test/flutter_test.dart';
 KnowledgeGraph _twoCollectionGraph() {
   return KnowledgeGraph(
     concepts: [
-      Concept(id: 'c1', name: 'Docker', description: '', sourceDocumentId: 'd1'),
+      Concept(
+        id: 'c1',
+        name: 'Docker',
+        description: '',
+        sourceDocumentId: 'd1',
+      ),
       Concept(id: 'c2', name: 'K8s', description: '', sourceDocumentId: 'd1'),
       Concept(id: 'c3', name: 'React', description: '', sourceDocumentId: 'd2'),
     ],
     relationships: [
       // Both endpoints in collection A
-      const Relationship(id: 'r1', fromConceptId: 'c2', toConceptId: 'c1', label: 'depends on'),
+      const Relationship(
+        id: 'r1',
+        fromConceptId: 'c2',
+        toConceptId: 'c1',
+        label: 'depends on',
+      ),
       // Cross-collection: c2 (colA) → c3 (colB) — should be excluded by either filter
-      const Relationship(id: 'r2', fromConceptId: 'c2', toConceptId: 'c3', label: 'relates to'),
+      const Relationship(
+        id: 'r2',
+        fromConceptId: 'c2',
+        toConceptId: 'c3',
+        label: 'relates to',
+      ),
     ],
     quizItems: [
       QuizItem.newCard(id: 'q1', conceptId: 'c1', question: 'Q1', answer: 'A1'),
       QuizItem.newCard(id: 'q2', conceptId: 'c3', question: 'Q2', answer: 'A2'),
     ],
     documentMetadata: [
-      const DocumentMetadata(
-        documentId: 'd1', title: 'DevOps', updatedAt: '2026-01-01', ingestedAt: '2026-01-01',
-        collectionId: 'colA', collectionName: 'Infrastructure',
+      DocumentMetadata(
+        documentId: 'd1',
+        title: 'DevOps',
+        updatedAt: '2026-01-01',
+        ingestedAt: DateTime.utc(2026),
+        collectionId: 'colA',
+        collectionName: 'Infrastructure',
       ),
-      const DocumentMetadata(
-        documentId: 'd2', title: 'Frontend', updatedAt: '2026-01-01', ingestedAt: '2026-01-01',
-        collectionId: 'colB', collectionName: 'Web',
+      DocumentMetadata(
+        documentId: 'd2',
+        title: 'Frontend',
+        updatedAt: '2026-01-01',
+        ingestedAt: DateTime.utc(2026),
+        collectionId: 'colB',
+        collectionName: 'Web',
       ),
     ],
   );
 }
 
 void main() {
-  ProviderContainer buildContainer(KnowledgeGraph graph, {String? collectionId}) {
+  ProviderContainer buildContainer(
+    KnowledgeGraph graph, {
+    String? collectionId,
+  }) {
     return ProviderContainer(
       overrides: [
-        knowledgeGraphProvider.overrideWith(() => _PreloadedGraphNotifier(graph)),
+        knowledgeGraphProvider.overrideWith(
+          () => _PreloadedGraphNotifier(graph),
+        ),
         if (collectionId != null)
           selectedCollectionIdProvider.overrideWith((ref) => collectionId),
       ],
@@ -121,7 +149,9 @@ void main() {
     test('returns null when graph is null', () {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider.overrideWith(() => _PreloadedGraphNotifier(null)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(null),
+          ),
         ],
       );
 
@@ -134,7 +164,9 @@ void main() {
     test('returns zero stats when graph is null', () {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider.overrideWith(() => _PreloadedGraphNotifier(null)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(null),
+          ),
         ],
       );
 

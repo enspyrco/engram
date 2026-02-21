@@ -45,12 +45,9 @@ class EntropyStormCard extends StatelessWidget {
 
   Color? _cardColor(BuildContext context) {
     return switch (storm.status) {
-      StormStatus.active =>
-        Colors.deepPurple.withValues(alpha: 0.08),
-      StormStatus.survived =>
-        Colors.green.withValues(alpha: 0.08),
-      StormStatus.failed =>
-        Colors.red.withValues(alpha: 0.08),
+      StormStatus.active => Colors.deepPurple.withValues(alpha: 0.08),
+      StormStatus.survived => Colors.green.withValues(alpha: 0.08),
+      StormStatus.failed => Colors.red.withValues(alpha: 0.08),
       StormStatus.scheduled => null,
     };
   }
@@ -70,9 +67,7 @@ class EntropyStormCard extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: _statusColor(),
-          ),
+          style: theme.textTheme.titleSmall?.copyWith(color: _statusColor()),
         ),
         const Spacer(),
         Text(
@@ -96,16 +91,13 @@ class EntropyStormCard extends StatelessWidget {
 
   Widget _buildScheduled(BuildContext context) {
     final theme = Theme.of(context);
-    final isParticipant = currentUid != null &&
-        storm.participantUids.contains(currentUid);
+    final isParticipant =
+        currentUid != null && storm.participantUids.contains(currentUid);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StormCountdown(
-          targetTime: DateTime.parse(storm.scheduledStart),
-          label: 'Starts in',
-        ),
+        _StormCountdown(targetTime: storm.scheduledStart, label: 'Starts in'),
         const SizedBox(height: 4),
         Text(
           '2x freshness decay for 48 hours. Keep health above '
@@ -118,15 +110,9 @@ class EntropyStormCard extends StatelessWidget {
         Row(
           children: [
             if (isParticipant)
-              OutlinedButton(
-                onPressed: onOptOut,
-                child: const Text('Opt Out'),
-              )
+              OutlinedButton(onPressed: onOptOut, child: const Text('Opt Out'))
             else
-              FilledButton(
-                onPressed: onOptIn,
-                child: const Text('Opt In'),
-              ),
+              FilledButton(onPressed: onOptIn, child: const Text('Opt In')),
           ],
         ),
       ],
@@ -139,10 +125,7 @@ class EntropyStormCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StormCountdown(
-          targetTime: DateTime.parse(storm.scheduledEnd),
-          label: 'Ends in',
-        ),
+        _StormCountdown(targetTime: storm.scheduledEnd, label: 'Ends in'),
         const SizedBox(height: 8),
         // Health threshold indicator
         Row(
@@ -160,9 +143,10 @@ class EntropyStormCard extends StatelessWidget {
                     Text(
                       'Lowest: ${(storm.lowestHealth! * 100).round()}%',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: storm.lowestHealth! >= storm.healthThreshold
-                            ? Colors.green
-                            : Colors.red,
+                        color:
+                            storm.lowestHealth! >= storm.healthThreshold
+                                ? Colors.green
+                                : Colors.red,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -221,10 +205,7 @@ class EntropyStormCard extends StatelessWidget {
 }
 
 class _StormCountdown extends StatefulWidget {
-  const _StormCountdown({
-    required this.targetTime,
-    required this.label,
-  });
+  const _StormCountdown({required this.targetTime, required this.label});
 
   final DateTime targetTime;
   final String label;
@@ -256,9 +237,9 @@ class _StormCountdownState extends State<_StormCountdown> {
     if (remaining.isNegative) {
       return Text(
         'Now!',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       );
     }
 
@@ -268,9 +249,9 @@ class _StormCountdownState extends State<_StormCountdown> {
 
     return Text(
       '${widget.label}: $text',
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }

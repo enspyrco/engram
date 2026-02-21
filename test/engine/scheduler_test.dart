@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 
 QuizItem _makeItem(
   String id, {
-  required String nextReview,
+  required DateTime nextReview,
   String conceptId = 'c1',
   int repetitions = 1,
 }) {
@@ -26,19 +26,19 @@ QuizItem _makeItem(
 }
 
 Concept _concept(String id) => Concept(
-      id: id,
-      name: id,
-      description: 'desc',
-      sourceDocumentId: 'doc1',
-      tags: const [],
-    );
+  id: id,
+  name: id,
+  description: 'desc',
+  sourceDocumentId: 'doc1',
+  tags: const [],
+);
 
 Relationship _dep(String from, String to) => Relationship(
-      id: '$from-$to',
-      fromConceptId: from,
-      toConceptId: to,
-      label: 'depends on',
-    );
+  id: '$from-$to',
+  fromConceptId: from,
+  toConceptId: to,
+  label: 'depends on',
+);
 
 /// Wrap quiz items in a KnowledgeGraph with no relationships,
 /// so all concepts are unlocked (preserving Phase 1 behavior).
@@ -56,9 +56,12 @@ void main() {
   group('scheduleDueItems (basic)', () {
     test('returns items due before now', () {
       final items = [
-        _makeItem('q1', nextReview: '2025-06-14T00:00:00.000Z'), // due
-        _makeItem('q2', nextReview: '2025-06-15T12:00:00.000Z'), // due (exact)
-        _makeItem('q3', nextReview: '2025-06-16T00:00:00.000Z'), // not due
+        _makeItem('q1', nextReview: DateTime.utc(2025, 6, 14)), // due
+        _makeItem(
+          'q2',
+          nextReview: DateTime.utc(2025, 6, 15, 12),
+        ), // due (exact)
+        _makeItem('q3', nextReview: DateTime.utc(2025, 6, 16)), // not due
       ];
 
       final due = scheduleDueItems(_graphOf(items), now: now);
@@ -69,9 +72,9 @@ void main() {
 
     test('sorts oldest due first', () {
       final items = [
-        _makeItem('q2', nextReview: '2025-06-14T00:00:00.000Z'),
-        _makeItem('q1', nextReview: '2025-06-10T00:00:00.000Z'),
-        _makeItem('q3', nextReview: '2025-06-15T00:00:00.000Z'),
+        _makeItem('q2', nextReview: DateTime.utc(2025, 6, 14)),
+        _makeItem('q1', nextReview: DateTime.utc(2025, 6, 10)),
+        _makeItem('q3', nextReview: DateTime.utc(2025, 6, 15)),
       ];
 
       final due = scheduleDueItems(_graphOf(items), now: now);
@@ -84,7 +87,7 @@ void main() {
     test('caps at maxSessionSize', () {
       final items = List.generate(
         30,
-        (i) => _makeItem('q$i', nextReview: '2025-06-01T00:00:00.000Z'),
+        (i) => _makeItem('q$i', nextReview: DateTime.utc(2025, 6, 1)),
       );
 
       final due = scheduleDueItems(_graphOf(items), now: now);
@@ -94,8 +97,8 @@ void main() {
 
     test('returns empty list when nothing is due', () {
       final items = [
-        _makeItem('q1', nextReview: '2025-06-16T00:00:00.000Z'),
-        _makeItem('q2', nextReview: '2025-06-20T00:00:00.000Z'),
+        _makeItem('q1', nextReview: DateTime.utc(2025, 6, 16)),
+        _makeItem('q2', nextReview: DateTime.utc(2025, 6, 20)),
       ];
 
       final due = scheduleDueItems(_graphOf(items), now: now);
@@ -116,8 +119,18 @@ void main() {
         concepts: [_concept('a'), _concept('b')],
         relationships: [_dep('b', 'a')],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
         ],
       );
 
@@ -132,8 +145,18 @@ void main() {
         concepts: [_concept('a'), _concept('b')],
         relationships: [_dep('b', 'a')],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 1),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 1,
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
         ],
       );
 
@@ -149,8 +172,18 @@ void main() {
         relationships: [_dep('b', 'a')],
         quizItems: [
           // b is due earlier, but a is foundational
-          _makeItem('q-b', conceptId: 'b', nextReview: '2025-06-10T00:00:00.000Z', repetitions: 0),
-          _makeItem('q-a', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 1),
+          _makeItem(
+            'q-b',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 10),
+            repetitions: 0,
+          ),
+          _makeItem(
+            'q-a',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 1,
+          ),
         ],
       );
 
@@ -163,8 +196,11 @@ void main() {
     test('custom maxItems caps correctly', () {
       final items = List.generate(
         15,
-        (i) => _makeItem('q$i',
-            conceptId: 'c$i', nextReview: '2025-06-01T00:00:00.000Z'),
+        (i) => _makeItem(
+          'q$i',
+          conceptId: 'c$i',
+          nextReview: DateTime.utc(2025, 6, 1),
+        ),
       );
       final graph = _graphOf(items);
 
@@ -175,8 +211,11 @@ void main() {
     test('maxItems null returns all due', () {
       final items = List.generate(
         30,
-        (i) => _makeItem('q$i',
-            conceptId: 'c$i', nextReview: '2025-06-01T00:00:00.000Z'),
+        (i) => _makeItem(
+          'q$i',
+          conceptId: 'c$i',
+          nextReview: DateTime.utc(2025, 6, 1),
+        ),
       );
       final graph = _graphOf(items);
 
@@ -196,8 +235,18 @@ void main() {
           ),
         ],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
         ],
       );
 
@@ -226,15 +275,23 @@ void main() {
           ),
         ],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z'),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z'),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+          ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc1',
             title: 'Doc 1',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-x',
             collectionName: 'X',
           ),
@@ -242,7 +299,7 @@ void main() {
             documentId: 'doc2',
             title: 'Doc 2',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-y',
             collectionName: 'Y',
           ),
@@ -272,15 +329,23 @@ void main() {
           ),
         ],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z'),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z'),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+          ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc1',
             title: 'Doc 1',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-x',
             collectionName: 'X',
           ),
@@ -288,7 +353,7 @@ void main() {
             documentId: 'doc2',
             title: 'Doc 2',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-y',
             collectionName: 'Y',
           ),
@@ -321,15 +386,25 @@ void main() {
         ],
         relationships: [_dep('b', 'a')],
         quizItems: [
-          _makeItem('q1', conceptId: 'a', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
-          _makeItem('q2', conceptId: 'b', nextReview: '2025-06-14T00:00:00.000Z', repetitions: 0),
+          _makeItem(
+            'q1',
+            conceptId: 'a',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
+          _makeItem(
+            'q2',
+            conceptId: 'b',
+            nextReview: DateTime.utc(2025, 6, 14),
+            repetitions: 0,
+          ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc-y',
             title: 'Doc Y',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-y',
             collectionName: 'Y',
           ),
@@ -337,7 +412,7 @@ void main() {
             documentId: 'doc-x',
             title: 'Doc X',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-x',
             collectionName: 'X',
           ),

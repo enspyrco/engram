@@ -16,7 +16,12 @@ List<GraphEdge> _makeEdges() {
       Concept(id: 'b', name: 'B', description: '', sourceDocumentId: 'd'),
     ],
     relationships: [
-      const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
+      const Relationship(
+        id: 'r1',
+        fromConceptId: 'a',
+        toConceptId: 'b',
+        label: 'relates to',
+      ),
     ],
   );
 
@@ -78,18 +83,16 @@ void main() {
 
       system.initialize(edges, HealthTier.healthy);
 
-      final beforePositions =
-          system.particles.map((p) => p.progress).toList();
+      final beforePositions = system.particles.map((p) => p.progress).toList();
 
       system.step(HealthTier.healthy);
 
-      final afterPositions =
-          system.particles.map((p) => p.progress).toList();
+      final afterPositions = system.particles.map((p) => p.progress).toList();
 
       // At least one particle should have moved
-      final moved = Iterable.generate(beforePositions.length).any(
-        (i) => (afterPositions[i] - beforePositions[i]).abs() > 0.001,
-      );
+      final moved = Iterable.generate(
+        beforePositions.length,
+      ).any((i) => (afterPositions[i] - beforePositions[i]).abs() > 0.001);
       expect(moved, isTrue);
     });
 

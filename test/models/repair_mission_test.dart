@@ -9,7 +9,7 @@ void main() {
       final mission = RepairMission(
         id: 'm1',
         conceptIds: ['a', 'b', 'c'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
       );
 
       final updated = mission.withReviewedConcept('a', now: now);
@@ -24,13 +24,13 @@ void main() {
         id: 'm1',
         conceptIds: ['a', 'b'],
         reviewedConceptIds: ['a'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
       );
 
       final completed = mission.withReviewedConcept('b', now: now);
 
       expect(completed.isComplete, isTrue);
-      expect(completed.completedAt, now.toUtc().toIso8601String());
+      expect(completed.completedAt, now.toUtc());
     });
 
     test('withReviewedConcept ignores duplicate concept', () {
@@ -38,7 +38,7 @@ void main() {
         id: 'm1',
         conceptIds: ['a', 'b'],
         reviewedConceptIds: ['a'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
       );
 
       final same = mission.withReviewedConcept('a', now: now);
@@ -50,7 +50,7 @@ void main() {
       final mission = RepairMission(
         id: 'm1',
         conceptIds: ['a', 'b'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
       );
 
       final same = mission.withReviewedConcept('z', now: now);
@@ -63,7 +63,7 @@ void main() {
         id: 'm1',
         conceptIds: ['a', 'b', 'c', 'd'],
         reviewedConceptIds: ['a'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
       );
 
       expect(mission.progress, 0.25);
@@ -75,7 +75,7 @@ void main() {
         id: 'm1',
         conceptIds: ['a', 'b'],
         reviewedConceptIds: ['a'],
-        createdAt: '2025-06-15T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 15),
         completedAt: null,
         catastropheEventId: 'evt1',
       );

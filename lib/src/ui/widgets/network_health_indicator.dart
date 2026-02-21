@@ -9,11 +9,7 @@ import '../../models/network_health.dart';
 /// Displays a circular arc with the health score percentage, colored by tier.
 /// Tapping expands to show per-cluster breakdown.
 class NetworkHealthIndicator extends StatelessWidget {
-  const NetworkHealthIndicator({
-    required this.health,
-    this.onTap,
-    super.key,
-  });
+  const NetworkHealthIndicator({required this.health, this.onTap, super.key});
 
   final NetworkHealth health;
   final VoidCallback? onTap;
@@ -74,18 +70,18 @@ class NetworkHealthIndicator extends StatelessWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 8),
                 ...health.clusterHealth.entries.map(
-                  (entry) => _ClusterRow(
-                    label: entry.key,
-                    score: entry.value,
-                  ),
+                  (entry) => _ClusterRow(label: entry.key, score: entry.value),
                 ),
               ],
               if (health.atRiskCriticalPaths > 0) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.warning_amber,
-                        size: 14, color: Colors.orange.shade700),
+                    Icon(
+                      Icons.warning_amber,
+                      size: 14,
+                      color: Colors.orange.shade700,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${health.atRiskCriticalPaths} critical path${health.atRiskCriticalPaths == 1 ? '' : 's'} at risk',

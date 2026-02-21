@@ -11,8 +11,9 @@ void main() {
       // Without auth/settings, the provider returns empty state
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
           teamRepositoryProvider.overrideWithValue(null),
         ],
       );
@@ -26,8 +27,16 @@ void main() {
     test('myGuardedClusters filters by currentUid', () {
       final state = GuardianState(
         clusters: [
-          ConceptCluster(label: 'CI/CD', conceptIds: ['a', 'b'], guardianUid: 'me'),
-          ConceptCluster(label: 'Docker', conceptIds: ['c'], guardianUid: 'other'),
+          ConceptCluster(
+            label: 'CI/CD',
+            conceptIds: ['a', 'b'],
+            guardianUid: 'me',
+          ),
+          ConceptCluster(
+            label: 'Docker',
+            conceptIds: ['c'],
+            guardianUid: 'other',
+          ),
           ConceptCluster(label: 'K8s', conceptIds: ['d']),
         ],
         currentUid: 'me',
@@ -41,7 +50,11 @@ void main() {
     test('guardianForCluster looks up guardian UID by label', () {
       final state = GuardianState(
         clusters: [
-          ConceptCluster(label: 'CI/CD', conceptIds: ['a'], guardianUid: 'user1'),
+          ConceptCluster(
+            label: 'CI/CD',
+            conceptIds: ['a'],
+            guardianUid: 'user1',
+          ),
           ConceptCluster(label: 'K8s', conceptIds: ['b']),
         ],
         currentUid: 'me',

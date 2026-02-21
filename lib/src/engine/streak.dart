@@ -90,10 +90,7 @@ AbsenceInfo? inspectAbsence({
   final today = DateTime.parse(_dateString(now));
   final days = today.difference(lastDate).inDays;
 
-  return AbsenceInfo(
-    daysSinceLastSession: days,
-    isComeback: days > 3,
-  );
+  return AbsenceInfo(daysSinceLastSession: days, isComeback: days > 3);
 }
 
 /// Format a DateTime as yyyy-MM-dd for date-only comparison.

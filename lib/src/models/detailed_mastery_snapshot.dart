@@ -17,15 +17,21 @@ class DetailedMasterySnapshot {
 
   factory DetailedMasterySnapshot.fromJson(Map<String, dynamic> json) {
     return DetailedMasterySnapshot(
-      summary: json['summary'] != null
-          ? MasterySnapshot.fromJson(json['summary'] as Map<String, dynamic>)
-          : const MasterySnapshot(),
+      summary:
+          json['summary'] != null
+              ? MasterySnapshot.fromJson(
+                json['summary'] as Map<String, dynamic>,
+              )
+              : const MasterySnapshot(),
       conceptMastery:
           (json['conceptMastery'] as Map<String, dynamic>?)?.map(
-                (k, v) => MapEntry(k, v as String),
-              ) ??
-              const {},
-      updatedAt: json['updatedAt'] as String?,
+            (k, v) => MapEntry(k, v as String),
+          ) ??
+          const {},
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'] as String)
+              : null,
     );
   }
 
@@ -36,24 +42,26 @@ class DetailedMasterySnapshot {
   /// Only includes concepts with state != 'locked' to keep payload small.
   final Map<String, String> conceptMastery;
 
-  /// ISO8601 timestamp of when this snapshot was last updated.
-  final String? updatedAt;
+  /// Timestamp of when this snapshot was last updated.
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => {
-        'summary': summary.toJson(),
-        'conceptMastery': conceptMastery,
-        'updatedAt': updatedAt,
-      };
+    'summary': summary.toJson(),
+    'conceptMastery': conceptMastery,
+    'updatedAt': updatedAt?.toIso8601String(),
+  };
 
   /// Concept IDs where this friend has mastered state.
-  List<String> get masteredConceptIds => conceptMastery.entries
-      .where((e) => e.value == 'mastered')
-      .map((e) => e.key)
-      .toList();
+  List<String> get masteredConceptIds =>
+      conceptMastery.entries
+          .where((e) => e.value == 'mastered')
+          .map((e) => e.key)
+          .toList();
 
   /// Concept IDs where this friend is actively learning.
-  List<String> get learningConceptIds => conceptMastery.entries
-      .where((e) => e.value == 'learning')
-      .map((e) => e.key)
-      .toList();
+  List<String> get learningConceptIds =>
+      conceptMastery.entries
+          .where((e) => e.value == 'learning')
+          .map((e) => e.key)
+          .toList();
 }

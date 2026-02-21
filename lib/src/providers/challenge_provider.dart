@@ -6,8 +6,8 @@ import 'social_repository_provider.dart';
 /// Watches incoming challenges for the current user.
 final challengeProvider =
     AsyncNotifierProvider<ChallengeNotifier, List<Challenge>>(
-  ChallengeNotifier.new,
-);
+      ChallengeNotifier.new,
+    );
 
 class ChallengeNotifier extends AsyncNotifier<List<Challenge>> {
   @override
@@ -15,8 +15,9 @@ class ChallengeNotifier extends AsyncNotifier<List<Challenge>> {
     final socialRepo = ref.watch(socialRepositoryProvider);
     if (socialRepo == null) return [];
 
-    final subscription =
-        socialRepo.watchIncomingChallenges().listen((challenges) {
+    final subscription = socialRepo.watchIncomingChallenges().listen((
+      challenges,
+    ) {
       state = AsyncData(challenges);
     });
 
@@ -35,14 +36,18 @@ class ChallengeNotifier extends AsyncNotifier<List<Challenge>> {
     final socialRepo = ref.read(socialRepositoryProvider);
     if (socialRepo == null) return;
     await socialRepo.updateChallengeStatus(
-        challengeId, ChallengeStatus.accepted);
+      challengeId,
+      ChallengeStatus.accepted,
+    );
   }
 
   Future<void> declineChallenge(String challengeId) async {
     final socialRepo = ref.read(socialRepositoryProvider);
     if (socialRepo == null) return;
     await socialRepo.updateChallengeStatus(
-        challengeId, ChallengeStatus.declined);
+      challengeId,
+      ChallengeStatus.declined,
+    );
   }
 
   Future<void> completeChallenge(String challengeId, int score) async {

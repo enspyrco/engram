@@ -24,8 +24,8 @@ class IngestDocument {
   final IngestDocumentStatus status;
 
   String get statusLabel => switch (status) {
-        IngestDocumentStatus.newDoc => 'new',
-        IngestDocumentStatus.changed => 'changed',
-        IngestDocumentStatus.unchanged => 'unchanged',
-      };
+    IngestDocumentStatus.newDoc => 'new',
+    IngestDocumentStatus.changed => 'changed',
+    IngestDocumentStatus.unchanged => 'unchanged',
+  };
 }

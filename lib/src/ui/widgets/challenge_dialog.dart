@@ -44,16 +44,20 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
         data: (graph) {
           // Find concepts the current user has mastered
           // (quiz items with easeFactor >= 2.5 and repetitions >= 3)
-          final masteredConceptIds = graph.quizItems
-              .where((q) =>
-                  q.repetitions >= kMasteryMinRepetitions &&
-                  q.easeFactor >= kMasteryMinEaseFactor)
-              .map((q) => q.conceptId)
-              .toSet();
+          final masteredConceptIds =
+              graph.quizItems
+                  .where(
+                    (q) =>
+                        q.repetitions >= kMasteryMinRepetitions &&
+                        q.easeFactor >= kMasteryMinEaseFactor,
+                  )
+                  .map((q) => q.conceptId)
+                  .toSet();
 
-          final masteredConcepts = graph.concepts
-              .where((c) => masteredConceptIds.contains(c.id))
-              .toList();
+          final masteredConcepts =
+              graph.concepts
+                  .where((c) => masteredConceptIds.contains(c.id))
+                  .toList();
 
           if (masteredConcepts.isEmpty) {
             return const Text(
@@ -72,8 +76,7 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
                 Flexible(
                   child: RadioGroup<Concept>(
                     groupValue: _selectedConcept,
-                    onChanged: (c) =>
-                        setState(() => _selectedConcept = c),
+                    onChanged: (c) => setState(() => _selectedConcept = c),
                     child: ListView.builder(
                       shrinkWrap: true,
                       itemCount: masteredConcepts.length,
@@ -100,13 +103,16 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _selectedConcept == null || _sending
-              ? null
-              : _sendChallenge,
-          child: _sending
-              ? const SizedBox(
-                  width: 16, height: 16, child: CircularProgressIndicator())
-              : const Text('Send'),
+          onPressed:
+              _selectedConcept == null || _sending ? null : _sendChallenge,
+          child:
+              _sending
+                  ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(),
+                  )
+                  : const Text('Send'),
         ),
       ],
     );
@@ -137,7 +143,7 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
         toUid: widget.friend.uid,
         quizItemSnapshot: quizItem.toContentSnapshot(),
         conceptName: _selectedConcept!.name,
-        createdAt: ref.read(clockProvider)().toIso8601String(),
+        createdAt: ref.read(clockProvider)(),
       );
 
       await ref.read(challengeProvider.notifier).sendChallenge(challenge);
@@ -145,9 +151,9 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send challenge: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send challenge: $e')));
       }
     } finally {
       if (mounted) setState(() => _sending = false);

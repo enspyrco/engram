@@ -124,15 +124,11 @@ FsrsResult reviewFsrs({
 /// from the FSRS "good" initial parameter (~3.26 days). This ensures
 /// the first [reviewFsrs] call uses the "existing card" update path
 /// (mean reversion) rather than overwriting both from the rating.
-FsrsResult initializeFsrsCard({
-  double? predictedDifficulty,
-  DateTime? now,
-}) {
+FsrsResult initializeFsrsCard({double? predictedDifficulty, DateTime? now}) {
   final currentTime = now ?? DateTime.now().toUtc();
 
-  final difficulty = predictedDifficulty != null
-      ? predictedDifficulty.clamp(1.0, 10.0)
-      : 5.0;
+  final difficulty =
+      predictedDifficulty != null ? predictedDifficulty.clamp(1.0, 10.0) : 5.0;
 
   // Use "good" initial stability from FSRS default parameters
   final stability = fsrs.defaultParameters[_goodInitialStabilityIndex];

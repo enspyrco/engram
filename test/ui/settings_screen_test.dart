@@ -1,4 +1,5 @@
 import 'package:engram/src/providers/settings_provider.dart';
+import 'package:engram/src/storage/settings_repository.dart';
 import 'package:engram/src/ui/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,61 @@ void main() {
       );
       final config = container.read(settingsProvider);
       expect(config.outlineApiUrl, 'https://wiki.test.com');
+    });
+
+    testWidgets('friend discovery toggle defaults to off', (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      // Scroll down to reveal the Social section
+      await tester.scrollUntilVisible(
+        find.text('Social'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Social'), findsOneWidget);
+      expect(find.text('Friend discovery'), findsOneWidget);
+      expect(
+        find.text('Discover teammates from your wiki group'),
+        findsOneWidget,
+      );
+
+      // Default is off
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SettingsScreen)),
+      );
+      final repo = container.read(settingsRepositoryProvider);
+      expect(repo.getFriendDiscoveryEnabled(), isFalse);
+    });
+
+    testWidgets('friend discovery toggle persists value', (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      // Scroll down to reveal the Social section
+      await tester.scrollUntilVisible(
+        find.text('Friend discovery'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      // Find and tap the switch
+      final switchFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is SwitchListTile &&
+            widget.title is Text &&
+            (widget.title as Text).data == 'Friend discovery',
+      );
+      expect(switchFinder, findsOneWidget);
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      // Verify persisted
+      final repo = SettingsRepository(prefs);
+      expect(repo.getFriendDiscoveryEnabled(), isTrue);
     });
   });
 }

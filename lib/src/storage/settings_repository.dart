@@ -18,6 +18,7 @@ class SettingsRepository {
   static const _keyLastSessionDate = 'last_session_date';
   static const _keyCurrentStreak = 'current_streak';
   static const _keyLongestStreak = 'longest_streak';
+  static const _keyFriendDiscoveryEnabled = 'friend_discovery_enabled';
 
   EngramConfig load() {
     return EngramConfig(
@@ -46,14 +47,12 @@ class SettingsRepository {
 
   // --- Sync settings ---
 
-  String? getLastSyncTimestamp() =>
-      _prefs.getString(_keyLastSyncTimestamp);
+  String? getLastSyncTimestamp() => _prefs.getString(_keyLastSyncTimestamp);
 
   Future<void> setLastSyncTimestamp(String value) =>
       _prefs.setString(_keyLastSyncTimestamp, value);
 
-  bool getAutoCheckOnLaunch() =>
-      _prefs.getBool(_keyAutoCheckOnLaunch) ?? true;
+  bool getAutoCheckOnLaunch() => _prefs.getBool(_keyAutoCheckOnLaunch) ?? true;
 
   Future<void> setAutoCheckOnLaunch(bool value) =>
       _prefs.setBool(_keyAutoCheckOnLaunch, value);
@@ -98,4 +97,12 @@ class SettingsRepository {
 
   Future<void> setLongestStreak(int value) =>
       _prefs.setInt(_keyLongestStreak, value);
+
+  // --- Social settings ---
+
+  bool getFriendDiscoveryEnabled() =>
+      _prefs.getBool(_keyFriendDiscoveryEnabled) ?? false;
+
+  Future<void> setFriendDiscoveryEnabled(bool value) =>
+      _prefs.setBool(_keyFriendDiscoveryEnabled, value);
 }

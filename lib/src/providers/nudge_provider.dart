@@ -4,8 +4,9 @@ import '../models/nudge.dart';
 import 'social_repository_provider.dart';
 
 /// Watches incoming nudges for the current user.
-final nudgeProvider =
-    AsyncNotifierProvider<NudgeNotifier, List<Nudge>>(NudgeNotifier.new);
+final nudgeProvider = AsyncNotifierProvider<NudgeNotifier, List<Nudge>>(
+  NudgeNotifier.new,
+);
 
 class NudgeNotifier extends AsyncNotifier<List<Nudge>> {
   @override

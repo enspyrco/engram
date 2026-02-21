@@ -4,14 +4,14 @@ import 'package:test/test.dart';
 void main() {
   group('RelayLeg', () {
     test('fromJson/toJson round-trip', () {
-      const leg = RelayLeg(
+      final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git Basics',
         claimedByUid: 'user1',
         claimedByName: 'Alice',
-        claimedAt: '2025-06-15T10:00:00.000Z',
-        completedAt: '2025-06-15T12:00:00.000Z',
-        lastStallNudgeAt: '2025-06-15T11:00:00.000Z',
+        claimedAt: DateTime.utc(2025, 6, 15, 10),
+        completedAt: DateTime.utc(2025, 6, 15, 12),
+        lastStallNudgeAt: DateTime.utc(2025, 6, 15, 11),
       );
 
       final json = leg.toJson();
@@ -21,9 +21,9 @@ void main() {
       expect(restored.conceptName, 'Git Basics');
       expect(restored.claimedByUid, 'user1');
       expect(restored.claimedByName, 'Alice');
-      expect(restored.claimedAt, '2025-06-15T10:00:00.000Z');
-      expect(restored.completedAt, '2025-06-15T12:00:00.000Z');
-      expect(restored.lastStallNudgeAt, '2025-06-15T11:00:00.000Z');
+      expect(restored.claimedAt, DateTime.utc(2025, 6, 15, 10));
+      expect(restored.completedAt, DateTime.utc(2025, 6, 15, 12));
+      expect(restored.lastStallNudgeAt, DateTime.utc(2025, 6, 15, 11));
     });
 
     test('statusAt is unclaimed when no claim', () {
@@ -34,50 +34,48 @@ void main() {
 
     test('statusAt is claimed when claimed and within deadline', () {
       final now = DateTime.utc(2025, 6, 15, 11);
-      final recentClaim = DateTime.utc(2025, 6, 15, 10).toIso8601String();
       final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: recentClaim,
+        claimedAt: DateTime.utc(2025, 6, 15, 10),
       );
       expect(leg.statusAt(now), RelayLegStatus.claimed);
     });
 
     test('statusAt is stalled when overdue', () {
-      final claimedAt = DateTime.utc(2025, 6, 14, 8).toIso8601String();
       final now = DateTime.utc(2025, 6, 15, 10); // 26h later
       final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: claimedAt,
+        claimedAt: DateTime.utc(2025, 6, 14, 8),
       );
       expect(leg.statusAt(now), RelayLegStatus.stalled);
     });
 
     test('statusAt is completed when completedAt set', () {
-      const leg = RelayLeg(
+      final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: '2020-01-01T00:00:00.000Z',
-        completedAt: '2020-01-01T12:00:00.000Z',
+        claimedAt: DateTime.utc(2020),
+        completedAt: DateTime.utc(2020, 1, 1, 12),
       );
       final now = DateTime.utc(2025, 6, 15);
       expect(leg.statusAt(now), RelayLegStatus.completed);
     });
 
     test('deadline is 24 hours after claimedAt', () {
-      const leg = RelayLeg(
+      final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: '2025-06-15T10:00:00.000Z',
+        claimedAt: DateTime.utc(2025, 6, 15, 10),
       );
       expect(leg.deadline, DateTime.utc(2025, 6, 16, 10, 0, 0));
     });
@@ -88,12 +86,12 @@ void main() {
     });
 
     test('isOverdueAt uses provided time', () {
-      const leg = RelayLeg(
+      final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: '2025-06-15T10:00:00.000Z',
+        claimedAt: DateTime.utc(2025, 6, 15, 10),
       );
       // 23 hours later — not overdue
       expect(leg.isOverdueAt(DateTime.utc(2025, 6, 16, 9)), isFalse);
@@ -106,24 +104,24 @@ void main() {
       final claimed = leg.withClaimed(
         uid: 'u1',
         displayName: 'Alice',
-        timestamp: '2025-06-15T10:00:00.000Z',
+        timestamp: DateTime.utc(2025, 6, 15, 10),
       );
       expect(claimed.claimedByUid, 'u1');
       expect(claimed.claimedByName, 'Alice');
-      expect(claimed.claimedAt, '2025-06-15T10:00:00.000Z');
+      expect(claimed.claimedAt, DateTime.utc(2025, 6, 15, 10));
       expect(leg.claimedByUid, isNull); // original unchanged
     });
 
     test('withCompleted creates new leg with completion', () {
-      const leg = RelayLeg(
+      final leg = RelayLeg(
         conceptId: 'c1',
         conceptName: 'Git',
         claimedByUid: 'u1',
         claimedByName: 'A',
-        claimedAt: '2025-06-15T10:00:00.000Z',
+        claimedAt: DateTime.utc(2025, 6, 15, 10),
       );
-      final completed = leg.withCompleted('2025-06-15T12:00:00.000Z');
-      expect(completed.completedAt, '2025-06-15T12:00:00.000Z');
+      final completed = leg.withCompleted(DateTime.utc(2025, 6, 15, 12));
+      expect(completed.completedAt, DateTime.utc(2025, 6, 15, 12));
       expect(leg.completedAt, isNull);
     });
   });
@@ -137,17 +135,17 @@ void main() {
         title: 'CI/CD Pipeline',
         legs: [
           const RelayLeg(conceptId: 'c1', conceptName: 'Git Basics'),
-          const RelayLeg(
+          RelayLeg(
             conceptId: 'c2',
             conceptName: 'Branching',
             claimedByUid: 'u1',
             claimedByName: 'Alice',
-            claimedAt: '2025-06-15T10:00:00.000Z',
-            completedAt: '2025-06-15T12:00:00.000Z',
+            claimedAt: DateTime.utc(2025, 6, 15, 10),
+            completedAt: DateTime.utc(2025, 6, 15, 12),
           ),
           const RelayLeg(conceptId: 'c3', conceptName: 'CI Pipelines'),
         ],
-        createdAt: '2025-06-14T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 14),
         createdByUid: 'creator1',
       );
     });
@@ -169,7 +167,7 @@ void main() {
     });
 
     test('isComplete is true when completedAt set', () {
-      final completed = relay.withCompleted('2025-06-16T00:00:00.000Z');
+      final completed = relay.withCompleted(DateTime.utc(2025, 6, 16));
       expect(completed.isComplete, isTrue);
     });
 
@@ -191,7 +189,7 @@ void main() {
         0,
         uid: 'u2',
         displayName: 'Bob',
-        timestamp: '2025-06-15T14:00:00.000Z',
+        timestamp: DateTime.utc(2025, 6, 15, 14),
       );
       expect(updated.legs[0].claimedByUid, 'u2');
       expect(updated.legs[1].claimedByUid, 'u1'); // other legs unchanged
@@ -199,8 +197,8 @@ void main() {
     });
 
     test('withLegCompleted updates specific leg', () {
-      final updated = relay.withLegCompleted(0, '2025-06-15T15:00:00.000Z');
-      expect(updated.legs[0].completedAt, '2025-06-15T15:00:00.000Z');
+      final updated = relay.withLegCompleted(0, DateTime.utc(2025, 6, 15, 15));
+      expect(updated.legs[0].completedAt, DateTime.utc(2025, 6, 15, 15));
     });
 
     test('hasStallAt detects stalled legs', () {
@@ -213,7 +211,7 @@ void main() {
       final empty = RelayChallenge(
         id: 'r',
         title: 'T',
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
         createdByUid: 'u',
       );
       expect(empty.progress, 1.0);

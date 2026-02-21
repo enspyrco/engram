@@ -7,6 +7,9 @@ import '../models/quiz_item.dart';
 import '../models/relationship.dart';
 import 'graph_repository.dart';
 
+/// Maximum number of operations per Firestore batch (Firestore limit is 500).
+const _maxBatchOps = 500;
+
 /// Firestore-backed graph repository using subcollections:
 ///
 /// ```
@@ -20,17 +23,21 @@ class FirestoreGraphRepository extends GraphRepository {
   FirestoreGraphRepository({
     required FirebaseFirestore firestore,
     required String userId,
-  })  : _firestore = firestore,
-        _userId = userId;
+  }) : _firestore = firestore,
+       _userId = userId;
 
   final FirebaseFirestore _firestore;
   final String _userId;
 
-  DocumentReference get _graphDoc =>
-      _firestore.collection('users').doc(_userId).collection('data').doc('graph');
+  DocumentReference get _graphDoc => _firestore
+      .collection('users')
+      .doc(_userId)
+      .collection('data')
+      .doc('graph');
 
   CollectionReference get _concepts => _graphDoc.collection('concepts');
-  CollectionReference get _relationships => _graphDoc.collection('relationships');
+  CollectionReference get _relationships =>
+      _graphDoc.collection('relationships');
   CollectionReference get _quizItems => _graphDoc.collection('quizItems');
   CollectionReference get _documents => _graphDoc.collection('documents');
 
@@ -43,18 +50,27 @@ class FirestoreGraphRepository extends GraphRepository {
       _documents.get(),
     ]);
 
-    final concepts = results[0].docs
-        .map((d) => Concept.fromJson(d.data()! as Map<String, dynamic>))
-        .toList();
-    final relationships = results[1].docs
-        .map((d) => Relationship.fromJson(d.data()! as Map<String, dynamic>))
-        .toList();
-    final quizItems = results[2].docs
-        .map((d) => QuizItem.fromJson(d.data()! as Map<String, dynamic>))
-        .toList();
-    final documentMetadata = results[3].docs
-        .map((d) => DocumentMetadata.fromJson(d.data()! as Map<String, dynamic>))
-        .toList();
+    final concepts =
+        results[0].docs
+            .map((d) => Concept.fromJson(d.data()! as Map<String, dynamic>))
+            .toList();
+    final relationships =
+        results[1].docs
+            .map(
+              (d) => Relationship.fromJson(d.data()! as Map<String, dynamic>),
+            )
+            .toList();
+    final quizItems =
+        results[2].docs
+            .map((d) => QuizItem.fromJson(d.data()! as Map<String, dynamic>))
+            .toList();
+    final documentMetadata =
+        results[3].docs
+            .map(
+              (d) =>
+                  DocumentMetadata.fromJson(d.data()! as Map<String, dynamic>),
+            )
+            .toList();
 
     return KnowledgeGraph(
       concepts: concepts,
@@ -66,29 +82,59 @@ class FirestoreGraphRepository extends GraphRepository {
 
   @override
   Future<void> save(KnowledgeGraph graph) async {
-    final batch = _firestore.batch();
+    // Query existing doc IDs in all subcollections.
+    final existing = await Future.wait([
+      _concepts.get(),
+      _relationships.get(),
+      _quizItems.get(),
+      _documents.get(),
+    ]);
 
-    // Delete existing data
-    await _deleteCollection(_concepts, batch);
-    await _deleteCollection(_relationships, batch);
-    await _deleteCollection(_quizItems, batch);
-    await _deleteCollection(_documents, batch);
+    final existingConceptIds = existing[0].docs.map((d) => d.id).toSet();
+    final existingRelIds = existing[1].docs.map((d) => d.id).toSet();
+    final existingQuizIds = existing[2].docs.map((d) => d.id).toSet();
+    final existingDocIds = existing[3].docs.map((d) => d.id).toSet();
 
-    // Write new data
+    // Collect all write and delete operations, then commit in batched chunks.
+    final ops = <void Function(WriteBatch)>[];
+
+    // Upsert all current entities.
+    final newConceptIds = <String>{};
     for (final concept in graph.concepts) {
-      batch.set(_concepts.doc(concept.id), concept.toJson());
+      newConceptIds.add(concept.id);
+      ops.add((b) => b.set(_concepts.doc(concept.id), concept.toJson()));
     }
+    final newRelIds = <String>{};
     for (final rel in graph.relationships) {
-      batch.set(_relationships.doc(rel.id), rel.toJson());
+      newRelIds.add(rel.id);
+      ops.add((b) => b.set(_relationships.doc(rel.id), rel.toJson()));
     }
+    final newQuizIds = <String>{};
     for (final item in graph.quizItems) {
-      batch.set(_quizItems.doc(item.id), item.toJson());
+      newQuizIds.add(item.id);
+      ops.add((b) => b.set(_quizItems.doc(item.id), item.toJson()));
     }
+    final newDocIds = <String>{};
     for (final meta in graph.documentMetadata) {
-      batch.set(_documents.doc(meta.documentId), meta.toJson());
+      newDocIds.add(meta.documentId);
+      ops.add((b) => b.set(_documents.doc(meta.documentId), meta.toJson()));
     }
 
-    await batch.commit();
+    // Delete orphans — docs that exist in Firestore but not in the new graph.
+    for (final id in existingConceptIds.difference(newConceptIds)) {
+      ops.add((b) => b.delete(_concepts.doc(id)));
+    }
+    for (final id in existingRelIds.difference(newRelIds)) {
+      ops.add((b) => b.delete(_relationships.doc(id)));
+    }
+    for (final id in existingQuizIds.difference(newQuizIds)) {
+      ops.add((b) => b.delete(_quizItems.doc(id)));
+    }
+    for (final id in existingDocIds.difference(newDocIds)) {
+      ops.add((b) => b.delete(_documents.doc(id)));
+    }
+
+    await _commitBatched(ops);
   }
 
   @override
@@ -103,17 +149,17 @@ class FirestoreGraphRepository extends GraphRepository {
     required List<Relationship> relationships,
     required List<QuizItem> quizItems,
   }) async {
-    final batch = _firestore.batch();
+    final ops = <void Function(WriteBatch)>[];
     for (final concept in concepts) {
-      batch.set(_concepts.doc(concept.id), concept.toJson());
+      ops.add((b) => b.set(_concepts.doc(concept.id), concept.toJson()));
     }
     for (final rel in relationships) {
-      batch.set(_relationships.doc(rel.id), rel.toJson());
+      ops.add((b) => b.set(_relationships.doc(rel.id), rel.toJson()));
     }
     for (final item in quizItems) {
-      batch.set(_quizItems.doc(item.id), item.toJson());
+      ops.add((b) => b.set(_quizItems.doc(item.id), item.toJson()));
     }
-    await batch.commit();
+    await _commitBatched(ops);
   }
 
   @override
@@ -123,13 +169,15 @@ class FirestoreGraphRepository extends GraphRepository {
     return _concepts.snapshots().asyncMap((_) => load());
   }
 
-  Future<void> _deleteCollection(
-    CollectionReference collection,
-    WriteBatch batch,
-  ) async {
-    final snapshot = await collection.get();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
+  /// Commit a list of batch operations in chunks of [_maxBatchOps].
+  Future<void> _commitBatched(List<void Function(WriteBatch)> ops) async {
+    for (var i = 0; i < ops.length; i += _maxBatchOps) {
+      final batch = _firestore.batch();
+      final end = (i + _maxBatchOps).clamp(0, ops.length);
+      for (var j = i; j < end; j++) {
+        ops[j](batch);
+      }
+      await batch.commit();
     }
   }
 }

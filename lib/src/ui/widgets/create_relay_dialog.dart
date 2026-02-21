@@ -103,22 +103,29 @@ class _CreateRelayDialogState extends ConsumerState<CreateRelayDialog> {
                   itemCount: concepts.length,
                   itemBuilder: (context, index) {
                     final concept = concepts[index];
-                    final alreadySelected = _selectedConcepts
-                        .any((c) => c.id == concept.id);
+                    final alreadySelected = _selectedConcepts.any(
+                      (c) => c.id == concept.id,
+                    );
                     return ListTile(
                       dense: true,
                       title: Text(
                         concept.name,
                         style: const TextStyle(fontSize: 13),
                       ),
-                      trailing: alreadySelected
-                          ? const Icon(Icons.check, size: 16, color: Colors.green)
-                          : null,
-                      onTap: alreadySelected
-                          ? null
-                          : () {
-                              setState(() => _selectedConcepts.add(concept));
-                            },
+                      trailing:
+                          alreadySelected
+                              ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.green,
+                              )
+                              : null,
+                      onTap:
+                          alreadySelected
+                              ? null
+                              : () {
+                                setState(() => _selectedConcepts.add(concept));
+                              },
                     );
                   },
                 ),
@@ -145,14 +152,14 @@ class _CreateRelayDialogState extends ConsumerState<CreateRelayDialog> {
   }
 
   Future<void> _createRelay() async {
-    final legs = _selectedConcepts
-        .map((c) => RelayLeg(conceptId: c.id, conceptName: c.name))
-        .toList();
+    final legs =
+        _selectedConcepts
+            .map((c) => RelayLeg(conceptId: c.id, conceptName: c.name))
+            .toList();
 
-    await ref.read(relayProvider.notifier).createRelay(
-          title: _titleController.text,
-          legs: legs,
-        );
+    await ref
+        .read(relayProvider.notifier)
+        .createRelay(title: _titleController.text, legs: legs);
 
     if (mounted) Navigator.of(context).pop();
   }

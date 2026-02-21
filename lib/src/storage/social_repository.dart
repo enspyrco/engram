@@ -12,9 +12,9 @@ class SocialRepository {
     required FirebaseFirestore firestore,
     required String userId,
     DateTime Function()? clock,
-  })  : _firestore = firestore,
-        _userId = userId,
-        _clock = clock ?? _defaultClock;
+  }) : _firestore = firestore,
+       _userId = userId,
+       _clock = clock ?? _defaultClock;
 
   static DateTime _defaultClock() => DateTime.now().toUtc();
 
@@ -36,11 +36,11 @@ class SocialRepository {
         .collection('members')
         .doc(_userId)
         .set({
-      'uid': _userId,
-      'displayName': displayName,
-      'photoUrl': photoUrl,
-      'joinedAt': _clock().toIso8601String(),
-    }, SetOptions(merge: true));
+          'uid': _userId,
+          'displayName': displayName,
+          'photoUrl': photoUrl,
+          'joinedAt': _clock().toIso8601String(),
+        }, SetOptions(merge: true));
   }
 
   /// List all members of a wiki group.
@@ -50,10 +50,13 @@ class SocialRepository {
         .doc(wikiUrlHash)
         .collection('members')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .where((doc) => doc.id != _userId) // exclude self
-            .map((doc) => Friend.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .where((doc) => doc.id != _userId) // exclude self
+                  .map((doc) => Friend.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   // --- Friends ---
@@ -75,8 +78,10 @@ class SocialRepository {
         .doc(_userId)
         .collection('friends')
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Friend.fromJson(doc.data())).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Friend.fromJson(doc.data())).toList(),
+        );
   }
 
   // --- Detailed Mastery Snapshots ---
@@ -105,13 +110,13 @@ class SocialRepository {
         .collection('memberSnapshots')
         .snapshots()
         .map((snapshot) {
-      final result = <String, DetailedMasterySnapshot>{};
-      for (final doc in snapshot.docs) {
-        if (doc.id == _userId) continue; // exclude self
-        result[doc.id] = DetailedMasterySnapshot.fromJson(doc.data());
-      }
-      return result;
-    });
+          final result = <String, DetailedMasterySnapshot>{};
+          for (final doc in snapshot.docs) {
+            if (doc.id == _userId) continue; // exclude self
+            result[doc.id] = DetailedMasterySnapshot.fromJson(doc.data());
+          }
+          return result;
+        });
   }
 
   // --- Challenges ---
@@ -135,9 +140,12 @@ class SocialRepository {
         .where('toUid', isEqualTo: _userId)
         .where('status', isEqualTo: ChallengeStatus.pending.name)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Challenge.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Challenge.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Update challenge status (accept, complete, decline).
@@ -177,8 +185,10 @@ class SocialRepository {
         .where('toUid', isEqualTo: _userId)
         .where('status', isEqualTo: NudgeStatus.pending.name)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Nudge.fromJson(doc.data())).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Nudge.fromJson(doc.data())).toList(),
+        );
   }
 
   /// Mark nudge as seen.

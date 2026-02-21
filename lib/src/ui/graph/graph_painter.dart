@@ -113,9 +113,11 @@ class GraphPainter extends CustomPainter {
     // Layer 4: Concept labels
     for (final node in nodes) {
       final isDragging = node.id == draggingNodeId;
-      _paintLabel(canvas, node,
-          effectiveRadius:
-              isDragging ? node.radius * dragScaleFactor : null);
+      _paintLabel(
+        canvas,
+        node,
+        effectiveRadius: isDragging ? node.radius * dragScaleFactor : null,
+      );
     }
     // Layer 5: Team avatar nodes (on top)
     for (final teamNode in teamNodes) {
@@ -156,7 +158,8 @@ class GraphPainter extends CustomPainter {
       final paint = _paintForType(edge.type);
       final src = edge.source.position;
       final tgt = edge.target.position;
-      final isDashed = edge.type == RelationshipType.analogy ||
+      final isDashed =
+          edge.type == RelationshipType.analogy ||
           edge.type == RelationshipType.contrast;
 
       if (isDashed) {
@@ -173,8 +176,7 @@ class GraphPainter extends CustomPainter {
 
   /// Whether the given relationship type should render an arrowhead.
   static bool _hasArrowhead(RelationshipType type) =>
-      type == RelationshipType.prerequisite ||
-      type == RelationshipType.enables;
+      type == RelationshipType.prerequisite || type == RelationshipType.enables;
 
   /// Returns a [Paint] configured for the given [RelationshipType].
   static Paint _paintForType(RelationshipType type) {
@@ -237,17 +239,18 @@ class GraphPainter extends CustomPainter {
     final tip = to - unit * arrowTipOffset;
     final perpendicular = Offset(-unit.dy, unit.dx);
 
-    final path = Path()
-      ..moveTo(tip.dx, tip.dy)
-      ..lineTo(
-        tip.dx - unit.dx * arrowSize + perpendicular.dx * arrowSize * 0.5,
-        tip.dy - unit.dy * arrowSize + perpendicular.dy * arrowSize * 0.5,
-      )
-      ..lineTo(
-        tip.dx - unit.dx * arrowSize - perpendicular.dx * arrowSize * 0.5,
-        tip.dy - unit.dy * arrowSize - perpendicular.dy * arrowSize * 0.5,
-      )
-      ..close();
+    final path =
+        Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo(
+            tip.dx - unit.dx * arrowSize + perpendicular.dx * arrowSize * 0.5,
+            tip.dy - unit.dy * arrowSize + perpendicular.dy * arrowSize * 0.5,
+          )
+          ..lineTo(
+            tip.dx - unit.dx * arrowSize - perpendicular.dx * arrowSize * 0.5,
+            tip.dy - unit.dy * arrowSize - perpendicular.dy * arrowSize * 0.5,
+          )
+          ..close();
 
     canvas.drawPath(
       path,
@@ -278,15 +281,12 @@ class GraphPainter extends CustomPainter {
 
     if (node.masteryState == MasteryState.mastered) {
       final glowRadius = node.radius * masteryGlowRadiusMultiplier;
-      final glowPaint = Paint()
-        ..shader = ui.Gradient.radial(
-          node.position,
-          glowRadius,
-          [
-            color.withValues(alpha: 0.4),
-            color.withValues(alpha: 0.0),
-          ],
-        );
+      final glowPaint =
+          Paint()
+            ..shader = ui.Gradient.radial(node.position, glowRadius, [
+              color.withValues(alpha: 0.4),
+              color.withValues(alpha: 0.0),
+            ]);
       canvas.drawCircle(node.position, glowRadius, glowPaint);
     }
 
@@ -301,7 +301,8 @@ class GraphPainter extends CustomPainter {
       );
     }
 
-    final opacity = minFreshnessOpacity + (1.0 - minFreshnessOpacity) * node.freshness;
+    final opacity =
+        minFreshnessOpacity + (1.0 - minFreshnessOpacity) * node.freshness;
     final nodePaint = Paint()..color = color.withValues(alpha: opacity);
     canvas.drawCircle(node.position, effectiveRadius, nodePaint);
 
@@ -341,14 +342,15 @@ class GraphPainter extends CustomPainter {
     );
     const badgeSize = shieldBadgeSize;
 
-    final path = Path()
-      ..moveTo(badgeCenter.dx, badgeCenter.dy - badgeSize)
-      ..lineTo(badgeCenter.dx + badgeSize, badgeCenter.dy - badgeSize * 0.3)
-      ..lineTo(badgeCenter.dx + badgeSize * 0.7, badgeCenter.dy + badgeSize)
-      ..lineTo(badgeCenter.dx, badgeCenter.dy + badgeSize * 0.6)
-      ..lineTo(badgeCenter.dx - badgeSize * 0.7, badgeCenter.dy + badgeSize)
-      ..lineTo(badgeCenter.dx - badgeSize, badgeCenter.dy - badgeSize * 0.3)
-      ..close();
+    final path =
+        Path()
+          ..moveTo(badgeCenter.dx, badgeCenter.dy - badgeSize)
+          ..lineTo(badgeCenter.dx + badgeSize, badgeCenter.dy - badgeSize * 0.3)
+          ..lineTo(badgeCenter.dx + badgeSize * 0.7, badgeCenter.dy + badgeSize)
+          ..lineTo(badgeCenter.dx, badgeCenter.dy + badgeSize * 0.6)
+          ..lineTo(badgeCenter.dx - badgeSize * 0.7, badgeCenter.dy + badgeSize)
+          ..lineTo(badgeCenter.dx - badgeSize, badgeCenter.dy - badgeSize * 0.3)
+          ..close();
 
     canvas.drawPath(
       path,
@@ -359,22 +361,26 @@ class GraphPainter extends CustomPainter {
   }
 
   void _paintLabel(Canvas canvas, GraphNode node, {double? effectiveRadius}) {
-    final paragraphBuilder = ui.ParagraphBuilder(
-      ui.ParagraphStyle(
-        textAlign: TextAlign.center,
-        fontSize: 10,
-        maxLines: 1,
-        ellipsis: '...',
-      ),
-    )
-      ..pushStyle(ui.TextStyle(
-        color: Colors.white.withValues(alpha: 0.9),
-        fontSize: 10,
-      ))
-      ..addText(node.name);
+    final paragraphBuilder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(
+              textAlign: TextAlign.center,
+              fontSize: 10,
+              maxLines: 1,
+              ellipsis: '...',
+            ),
+          )
+          ..pushStyle(
+            ui.TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 10,
+            ),
+          )
+          ..addText(node.name);
 
-    final paragraph = paragraphBuilder.build()
-      ..layout(const ui.ParagraphConstraints(width: labelMaxWidth));
+    final paragraph =
+        paragraphBuilder.build()
+          ..layout(const ui.ParagraphConstraints(width: labelMaxWidth));
 
     final labelOffset = Offset(
       node.position.dx - paragraph.width / 2,
@@ -389,7 +395,8 @@ class GraphPainter extends CustomPainter {
     final r = teamNode.radius;
 
     // Health ring: green (healthy) → red (neglected)
-    final healthColor = Color.lerp(Colors.red, Colors.green, teamNode.healthRatio)!;
+    final healthColor =
+        Color.lerp(Colors.red, Colors.green, teamNode.healthRatio)!;
     canvas.drawCircle(
       pos,
       r + teamHealthRingGap,
@@ -420,22 +427,26 @@ class GraphPainter extends CustomPainter {
     }
 
     // Name label below avatar
-    final paragraphBuilder = ui.ParagraphBuilder(
-      ui.ParagraphStyle(
-        textAlign: TextAlign.center,
-        fontSize: 9,
-        maxLines: 1,
-        ellipsis: '...',
-      ),
-    )
-      ..pushStyle(ui.TextStyle(
-        color: Colors.white.withValues(alpha: 0.8),
-        fontSize: 9,
-      ))
-      ..addText(teamNode.displayName);
+    final paragraphBuilder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(
+              textAlign: TextAlign.center,
+              fontSize: 9,
+              maxLines: 1,
+              ellipsis: '...',
+            ),
+          )
+          ..pushStyle(
+            ui.TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 9,
+            ),
+          )
+          ..addText(teamNode.displayName);
 
-    final paragraph = paragraphBuilder.build()
-      ..layout(const ui.ParagraphConstraints(width: teamLabelMaxWidth));
+    final paragraph =
+        paragraphBuilder.build()
+          ..layout(const ui.ParagraphConstraints(width: teamLabelMaxWidth));
 
     canvas.drawParagraph(
       paragraph,
@@ -450,8 +461,8 @@ class GraphPainter extends CustomPainter {
     ui.Image image,
   ) {
     canvas.save();
-    final circlePath = Path()
-      ..addOval(Rect.fromCircle(center: center, radius: radius));
+    final circlePath =
+        Path()..addOval(Rect.fromCircle(center: center, radius: radius));
     canvas.clipPath(circlePath);
 
     final srcRect = Rect.fromLTWH(
@@ -478,14 +489,16 @@ class GraphPainter extends CustomPainter {
 
     // Initial letter
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final paragraphBuilder = ui.ParagraphBuilder(
-      ui.ParagraphStyle(textAlign: TextAlign.center, fontSize: 16),
-    )
-      ..pushStyle(ui.TextStyle(color: Colors.white, fontSize: 16))
-      ..addText(initial);
+    final paragraphBuilder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(textAlign: TextAlign.center, fontSize: 16),
+          )
+          ..pushStyle(ui.TextStyle(color: Colors.white, fontSize: 16))
+          ..addText(initial);
 
-    final paragraph = paragraphBuilder.build()
-      ..layout(const ui.ParagraphConstraints(width: 40));
+    final paragraph =
+        paragraphBuilder.build()
+          ..layout(const ui.ParagraphConstraints(width: 40));
 
     canvas.drawParagraph(
       paragraph,

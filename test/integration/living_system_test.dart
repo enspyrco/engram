@@ -33,9 +33,10 @@ class MockExtractionService extends Mock implements ExtractionService {}
 
 /// A fixed "now" for all test graphs. Items with nextReview in the past are due.
 final _testNow = DateTime.utc(2026, 1, 15);
-final _pastReview = _testNow.subtract(const Duration(days: 1)).toIso8601String();
-final _ingestedAt = _testNow.subtract(const Duration(days: 14)).toIso8601String();
-final _docUpdatedAt = _testNow.subtract(const Duration(days: 15)).toIso8601String();
+final _pastReview = _testNow.subtract(const Duration(days: 1));
+final _ingestedAt = _testNow.subtract(const Duration(days: 14));
+final _docUpdatedAt =
+    _testNow.subtract(const Duration(days: 15)).toIso8601String();
 
 /// Builds a graph modeling: Docker (foundational) → Kubernetes (depends on Docker)
 /// → Helm (depends on Kubernetes). This creates a 3-tier dependency chain.
@@ -148,7 +149,8 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
-    ProviderContainer createContainer(KnowledgeGraph graph, {
+    ProviderContainer createContainer(
+      KnowledgeGraph graph, {
       http.Client? httpClient,
       ExtractionService? extraction,
     }) {
@@ -157,8 +159,9 @@ void main() {
 
       return ProviderContainer(
         overrides: [
-          settingsProvider
-              .overrideWith(() => _FakeSettingsNotifier(tempDir.path)),
+          settingsProvider.overrideWith(
+            () => _FakeSettingsNotifier(tempDir.path),
+          ),
           graphRepositoryProvider.overrideWithValue(store),
           sharedPreferencesProvider.overrideWithValue(prefs),
           settingsRepositoryProvider.overrideWithValue(settingsRepo),
@@ -176,26 +179,29 @@ void main() {
       );
     }
 
-    test('dependency chain: only foundational concepts are schedulable initially', () async {
-      final graph = buildDependencyGraph();
-      final container = createContainer(graph);
-      await container.read(knowledgeGraphProvider.future);
+    test(
+      'dependency chain: only foundational concepts are schedulable initially',
+      () async {
+        final graph = buildDependencyGraph();
+        final container = createContainer(graph);
+        await container.read(knowledgeGraphProvider.future);
 
-      final stats = container.read(dashboardStatsProvider);
+        final stats = container.read(dashboardStatsProvider);
 
-      // Docker is foundational (no prerequisites)
-      expect(stats.foundationalCount, 1);
-      // Docker is unlocked, plus it itself has no prereqs
-      // Kubernetes depends on Docker (unmastered) → locked
-      // Helm depends on Kubernetes (unmastered) → locked
-      expect(stats.lockedCount, 2);
+        // Docker is foundational (no prerequisites)
+        expect(stats.foundationalCount, 1);
+        // Docker is unlocked, plus it itself has no prereqs
+        // Kubernetes depends on Docker (unmastered) → locked
+        // Helm depends on Kubernetes (unmastered) → locked
+        expect(stats.lockedCount, 2);
 
-      // Only Docker's quiz item should be due (Kubernetes & Helm are locked)
-      final loadedGraph = await container.read(knowledgeGraphProvider.future);
-      final due = scheduleDueItems(loadedGraph);
-      expect(due, hasLength(1));
-      expect(due.first.conceptId, 'docker');
-    });
+        // Only Docker's quiz item should be due (Kubernetes & Helm are locked)
+        final loadedGraph = await container.read(knowledgeGraphProvider.future);
+        final due = scheduleDueItems(loadedGraph);
+        expect(due, hasLength(1));
+        expect(due.first.conceptId, 'docker');
+      },
+    );
 
     test('mastering a concept unlocks its dependents', () async {
       // Docker already mastered (reps=1), so Kubernetes should unlock
@@ -212,7 +218,10 @@ void main() {
       final loadedGraph = await container.read(knowledgeGraphProvider.future);
       final due = scheduleDueItems(loadedGraph);
       // Docker (reps=1 but nextReview is in the past) + Kubernetes should be due
-      expect(due.map((q) => q.conceptId), containsAll(['docker', 'kubernetes']));
+      expect(
+        due.map((q) => q.conceptId),
+        containsAll(['docker', 'kubernetes']),
+      );
       expect(due.any((q) => q.conceptId == 'helm'), isFalse);
     });
 
@@ -281,9 +290,8 @@ void main() {
       expect(helmPrereqs, {'kubernetes'});
 
       // Count unmastered prereqs for Helm
-      final unmasteredPrereqs = helmPrereqs
-          .where((p) => !analyzer.isConceptMastered(p))
-          .toList();
+      final unmasteredPrereqs =
+          helmPrereqs.where((p) => !analyzer.isConceptMastered(p)).toList();
       expect(unmasteredPrereqs, hasLength(1)); // Only Kubernetes
       // This means Helm would appear in "Almost unlocking" on the session summary
     });
@@ -388,9 +396,9 @@ class _FakeSettingsNotifier extends SettingsNotifier {
 
   @override
   EngramConfig build() => EngramConfig(
-        dataDir: _dataDir,
-        outlineApiUrl: 'https://wiki.test.com',
-        outlineApiKey: 'test-key',
-        anthropicApiKey: 'sk-ant-test',
-      );
+    dataDir: _dataDir,
+    outlineApiUrl: 'https://wiki.test.com',
+    outlineApiKey: 'test-key',
+    anthropicApiKey: 'sk-ant-test',
+  );
 }

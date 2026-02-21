@@ -14,8 +14,9 @@ import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
 
-final ingestProvider =
-    NotifierProvider<IngestNotifier, IngestState>(IngestNotifier.new);
+final ingestProvider = NotifierProvider<IngestNotifier, IngestState>(
+  IngestNotifier.new,
+);
 
 class IngestNotifier extends Notifier<IngestState> {
   @override
@@ -34,11 +35,8 @@ class IngestNotifier extends Notifier<IngestState> {
       // Show topic selection even when offline — existing topics are local.
       // New topic creation will be limited (no document list), but users
       // can still browse and re-ingest existing topics.
-      final hasTopics = ref
-              .read(knowledgeGraphProvider)
-              .valueOrNull
-              ?.topics
-              .isNotEmpty ??
+      final hasTopics =
+          ref.read(knowledgeGraphProvider).valueOrNull?.topics.isNotEmpty ??
           false;
       if (hasTopics) {
         state = state.copyWith(
@@ -55,9 +53,7 @@ class IngestNotifier extends Notifier<IngestState> {
   }
 
   void selectCollection(Map<String, dynamic> collection) {
-    state = state.copyWith(
-      selectedCollection: () => collection,
-    );
+    state = state.copyWith(selectedCollection: () => collection);
   }
 
   /// Begin configuring a new topic.
@@ -97,8 +93,7 @@ class IngestNotifier extends Notifier<IngestState> {
     state = state.copyWith(statusMessage: 'Loading documents...');
     try {
       final client = ref.read(outlineClientProvider);
-      final graph =
-          ref.read(knowledgeGraphProvider).valueOrNull;
+      final graph = ref.read(knowledgeGraphProvider).valueOrNull;
 
       final allDocs = <IngestDocument>[];
       for (final collection in state.collections) {
@@ -112,24 +107,28 @@ class IngestNotifier extends Notifier<IngestState> {
           // Compute status
           var docStatus = IngestDocumentStatus.newDoc;
           if (graph != null) {
-            final meta = graph.documentMetadata
-                .where((m) => m.documentId == docId)
-                .firstOrNull;
+            final meta =
+                graph.documentMetadata
+                    .where((m) => m.documentId == docId)
+                    .firstOrNull;
             if (meta != null) {
-              docStatus = meta.updatedAt == updatedAt
-                  ? IngestDocumentStatus.unchanged
-                  : IngestDocumentStatus.changed;
+              docStatus =
+                  meta.updatedAt == updatedAt
+                      ? IngestDocumentStatus.unchanged
+                      : IngestDocumentStatus.changed;
             }
           }
 
-          allDocs.add(IngestDocument(
-            id: docId,
-            title: doc['title'] as String,
-            updatedAt: updatedAt,
-            collectionId: collectionId,
-            collectionName: collectionName,
-            status: docStatus,
-          ));
+          allDocs.add(
+            IngestDocument(
+              id: docId,
+              title: doc['title'] as String,
+              updatedAt: updatedAt,
+              collectionId: collectionId,
+              collectionName: collectionName,
+              status: docStatus,
+            ),
+          );
         }
       }
 
@@ -138,18 +137,17 @@ class IngestNotifier extends Notifier<IngestState> {
         statusMessage: '',
       );
     } catch (e) {
-      state = state.copyWith(
-        statusMessage: 'Failed to load documents: $e',
-      );
+      state = state.copyWith(statusMessage: 'Failed to load documents: $e');
     }
   }
 
   /// Toggle a document's selection state.
   void toggleDocument(String documentId) {
     final current = state.selectedDocumentIds;
-    final updated = current.contains(documentId)
-        ? current.remove(documentId)
-        : current.add(documentId);
+    final updated =
+        current.contains(documentId)
+            ? current.remove(documentId)
+            : current.add(documentId);
     state = state.copyWith(selectedDocumentIds: updated);
   }
 
@@ -165,10 +163,11 @@ class IngestNotifier extends Notifier<IngestState> {
 
   /// Deselect all documents in a collection.
   void deselectAllInCollection(String collectionId) {
-    final docIds = state.availableDocuments
-        .where((d) => d.collectionId == collectionId)
-        .map((d) => d.id)
-        .toSet();
+    final docIds =
+        state.availableDocuments
+            .where((d) => d.collectionId == collectionId)
+            .map((d) => d.id)
+            .toSet();
     state = state.copyWith(
       selectedDocumentIds: state.selectedDocumentIds.removeAll(docIds),
     );
@@ -183,26 +182,33 @@ class IngestNotifier extends Notifier<IngestState> {
     final now = ref.read(clockProvider)();
     final isNewTopic = state.selectedTopic == null;
 
-    final topic = isNewTopic
-        ? Topic(
-            id: const Uuid().v4(),
-            name: state.topicName.isNotEmpty
-                ? state.topicName
-                : 'Topic ${now.toIso8601String()}',
-            description:
-                state.topicDescription.isNotEmpty ? state.topicDescription : null,
-            documentIds: state.selectedDocumentIds.unlock,
-            createdAt: now.toIso8601String(),
-          )
-        : state.selectedTopic!.copyWith(
-            name: state.topicName.isNotEmpty
-                ? state.topicName
-                : state.selectedTopic!.name,
-            description: () => state.topicDescription.isNotEmpty
-                ? state.topicDescription
-                : state.selectedTopic!.description,
-            documentIds: state.selectedDocumentIds,
-          );
+    final topic =
+        isNewTopic
+            ? Topic(
+              id: const Uuid().v4(),
+              name:
+                  state.topicName.isNotEmpty
+                      ? state.topicName
+                      : 'Topic ${now.toIso8601String()}',
+              description:
+                  state.topicDescription.isNotEmpty
+                      ? state.topicDescription
+                      : null,
+              documentIds: state.selectedDocumentIds.unlock,
+              createdAt: now,
+            )
+            : state.selectedTopic!.copyWith(
+              name:
+                  state.topicName.isNotEmpty
+                      ? state.topicName
+                      : state.selectedTopic!.name,
+              description:
+                  () =>
+                      state.topicDescription.isNotEmpty
+                          ? state.topicDescription
+                          : state.selectedTopic!.description,
+              documentIds: state.selectedDocumentIds,
+            );
 
     state = state.copyWith(
       phase: IngestPhase.ingesting,
@@ -218,20 +224,29 @@ class IngestNotifier extends Notifier<IngestState> {
       final extraction = ref.read(extractionServiceProvider);
 
       // Build the list of documents to process from the selected IDs
-      final docsToProcess = state.availableDocuments
-          .where((d) => state.selectedDocumentIds.contains(d.id))
-          .toList();
+      final docsToProcess =
+          state.availableDocuments
+              .where((d) => state.selectedDocumentIds.contains(d.id))
+              .toList();
 
       state = state.copyWith(totalDocuments: docsToProcess.length);
 
       debugPrint('[Ingest] Loading existing graph from storage...');
-      final initialGraph = await ref.read(knowledgeGraphProvider.future)
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException(
-                  'Loading graph from storage timed out after 30s'));
-      debugPrint('[Ingest] Graph loaded: '
-          '${initialGraph.concepts.length} concepts, '
-          '${initialGraph.quizItems.length} quiz items');
+      final initialGraph = await ref
+          .read(knowledgeGraphProvider.future)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout:
+                () =>
+                    throw TimeoutException(
+                      'Loading graph from storage timed out after 30s',
+                    ),
+          );
+      debugPrint(
+        '[Ingest] Graph loaded: '
+        '${initialGraph.concepts.length} concepts, '
+        '${initialGraph.quizItems.length} quiz items',
+      );
 
       var graph = initialGraph;
       var extracted = 0;
@@ -247,9 +262,10 @@ class IngestNotifier extends Notifier<IngestState> {
         state = state.copyWith(currentDocumentTitle: docTitle);
 
         // Skip unchanged documents (unless force re-extract is enabled)
-        final existing = graph.documentMetadata
-            .where((m) => m.documentId == docId)
-            .firstOrNull;
+        final existing =
+            graph.documentMetadata
+                .where((m) => m.documentId == docId)
+                .firstOrNull;
         if (!forceReExtract &&
             existing != null &&
             existing.updatedAt == updatedAt) {
@@ -295,44 +311,65 @@ class IngestNotifier extends Notifier<IngestState> {
         state = state.copyWith(
           statusMessage: 'Extracting knowledge (${content.length} chars)...',
         );
-        debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
-            '(${content.length} chars)...');
+        debugPrint(
+          '[Ingest] Extracting knowledge from "$docTitle" '
+          '(${content.length} chars)...',
+        );
         final stopwatch = Stopwatch()..start();
-        final result = await extraction.extract(
-          documentTitle: docTitle,
-          documentContent: content,
-          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
-        ).timeout(const Duration(minutes: 3),
-            onTimeout: () => throw TimeoutException(
-                'Claude extraction timed out after 3 min for "$docTitle"'));
-        debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
-            '${result.concepts.length} concepts, '
-            '${result.relationships.length} relationships, '
-            '${result.quizItems.length} quiz items');
+        final result = await extraction
+            .extract(
+              documentTitle: docTitle,
+              documentContent: content,
+              existingConceptIds: graph.concepts.map((c) => c.id).toList(),
+            )
+            .timeout(
+              const Duration(minutes: 3),
+              onTimeout:
+                  () =>
+                      throw TimeoutException(
+                        'Claude extraction timed out after 3 min for "$docTitle"',
+                      ),
+            );
+        debugPrint(
+          '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
+          '${result.concepts.length} concepts, '
+          '${result.relationships.length} relationships, '
+          '${result.quizItems.length} quiz items',
+        );
 
         // Merge into graph with staggered animation
         state = state.copyWith(
           statusMessage: 'Adding ${result.concepts.length} concepts...',
-          sessionConceptIds: state.sessionConceptIds
-              .addAll(result.concepts.map((c) => c.id)),
+          sessionConceptIds: state.sessionConceptIds.addAll(
+            result.concepts.map((c) => c.id),
+          ),
         );
         debugPrint('[Ingest] Adding concepts to graph...');
         try {
-          await graphNotifier.staggeredIngestExtraction(
-            result,
-            documentId: docId,
-            documentTitle: docTitle,
-            updatedAt: updatedAt,
-            collectionId: collectionId,
-            collectionName: collectionName,
-            documentText: content,
-          ).timeout(const Duration(minutes: 2),
-              onTimeout: () => throw TimeoutException(
-                  'Staggered ingestion timed out after 2 min'));
+          await graphNotifier
+              .staggeredIngestExtraction(
+                result,
+                documentId: docId,
+                documentTitle: docTitle,
+                updatedAt: updatedAt,
+                collectionId: collectionId,
+                collectionName: collectionName,
+                documentText: content,
+              )
+              .timeout(
+                const Duration(minutes: 2),
+                onTimeout:
+                    () =>
+                        throw TimeoutException(
+                          'Staggered ingestion timed out after 2 min',
+                        ),
+              );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
-          debugPrint('[Ingest] Storage save timed out — '
-              'data is in memory, will retry on next save');
+          debugPrint(
+            '[Ingest] Storage save timed out — '
+            'data is in memory, will retry on next save',
+          );
           state = state.copyWith(
             statusMessage: 'Save timed out (data kept in memory)',
           );
@@ -351,22 +388,20 @@ class IngestNotifier extends Notifier<IngestState> {
       final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
       if (currentGraph != null && skipped > 0) {
         final repo = ref.read(graphRepositoryProvider);
-        unawaited(repo.save(currentGraph).catchError((e) {
-          debugPrint('[Ingest] Backfill batch save failed: $e');
-        }));
+        unawaited(
+          repo.save(currentGraph).catchError((e) {
+            debugPrint('[Ingest] Backfill batch save failed: $e');
+          }),
+        );
       }
 
       // Save the topic to the graph
-      final finishedTopic = topic.withLastIngestedAt(
-        ref.read(clockProvider)().toIso8601String(),
-      );
+      final finishedTopic = topic.withLastIngestedAt(ref.read(clockProvider)());
       graphNotifier.upsertTopic(finishedTopic);
 
       // Record collection IDs for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);
-      final collectionIds = docsToProcess
-          .map((d) => d.collectionId)
-          .toSet();
+      final collectionIds = docsToProcess.map((d) => d.collectionId).toSet();
       for (final cid in collectionIds) {
         await settingsRepo.addIngestedCollectionId(cid);
       }
@@ -415,13 +450,21 @@ class IngestNotifier extends Notifier<IngestState> {
       );
 
       debugPrint('[Ingest] Loading existing graph from storage...');
-      final initialGraph = await ref.read(knowledgeGraphProvider.future)
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException(
-                  'Loading graph from storage timed out after 30s'));
-      debugPrint('[Ingest] Graph loaded: '
-          '${initialGraph.concepts.length} concepts, '
-          '${initialGraph.quizItems.length} quiz items');
+      final initialGraph = await ref
+          .read(knowledgeGraphProvider.future)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout:
+                () =>
+                    throw TimeoutException(
+                      'Loading graph from storage timed out after 30s',
+                    ),
+          );
+      debugPrint(
+        '[Ingest] Graph loaded: '
+        '${initialGraph.concepts.length} concepts, '
+        '${initialGraph.quizItems.length} quiz items',
+      );
 
       var graph = initialGraph;
       var extracted = 0;
@@ -435,9 +478,10 @@ class IngestNotifier extends Notifier<IngestState> {
         state = state.copyWith(currentDocumentTitle: docTitle);
 
         // Skip unchanged documents (unless force re-extract is enabled)
-        final existing = graph.documentMetadata
-            .where((m) => m.documentId == docId)
-            .firstOrNull;
+        final existing =
+            graph.documentMetadata
+                .where((m) => m.documentId == docId)
+                .firstOrNull;
         if (!forceReExtract &&
             existing != null &&
             existing.updatedAt == updatedAt) {
@@ -483,46 +527,67 @@ class IngestNotifier extends Notifier<IngestState> {
         state = state.copyWith(
           statusMessage: 'Extracting knowledge (${content.length} chars)...',
         );
-        debugPrint('[Ingest] Extracting knowledge from "$docTitle" '
-            '(${content.length} chars)...');
+        debugPrint(
+          '[Ingest] Extracting knowledge from "$docTitle" '
+          '(${content.length} chars)...',
+        );
         final stopwatch = Stopwatch()..start();
-        final result = await extraction.extract(
-          documentTitle: docTitle,
-          documentContent: content,
-          existingConceptIds: graph.concepts.map((c) => c.id).toList(),
-        ).timeout(const Duration(minutes: 3),
-            onTimeout: () => throw TimeoutException(
-                'Claude extraction timed out after 3 min for "$docTitle"'));
-        debugPrint('[Ingest] Extraction complete in ${stopwatch.elapsed}: '
-            '${result.concepts.length} concepts, '
-            '${result.relationships.length} relationships, '
-            '${result.quizItems.length} quiz items');
+        final result = await extraction
+            .extract(
+              documentTitle: docTitle,
+              documentContent: content,
+              existingConceptIds: graph.concepts.map((c) => c.id).toList(),
+            )
+            .timeout(
+              const Duration(minutes: 3),
+              onTimeout:
+                  () =>
+                      throw TimeoutException(
+                        'Claude extraction timed out after 3 min for "$docTitle"',
+                      ),
+            );
+        debugPrint(
+          '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
+          '${result.concepts.length} concepts, '
+          '${result.relationships.length} relationships, '
+          '${result.quizItems.length} quiz items',
+        );
 
         // Merge into graph — staggered for live knowledge graph animation.
         // Register session concept IDs first so the live graph filter can
         // show nodes as they appear during staggered ingestion.
         state = state.copyWith(
           statusMessage: 'Adding ${result.concepts.length} concepts...',
-          sessionConceptIds: state.sessionConceptIds
-              .addAll(result.concepts.map((c) => c.id)),
+          sessionConceptIds: state.sessionConceptIds.addAll(
+            result.concepts.map((c) => c.id),
+          ),
         );
         debugPrint('[Ingest] Adding concepts to graph...');
         try {
-          await graphNotifier.staggeredIngestExtraction(
-            result,
-            documentId: docId,
-            documentTitle: docTitle,
-            updatedAt: updatedAt,
-            collectionId: collectionId,
-            collectionName: collectionName,
-            documentText: content,
-          ).timeout(const Duration(minutes: 2),
-              onTimeout: () => throw TimeoutException(
-                  'Staggered ingestion timed out after 2 min'));
+          await graphNotifier
+              .staggeredIngestExtraction(
+                result,
+                documentId: docId,
+                documentTitle: docTitle,
+                updatedAt: updatedAt,
+                collectionId: collectionId,
+                collectionName: collectionName,
+                documentText: content,
+              )
+              .timeout(
+                const Duration(minutes: 2),
+                onTimeout:
+                    () =>
+                        throw TimeoutException(
+                          'Staggered ingestion timed out after 2 min',
+                        ),
+              );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
-          debugPrint('[Ingest] Storage save timed out — '
-              'data is in memory, will retry on next save');
+          debugPrint(
+            '[Ingest] Storage save timed out — '
+            'data is in memory, will retry on next save',
+          );
           state = state.copyWith(
             statusMessage: 'Save timed out (data kept in memory)',
           );
@@ -542,19 +607,18 @@ class IngestNotifier extends Notifier<IngestState> {
       final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
       if (currentGraph != null && skipped > 0) {
         final repo = ref.read(graphRepositoryProvider);
-        unawaited(repo.save(currentGraph).catchError((e) {
-          debugPrint('[Ingest] Backfill batch save failed: $e');
-        }));
+        unawaited(
+          repo.save(currentGraph).catchError((e) {
+            debugPrint('[Ingest] Backfill batch save failed: $e');
+          }),
+        );
       }
 
       // Record the collection ID for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);
       await settingsRepo.addIngestedCollectionId(collectionId);
 
-      state = state.copyWith(
-        phase: IngestPhase.done,
-        currentDocumentTitle: '',
-      );
+      state = state.copyWith(phase: IngestPhase.done, currentDocumentTitle: '');
     } catch (e) {
       state = state.copyWith(
         phase: IngestPhase.error,

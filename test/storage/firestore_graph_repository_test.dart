@@ -51,12 +51,12 @@ void main() {
           answer: 'A container runtime',
         ),
       ],
-      documentMetadata: const [
+      documentMetadata: [
         DocumentMetadata(
           documentId: 'doc1',
           title: 'Container Guide',
           updatedAt: '2025-01-01T00:00:00.000Z',
-          ingestedAt: '2025-01-01T12:00:00.000Z',
+          ingestedAt: DateTime.utc(2025, 1, 1, 12),
         ),
       ],
     );
@@ -83,11 +83,11 @@ void main() {
       expect(loaded.documentMetadata, hasLength(1));
     });
 
-    test('save replaces existing data', () async {
+    test('save upserts and removes orphans', () async {
       // Save initial graph with 2 concepts
       await repo.save(sampleGraph());
 
-      // Save smaller graph
+      // Save smaller graph — c1/c2 become orphans, c3 is new
       final smallGraph = KnowledgeGraph(
         concepts: [
           Concept(
@@ -106,6 +106,27 @@ void main() {
       expect(loaded.relationships, isEmpty);
     });
 
+    test('save preserves existing docs that remain in graph', () async {
+      await repo.save(sampleGraph());
+
+      // Save graph with one concept replaced but one retained
+      final updatedGraph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c1',
+            name: 'Docker Updated',
+            description: 'Container runtime v2',
+            sourceDocumentId: 'doc1',
+          ),
+        ],
+      );
+      await repo.save(updatedGraph);
+
+      final loaded = await repo.load();
+      expect(loaded.concepts, hasLength(1));
+      expect(loaded.concepts.first.name, 'Docker Updated');
+    });
+
     test('updateQuizItem writes single document', () async {
       final graph = sampleGraph();
       await repo.save(graph);
@@ -114,7 +135,7 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
 
       await repo.updateQuizItem(graph.withUpdatedQuizItem(updated), updated);
@@ -130,14 +151,15 @@ void main() {
       await repo.save(sampleGraph());
 
       // Verify the path structure: users/{userId}/data/graph/concepts/{id}
-      final conceptDoc = await fakeFirestore
-          .collection('users')
-          .doc('test-user')
-          .collection('data')
-          .doc('graph')
-          .collection('concepts')
-          .doc('c1')
-          .get();
+      final conceptDoc =
+          await fakeFirestore
+              .collection('users')
+              .doc('test-user')
+              .collection('data')
+              .doc('graph')
+              .collection('concepts')
+              .doc('c1')
+              .get();
 
       expect(conceptDoc.exists, isTrue);
       expect(conceptDoc.data()?['name'], 'Docker');
