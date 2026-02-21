@@ -51,11 +51,7 @@ void main() {
     test('entries with zero points sort last', () {
       final entries = [
         const GloryEntry(uid: 'u1', displayName: 'Zero'),
-        const GloryEntry(
-          uid: 'u2',
-          displayName: 'Hero',
-          guardianPoints: 1,
-        ),
+        const GloryEntry(uid: 'u2', displayName: 'Hero', guardianPoints: 1),
       ];
 
       final sorted = List<GloryEntry>.of(entries)

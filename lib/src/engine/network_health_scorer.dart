@@ -21,9 +21,9 @@ class NetworkHealthScorer {
     DateTime? now,
     List<ConceptCluster>? clusters,
     double decayMultiplier = 1.0,
-  })  : _now = now,
-        _clusters = clusters,
-        _decayMultiplier = decayMultiplier;
+  }) : _now = now,
+       _clusters = clusters,
+       _decayMultiplier = decayMultiplier;
 
   final KnowledgeGraph _graph;
   final DateTime? _now;
@@ -36,10 +36,7 @@ class NetworkHealthScorer {
   /// Compute the full network health assessment.
   NetworkHealth score() {
     if (_graph.concepts.isEmpty) {
-      return const NetworkHealth(
-        score: 1.0,
-        tier: HealthTier.healthy,
-      );
+      return const NetworkHealth(score: 1.0, tier: HealthTier.healthy);
     }
 
     final analyzer = GraphAnalyzer(_graph);
@@ -62,8 +59,12 @@ class NetworkHealthScorer {
         case MasteryState.due:
           break;
       }
-      freshnessSum += freshnessOf(concept.id, _graph,
-          now: _now, decayMultiplier: _decayMultiplier);
+      freshnessSum += freshnessOf(
+        concept.id,
+        _graph,
+        now: _now,
+        decayMultiplier: _decayMultiplier,
+      );
     }
 
     final masteryRatio = masteredCount / total;
@@ -93,9 +94,10 @@ class NetworkHealthScorer {
 
     // Composite score
     final base = 0.5 * masteryRatio + 0.3 * learningRatio + 0.2 * avgFreshness;
-    final criticalPenalty = totalCriticalPaths > 0
-        ? 1.0 - 0.1 * (atRiskCriticalPaths / totalCriticalPaths)
-        : 1.0;
+    final criticalPenalty =
+        totalCriticalPaths > 0
+            ? 1.0 - 0.1 * (atRiskCriticalPaths / totalCriticalPaths)
+            : 1.0;
     final rawScore = (base * criticalPenalty).clamp(0.0, 1.0);
 
     // Per-cluster health
@@ -124,9 +126,10 @@ class NetworkHealthScorer {
     for (final cluster in clusters) {
       if (cluster.conceptIds.isEmpty) continue;
 
-      final clusterConcepts = _graph.concepts
-          .where((c) => cluster.conceptIds.contains(c.id))
-          .toList();
+      final clusterConcepts =
+          _graph.concepts
+              .where((c) => cluster.conceptIds.contains(c.id))
+              .toList();
       final total = clusterConcepts.length;
       if (total == 0) continue;
 
@@ -146,12 +149,15 @@ class NetworkHealthScorer {
           case MasteryState.due:
             break;
         }
-        freshness += freshnessOf(concept.id, _graph,
-            now: _now, decayMultiplier: _decayMultiplier);
+        freshness += freshnessOf(
+          concept.id,
+          _graph,
+          now: _now,
+          decayMultiplier: _decayMultiplier,
+        );
       }
 
-      final clusterScore =
-          (0.5 * mastered / total +
+      final clusterScore = (0.5 * mastered / total +
               0.3 * learning / total +
               0.2 * freshness / total)
           .clamp(0.0, 1.0);

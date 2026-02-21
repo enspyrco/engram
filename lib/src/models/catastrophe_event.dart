@@ -28,12 +28,16 @@ class CatastropheEvent {
     return CatastropheEvent._raw(
       id: json['id'] as String,
       tier: HealthTier.values.byName(json['tier'] as String),
-      affectedConceptIds: (json['affectedConceptIds'] as List<dynamic>?)
+      affectedConceptIds:
+          (json['affectedConceptIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toIList() ??
           const IListConst([]),
-      createdAt: json['createdAt'] as String,
-      resolvedAt: json['resolvedAt'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      resolvedAt:
+          json['resolvedAt'] != null
+              ? DateTime.parse(json['resolvedAt'] as String)
+              : null,
       clusterLabel: json['clusterLabel'] as String?,
     );
   }
@@ -41,27 +45,27 @@ class CatastropheEvent {
   final String id;
   final HealthTier tier;
   final IList<String> affectedConceptIds;
-  final String createdAt;
-  final String? resolvedAt;
+  final DateTime createdAt;
+  final DateTime? resolvedAt;
   final String? clusterLabel;
 
   bool get isResolved => resolvedAt != null;
 
-  CatastropheEvent withResolved(String timestamp) => CatastropheEvent._raw(
-        id: id,
-        tier: tier,
-        affectedConceptIds: affectedConceptIds,
-        createdAt: createdAt,
-        resolvedAt: timestamp,
-        clusterLabel: clusterLabel,
-      );
+  CatastropheEvent withResolved(DateTime timestamp) => CatastropheEvent._raw(
+    id: id,
+    tier: tier,
+    affectedConceptIds: affectedConceptIds,
+    createdAt: createdAt,
+    resolvedAt: timestamp,
+    clusterLabel: clusterLabel,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'tier': tier.name,
-        'affectedConceptIds': affectedConceptIds.toList(),
-        'createdAt': createdAt,
-        'resolvedAt': resolvedAt,
-        'clusterLabel': clusterLabel,
-      };
+    'id': id,
+    'tier': tier.name,
+    'affectedConceptIds': affectedConceptIds.toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'resolvedAt': resolvedAt?.toIso8601String(),
+    'clusterLabel': clusterLabel,
+  };
 }

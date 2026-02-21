@@ -36,15 +36,15 @@ void main() {
 
   ProviderContainer createContainer({KnowledgeGraph? initial}) {
     if (initial != null) {
-      final json =
-          const JsonEncoder.withIndent('  ').convert(initial.toJson());
+      final json = const JsonEncoder.withIndent('  ').convert(initial.toJson());
       File('${tempDir.path}/knowledge_graph.json').writeAsStringSync(json);
     }
 
     return ProviderContainer(
       overrides: [
-        settingsProvider
-            .overrideWith(() => _FakeSettingsNotifier(tempDir.path)),
+        settingsProvider.overrideWith(
+          () => _FakeSettingsNotifier(tempDir.path),
+        ),
         graphRepositoryProvider.overrideWithValue(store),
       ],
     );
@@ -88,52 +88,54 @@ void main() {
 
       await container.read(knowledgeGraphProvider.future);
 
-      await container.read(knowledgeGraphProvider.notifier).splitConcept(
-        children: [
-          Concept(
-            id: 'child1',
-            name: 'Child 1',
-            description: 'First sub-concept',
-            sourceDocumentId: 'doc1',
-            parentConceptId: 'parent',
-          ),
-          Concept(
-            id: 'child2',
-            name: 'Child 2',
-            description: 'Second sub-concept',
-            sourceDocumentId: 'doc1',
-            parentConceptId: 'parent',
-          ),
-        ],
-        childRelationships: [
-          const Relationship(
-            id: 'child1-part-of-parent',
-            fromConceptId: 'child1',
-            toConceptId: 'parent',
-            label: 'is part of',
-          ),
-          const Relationship(
-            id: 'child2-part-of-parent',
-            fromConceptId: 'child2',
-            toConceptId: 'parent',
-            label: 'is part of',
-          ),
-        ],
-        childQuizItems: [
-          QuizItem.newCard(
-            id: 'q-child1',
-            conceptId: 'child1',
-            question: 'What is child 1?',
-            answer: 'First aspect.',
-          ),
-          QuizItem.newCard(
-            id: 'q-child2',
-            conceptId: 'child2',
-            question: 'What is child 2?',
-            answer: 'Second aspect.',
-          ),
-        ],
-      );
+      await container
+          .read(knowledgeGraphProvider.notifier)
+          .splitConcept(
+            children: [
+              Concept(
+                id: 'child1',
+                name: 'Child 1',
+                description: 'First sub-concept',
+                sourceDocumentId: 'doc1',
+                parentConceptId: 'parent',
+              ),
+              Concept(
+                id: 'child2',
+                name: 'Child 2',
+                description: 'Second sub-concept',
+                sourceDocumentId: 'doc1',
+                parentConceptId: 'parent',
+              ),
+            ],
+            childRelationships: [
+              const Relationship(
+                id: 'child1-part-of-parent',
+                fromConceptId: 'child1',
+                toConceptId: 'parent',
+                label: 'is part of',
+              ),
+              const Relationship(
+                id: 'child2-part-of-parent',
+                fromConceptId: 'child2',
+                toConceptId: 'parent',
+                label: 'is part of',
+              ),
+            ],
+            childQuizItems: [
+              QuizItem.newCard(
+                id: 'q-child1',
+                conceptId: 'child1',
+                question: 'What is child 1?',
+                answer: 'First aspect.',
+              ),
+              QuizItem.newCard(
+                id: 'q-child2',
+                conceptId: 'child2',
+                question: 'What is child 2?',
+                answer: 'Second aspect.',
+              ),
+            ],
+          );
 
       final graph = container.read(knowledgeGraphProvider).valueOrNull;
       expect(graph, isNotNull);

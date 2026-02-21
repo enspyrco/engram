@@ -72,8 +72,13 @@ class ForceDirectedGraphWidget extends StatefulWidget {
 
   /// Optional callback fired each animation tick with layout debug info.
   /// Used by GraphLabScreen to display temperature, pinned count, etc.
-  final void Function(double temperature, int pinnedCount, int totalCount,
-      bool isSettled)? onDebugTick;
+  final void Function(
+    double temperature,
+    int pinnedCount,
+    int totalCount,
+    bool isSettled,
+  )?
+  onDebugTick;
 
   @override
   State<ForceDirectedGraphWidget> createState() =>
@@ -127,8 +132,8 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       vsync: this,
       duration: const Duration(seconds: 5),
     )..addListener(() {
-        if (_stormActive) setState(() {});
-      });
+      if (_stormActive) setState(() {});
+    });
 
     _initCatastropheEffects();
     _initStormEffects();
@@ -218,11 +223,9 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       final concept = graph.concepts[i];
       final state = masteryStateOf(concept.id, graph, analyzer);
       final freshness = freshnessOf(concept.id, graph);
-      _nodes.add(GraphNode(
-        concept: concept,
-        masteryState: state,
-        freshness: freshness,
-      ));
+      _nodes.add(
+        GraphNode(concept: concept, masteryState: state, freshness: freshness),
+      );
       nodeIndex[concept.id] = i;
     }
 
@@ -234,11 +237,13 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
       final srcIdx = nodeIndex[rel.fromConceptId];
       final tgtIdx = nodeIndex[rel.toConceptId];
       if (srcIdx == null || tgtIdx == null) continue;
-      _edges.add(GraphEdge(
-        relationship: rel,
-        source: _nodes[srcIdx],
-        target: _nodes[tgtIdx],
-      ));
+      _edges.add(
+        GraphEdge(
+          relationship: rel,
+          source: _nodes[srcIdx],
+          target: _nodes[tgtIdx],
+        ),
+      );
       layoutEdges.add((srcIdx, tgtIdx));
     }
 
@@ -412,7 +417,10 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     // Check edges (relationships)
     for (final edge in _edges) {
       if (_distanceToSegment(
-              localPoint, edge.source.position, edge.target.position) <
+            localPoint,
+            edge.source.position,
+            edge.target.position,
+          ) <
           hitRadius) {
         setState(() => _selectedNodeId = null);
         _showEdgeOverlay(edge, details.globalPosition);
@@ -433,10 +441,11 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     if (zoomFactor <= 1.01) return; // already at max
 
     // Zoom centered on the tapped viewport point.
-    final m = Matrix4.identity()
-      ..translateByDouble(viewportLocal.dx, viewportLocal.dy, 0, 0)
-      ..scaleByDouble(zoomFactor, zoomFactor, 1, 1)
-      ..translateByDouble(-viewportLocal.dx, -viewportLocal.dy, 0, 0);
+    final m =
+        Matrix4.identity()
+          ..translateByDouble(viewportLocal.dx, viewportLocal.dy, 0, 0)
+          ..scaleByDouble(zoomFactor, zoomFactor, 1, 1)
+          ..translateByDouble(-viewportLocal.dx, -viewportLocal.dy, 0, 0);
     _transformController.value = m * _transformController.value;
   }
 
@@ -511,15 +520,16 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     _removeOverlay();
 
     _overlayEntry = OverlayEntry(
-      builder: (_) => Positioned(
-        left: globalPosition.dx + 12,
-        top: globalPosition.dy - 20,
-        child: Material(
-          elevation: 0,
-          color: Colors.transparent,
-          child: _NodePanel(node: node),
-        ),
-      ),
+      builder:
+          (_) => Positioned(
+            left: globalPosition.dx + 12,
+            top: globalPosition.dy - 20,
+            child: Material(
+              elevation: 0,
+              color: Colors.transparent,
+              child: _NodePanel(node: node),
+            ),
+          ),
     );
     Overlay.of(context).insert(_overlayEntry!);
   }
@@ -528,15 +538,16 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     _removeOverlay();
 
     _overlayEntry = OverlayEntry(
-      builder: (_) => Positioned(
-        left: globalPosition.dx + 12,
-        top: globalPosition.dy - 20,
-        child: Material(
-          elevation: 0,
-          color: Colors.transparent,
-          child: _TeamNodePanel(teamNode: teamNode),
-        ),
-      ),
+      builder:
+          (_) => Positioned(
+            left: globalPosition.dx + 12,
+            top: globalPosition.dy - 20,
+            child: Material(
+              elevation: 0,
+              color: Colors.transparent,
+              child: _TeamNodePanel(teamNode: teamNode),
+            ),
+          ),
     );
     Overlay.of(context).insert(_overlayEntry!);
   }
@@ -545,15 +556,16 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
     _removeOverlay();
 
     _overlayEntry = OverlayEntry(
-      builder: (_) => Positioned(
-        left: globalPosition.dx + 12,
-        top: globalPosition.dy - 20,
-        child: Material(
-          elevation: 0,
-          color: Colors.transparent,
-          child: EdgePanel(edge: edge),
-        ),
-      ),
+      builder:
+          (_) => Positioned(
+            left: globalPosition.dx + 12,
+            top: globalPosition.dy - 20,
+            child: Material(
+              elevation: 0,
+              color: Colors.transparent,
+              child: EdgePanel(edge: edge),
+            ),
+          ),
     );
     Overlay.of(context).insert(_overlayEntry!);
   }
@@ -623,30 +635,33 @@ class _ForceDirectedGraphWidgetState extends State<ForceDirectedGraphWidget>
             teamNodes: widget.teamNodes,
             avatarCache: _avatarCache,
             selectedNodeId: _selectedNodeId,
-            draggingNodeId: _draggingNodeIndex != null
-                ? _nodes[_draggingNodeIndex!].id
-                : null,
+            draggingNodeId:
+                _draggingNodeIndex != null
+                    ? _nodes[_draggingNodeIndex!].id
+                    : null,
             guardianMap: widget.guardianMap,
             currentUserUid: widget.currentUserUid,
           ),
-          foregroundPainter: _catastropheActive
-              ? CatastrophePainter(
-                  nodes: _nodes,
-                  edges: _edges,
-                  tier: widget.healthTier,
-                  animationProgress: _catastropheController.value,
-                )
-              : null,
-          child: _stormActive
-              ? CustomPaint(
-                  size: graphSize,
-                  painter: StormOverlayPainter(
+          foregroundPainter:
+              _catastropheActive
+                  ? CatastrophePainter(
+                    nodes: _nodes,
                     edges: _edges,
-                    animationProgress: _stormController.value,
-                  ),
-                  child: child,
-                )
-              : child,
+                    tier: widget.healthTier,
+                    animationProgress: _catastropheController.value,
+                  )
+                  : null,
+          child:
+              _stormActive
+                  ? CustomPaint(
+                    size: graphSize,
+                    painter: StormOverlayPainter(
+                      edges: _edges,
+                      animationProgress: _stormController.value,
+                    ),
+                    child: child,
+                  )
+                  : child,
         ),
       ),
     );
@@ -760,17 +775,19 @@ class _TeamNodePanel extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundImage: teamNode.photoUrl != null
-                      ? NetworkImage(teamNode.photoUrl!)
-                      : null,
-                  child: teamNode.photoUrl == null
-                      ? Text(
-                          teamNode.displayName.isNotEmpty
-                              ? teamNode.displayName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(fontSize: 12),
-                        )
-                      : null,
+                  backgroundImage:
+                      teamNode.photoUrl != null
+                          ? NetworkImage(teamNode.photoUrl!)
+                          : null,
+                  child:
+                      teamNode.photoUrl == null
+                          ? Text(
+                            teamNode.displayName.isNotEmpty
+                                ? teamNode.displayName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(fontSize: 12),
+                          )
+                          : null,
                 ),
                 const SizedBox(width: 8),
                 Flexible(
@@ -817,4 +834,3 @@ class _TeamNodePanel extends StatelessWidget {
     );
   }
 }
-

@@ -43,8 +43,7 @@ class GraphAnalyzer {
       _dependents[conceptId] ?? const {};
 
   /// The child concept IDs of a parent concept.
-  Set<String> childrenOf(String conceptId) =>
-      _children[conceptId] ?? const {};
+  Set<String> childrenOf(String conceptId) => _children[conceptId] ?? const {};
 
   /// Whether this concept has been split into sub-concepts.
   bool hasChildren(String conceptId) =>
@@ -60,9 +59,9 @@ class GraphAnalyzer {
     if (!seen.add(conceptId)) return true; // cycle guard
 
     if (hasChildren(conceptId)) {
-      return childrenOf(conceptId).every(
-        (childId) => isConceptMastered(childId, visited: seen),
-      );
+      return childrenOf(
+        conceptId,
+      ).every((childId) => isConceptMastered(childId, visited: seen));
     }
 
     final reps = _conceptRepetitions[conceptId];
@@ -81,22 +80,25 @@ class GraphAnalyzer {
   }
 
   /// Concepts with no prerequisites (entry points into the graph).
-  late final List<String> foundationalConcepts = _graph.concepts
-      .where((c) => prerequisitesOf(c.id).isEmpty)
-      .map((c) => c.id)
-      .toList();
+  late final List<String> foundationalConcepts =
+      _graph.concepts
+          .where((c) => prerequisitesOf(c.id).isEmpty)
+          .map((c) => c.id)
+          .toList();
 
   /// Concepts whose prerequisites are all mastered.
-  late final List<String> unlockedConcepts = _graph.concepts
-      .where((c) => isConceptUnlocked(c.id))
-      .map((c) => c.id)
-      .toList();
+  late final List<String> unlockedConcepts =
+      _graph.concepts
+          .where((c) => isConceptUnlocked(c.id))
+          .map((c) => c.id)
+          .toList();
 
   /// Concepts with at least one unmastered prerequisite.
-  late final List<String> lockedConcepts = _graph.concepts
-      .where((c) => !isConceptUnlocked(c.id))
-      .map((c) => c.id)
-      .toList();
+  late final List<String> lockedConcepts =
+      _graph.concepts
+          .where((c) => !isConceptUnlocked(c.id))
+          .map((c) => c.id)
+          .toList();
 
   /// Returns a topological ordering of concept IDs respecting dependency
   /// edges, or `null` if the graph contains cycles.

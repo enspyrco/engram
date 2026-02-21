@@ -17,8 +17,8 @@ const _uuid = Uuid();
 /// provides claim/complete/create operations.
 final relayProvider =
     AsyncNotifierProvider<RelayNotifier, List<RelayChallenge>>(
-  RelayNotifier.new,
-);
+      RelayNotifier.new,
+    );
 
 class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
   @override
@@ -49,7 +49,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
       id: 'relay_${_uuid.v4()}',
       title: title,
       legs: legs,
-      createdAt: now.toIso8601String(),
+      createdAt: now,
       createdByUid: user.uid,
     );
 
@@ -72,17 +72,15 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     if (relay.legs[legIndex].statusAt(now) != RelayLegStatus.unclaimed) return;
 
     // Validate: prior leg must be completed (or this is the first leg)
-    if (legIndex > 0 &&
-        relay.legs[legIndex - 1].completedAt == null) {
+    if (legIndex > 0 && relay.legs[legIndex - 1].completedAt == null) {
       return;
     }
 
-    final nowStr = now.toIso8601String();
     final updated = relay.withLegClaimed(
       legIndex,
       uid: user.uid,
       displayName: profile?.displayName ?? 'Someone',
-      timestamp: nowStr,
+      timestamp: now,
     );
 
     await teamRepo.updateRelay(updated);
@@ -102,8 +100,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     if (leg.completedAt != null) return; // already completed
 
     final now = ref.read(clockProvider)();
-    final nowStr = now.toIso8601String();
-    var updated = relay.withLegCompleted(legIndex, nowStr);
+    var updated = relay.withLegCompleted(legIndex, now);
 
     // Determine glory points
     var points = 3; // base per leg
@@ -116,7 +113,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
     // Check if this was the final leg
     final isLastLeg = updated.completedLegs == updated.legs.length;
     if (isLastLeg) {
-      updated = updated.withCompleted(nowStr);
+      updated = updated.withCompleted(now);
       points += 5; // bonus for completing the relay
     }
 
@@ -136,8 +133,7 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
 
         // Debounce: only nudge if >6h since last nudge
         if (leg.lastStallNudgeAt != null) {
-          final lastNudge = DateTime.parse(leg.lastStallNudgeAt!);
-          if (now.difference(lastNudge).inHours < 6) continue;
+          if (now.difference(leg.lastStallNudgeAt!).inHours < 6) continue;
         }
 
         _sendStallNudge(relay, i, now);
@@ -160,15 +156,16 @@ class RelayNotifier extends AsyncNotifier<List<RelayChallenge>> {
       fromName: 'Relay System',
       toUid: leg.claimedByUid!,
       conceptName: leg.conceptName,
-      message: 'Your relay leg "${leg.conceptName}" in "${relay.title}" '
+      message:
+          'Your relay leg "${leg.conceptName}" in "${relay.title}" '
           'is overdue! Master it or let someone else take over.',
-      createdAt: now.toIso8601String(),
+      createdAt: now,
     );
 
     unawaited(ref.read(nudgeProvider.notifier).sendNudge(nudge));
 
     // Update the leg's lastStallNudgeAt
-    final updated = relay.withLegStallNudge(legIndex, now.toIso8601String());
+    final updated = relay.withLegStallNudge(legIndex, now);
     unawaited(teamRepo.updateRelay(updated));
   }
 }

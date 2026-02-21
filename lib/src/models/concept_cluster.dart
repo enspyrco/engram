@@ -22,7 +22,8 @@ class ConceptCluster {
   factory ConceptCluster.fromJson(Map<String, dynamic> json) {
     return ConceptCluster._raw(
       label: json['label'] as String,
-      conceptIds: (json['conceptIds'] as List<dynamic>?)
+      conceptIds:
+          (json['conceptIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toIList() ??
           const IListConst([]),
@@ -42,14 +43,14 @@ class ConceptCluster {
   bool get hasGuardian => guardianUid != null;
 
   ConceptCluster withGuardian(String? uid) => ConceptCluster._raw(
-        label: label,
-        conceptIds: conceptIds,
-        guardianUid: uid,
-      );
+    label: label,
+    conceptIds: conceptIds,
+    guardianUid: uid,
+  );
 
   Map<String, dynamic> toJson() => {
-        'label': label,
-        'conceptIds': conceptIds.toList(),
-        'guardianUid': guardianUid,
-      };
+    'label': label,
+    'conceptIds': conceptIds.toList(),
+    'guardianUid': guardianUid,
+  };
 }

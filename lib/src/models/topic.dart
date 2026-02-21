@@ -28,12 +28,16 @@ class Topic {
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      documentIds: (json['documentIds'] as List<dynamic>?)
+      documentIds:
+          (json['documentIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toISet() ??
           const ISetConst({}),
-      createdAt: json['createdAt'] as String,
-      lastIngestedAt: json['lastIngestedAt'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      lastIngestedAt:
+          json['lastIngestedAt'] != null
+              ? DateTime.parse(json['lastIngestedAt'] as String)
+              : null,
     );
   }
 
@@ -41,16 +45,16 @@ class Topic {
   final String name;
   final String? description;
   final ISet<String> documentIds;
-  final String createdAt;
-  final String? lastIngestedAt;
+  final DateTime createdAt;
+  final DateTime? lastIngestedAt;
 
   Topic copyWith({
     String? id,
     String? name,
     String? Function()? description,
     ISet<String>? documentIds,
-    String? createdAt,
-    String? Function()? lastIngestedAt,
+    DateTime? createdAt,
+    DateTime? Function()? lastIngestedAt,
   }) {
     return Topic._raw(
       id: id ?? this.id,
@@ -67,18 +71,19 @@ class Topic {
     return copyWith(documentIds: ISet(documentIds));
   }
 
-  Topic withLastIngestedAt(String lastIngestedAt) {
+  Topic withLastIngestedAt(DateTime lastIngestedAt) {
     return copyWith(lastIngestedAt: () => lastIngestedAt);
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        if (description != null) 'description': description,
-        'documentIds': documentIds.toList(),
-        'createdAt': createdAt,
-        if (lastIngestedAt != null) 'lastIngestedAt': lastIngestedAt,
-      };
+    'id': id,
+    'name': name,
+    if (description != null) 'description': description,
+    'documentIds': documentIds.toList(),
+    'createdAt': createdAt.toIso8601String(),
+    if (lastIngestedAt != null)
+      'lastIngestedAt': lastIngestedAt!.toIso8601String(),
+  };
 
   @override
   bool operator ==(Object other) =>

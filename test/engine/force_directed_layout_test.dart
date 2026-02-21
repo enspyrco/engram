@@ -17,9 +17,9 @@ void main() {
       final after = layout.positions;
 
       // At least one position should have moved
-      final moved = Iterable.generate(3).any(
-        (i) => (after[i] - before[i]).distance > 0.01,
-      );
+      final moved = Iterable.generate(
+        3,
+      ).any((i) => (after[i] - before[i]).distance > 0.01);
       expect(moved, isTrue);
     });
 
@@ -57,8 +57,14 @@ void main() {
       while (layout2.step()) {}
 
       for (var i = 0; i < 3; i++) {
-        expect(layout1.positions[i].dx, closeTo(layout2.positions[i].dx, 0.001));
-        expect(layout1.positions[i].dy, closeTo(layout2.positions[i].dy, 0.001));
+        expect(
+          layout1.positions[i].dx,
+          closeTo(layout2.positions[i].dx, 0.001),
+        );
+        expect(
+          layout1.positions[i].dy,
+          closeTo(layout2.positions[i].dy, 0.001),
+        );
       }
     });
 
@@ -90,11 +96,7 @@ void main() {
     });
 
     test('single node settles without edges', () {
-      final layout = ForceDirectedLayout(
-        nodeCount: 1,
-        edges: [],
-        seed: 42,
-      );
+      final layout = ForceDirectedLayout(nodeCount: 1, edges: [], seed: 42);
 
       var steps = 0;
       while (layout.step()) {

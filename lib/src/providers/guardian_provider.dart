@@ -26,15 +26,10 @@ final teamRepositoryProvider = Provider<TeamRepository?>((ref) {
 /// Guardian system state: cluster assignments and the current user's role.
 @immutable
 class GuardianState {
-  GuardianState({
-    List<ConceptCluster> clusters = const [],
-    this.currentUid,
-  }) : clusters = IList(clusters);
+  GuardianState({List<ConceptCluster> clusters = const [], this.currentUid})
+    : clusters = IList(clusters);
 
-  const GuardianState._raw({
-    required this.clusters,
-    this.currentUid,
-  });
+  const GuardianState._raw({required this.clusters, this.currentUid});
 
   final IList<ConceptCluster> clusters;
   final String? currentUid;
@@ -47,10 +42,7 @@ class GuardianState {
   String? guardianForCluster(String label) =>
       clusters.where((c) => c.label == label).firstOrNull?.guardianUid;
 
-  GuardianState copyWith({
-    List<ConceptCluster>? clusters,
-    String? currentUid,
-  }) {
+  GuardianState copyWith({List<ConceptCluster>? clusters, String? currentUid}) {
     return GuardianState._raw(
       clusters: clusters != null ? IList(clusters) : this.clusters,
       currentUid: currentUid ?? this.currentUid,
@@ -63,8 +55,9 @@ class GuardianState {
 /// Watches clusters from Firestore via [TeamRepository] and provides
 /// volunteer/resign operations. Awards guardian points when a guarded
 /// cluster stays above 80% health.
-final guardianProvider =
-    NotifierProvider<GuardianNotifier, GuardianState>(GuardianNotifier.new);
+final guardianProvider = NotifierProvider<GuardianNotifier, GuardianState>(
+  GuardianNotifier.new,
+);
 
 class GuardianNotifier extends Notifier<GuardianState> {
   @override

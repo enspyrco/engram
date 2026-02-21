@@ -7,9 +7,12 @@ class OutlineClient {
     required String apiUrl,
     required String apiKey,
     http.Client? httpClient,
-  })  : _apiUrl = apiUrl.endsWith('/') ? apiUrl.substring(0, apiUrl.length - 1) : apiUrl,
-        _apiKey = apiKey,
-        _httpClient = httpClient ?? http.Client();
+  }) : _apiUrl =
+           apiUrl.endsWith('/')
+               ? apiUrl.substring(0, apiUrl.length - 1)
+               : apiUrl,
+       _apiKey = apiKey,
+       _httpClient = httpClient ?? http.Client();
 
   final String _apiUrl;
   final String _apiKey;
@@ -58,9 +61,7 @@ class OutlineClient {
   }
 
   /// List all documents in a collection, handling pagination.
-  Future<List<Map<String, dynamic>>> listDocuments(
-    String collectionId,
-  ) async {
+  Future<List<Map<String, dynamic>>> listDocuments(String collectionId) async {
     final allDocs = <Map<String, dynamic>>[];
     var offset = 0;
     const limit = 25;

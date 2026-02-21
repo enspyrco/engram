@@ -118,7 +118,7 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
           easeFactor: 2.5,
           interval: 0,
           repetitions: 0,
-          nextReview: _now.toIso8601String(),
+          nextReview: _now,
           lastReview: null,
         );
       case 1: // learning
@@ -130,8 +130,8 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
           easeFactor: 2.5,
           interval: 7,
           repetitions: 2,
-          nextReview: _now.add(const Duration(days: 7)).toIso8601String(),
-          lastReview: _now.subtract(const Duration(days: 1)).toIso8601String(),
+          nextReview: _now.add(const Duration(days: 7)),
+          lastReview: _now.subtract(const Duration(days: 1)),
         );
       case 2: // mastered
         return QuizItem(
@@ -142,8 +142,8 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
           easeFactor: 2.5,
           interval: 30,
           repetitions: 5,
-          nextReview: _now.add(const Duration(days: 30)).toIso8601String(),
-          lastReview: _now.subtract(const Duration(days: 2)).toIso8601String(),
+          nextReview: _now.add(const Duration(days: 30)),
+          lastReview: _now.subtract(const Duration(days: 2)),
         );
       case 3: // fading
         return QuizItem(
@@ -154,9 +154,8 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
           easeFactor: 2.5,
           interval: 30,
           repetitions: 3,
-          nextReview: _now.toIso8601String(),
-          lastReview:
-              _now.subtract(const Duration(days: 45)).toIso8601String(),
+          nextReview: _now,
+          lastReview: _now.subtract(const Duration(days: 45)),
         );
       default:
         return original;
@@ -178,7 +177,7 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
       interval: original.interval,
       repetitions: original.repetitions,
       nextReview: original.nextReview,
-      lastReview: lastReview.toIso8601String(),
+      lastReview: lastReview,
     );
   }
 
@@ -247,14 +246,12 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
             icon: Icons.add_circle_outline,
             label:
                 'Add Node (${_initialConcepts.length + _batch2Count}/${_initialConcepts.length + _batch2Concepts.length})',
-            onPressed:
-                _batch2Count < _batch2Concepts.length ? _addNode : null,
+            onPressed: _batch2Count < _batch2Concepts.length ? _addNode : null,
           ),
           _ToolbarButton(
             icon: Icons.library_add,
             label: 'Ingest Batch',
-            onPressed:
-                _batch2Count < _batch2Concepts.length ? _addBatch : null,
+            onPressed: _batch2Count < _batch2Concepts.length ? _addBatch : null,
           ),
           _ToolbarButton(
             icon: Icons.restart_alt,
@@ -268,26 +265,27 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
         children: [
           Expanded(
             child: LayoutBuilder(
-              builder: (context, constraints) => Stack(
-                children: [
-                  ForceDirectedGraphWidget(
-                    graph: _graph,
-                    layoutWidth: constraints.maxWidth,
-                    layoutHeight: constraints.maxHeight,
-                    onDebugTick: _onDebugTick,
+              builder:
+                  (context, constraints) => Stack(
+                    children: [
+                      ForceDirectedGraphWidget(
+                        graph: _graph,
+                        layoutWidth: constraints.maxWidth,
+                        layoutHeight: constraints.maxHeight,
+                        onDebugTick: _onDebugTick,
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: _DebugOverlay(notifier: _debugNotifier),
+                      ),
+                      const Positioned(
+                        left: 8,
+                        top: 8,
+                        child: _MasteryLegend(),
+                      ),
+                    ],
                   ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: _DebugOverlay(notifier: _debugNotifier),
-                  ),
-                  const Positioned(
-                    left: 8,
-                    top: 8,
-                    child: _MasteryLegend(),
-                  ),
-                ],
-              ),
             ),
           ),
           _buildVisualControls(),
@@ -312,19 +310,16 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
     final masteryLabel = _masteryLabelForOverride(
       _controlNodeId != null ? _masteryOverrides[_controlNodeId!] : null,
     );
-    final currentFreshness = _controlNodeId != null
-        ? (_freshnessOverrides[_controlNodeId!] ?? 1.0)
-        : 1.0;
+    final currentFreshness =
+        _controlNodeId != null
+            ? (_freshnessOverrides[_controlNodeId!] ?? 1.0)
+            : 1.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor,
-          ),
-        ),
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: Row(
         children: [
@@ -333,14 +328,18 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
             value: _controlNodeId,
             hint: const Text('Select node'),
             isDense: true,
-            items: allConcepts
-                .map(
-                  (c) => DropdownMenuItem(
-                    value: c.id,
-                    child: Text(c.name, style: const TextStyle(fontSize: 13)),
-                  ),
-                )
-                .toList(),
+            items:
+                allConcepts
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c.id,
+                        child: Text(
+                          c.name,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    )
+                    .toList(),
             onChanged: (id) => setState(() => _controlNodeId = id),
           ),
           const SizedBox(width: 12),
@@ -364,13 +363,14 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
               max: 1.0,
               divisions: 14,
               label: '${(currentFreshness * 100).round()}%',
-              onChanged: _controlNodeId != null
-                  ? (v) {
-                      _freshnessOverrides[_controlNodeId!] = v;
-                      _rebuildGraph();
-                      setState(() {});
-                    }
-                  : null,
+              onChanged:
+                  _controlNodeId != null
+                      ? (v) {
+                        _freshnessOverrides[_controlNodeId!] = v;
+                        _rebuildGraph();
+                        setState(() {});
+                      }
+                      : null,
             ),
           ),
           Text(
@@ -439,42 +439,43 @@ class _DebugOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<_DebugInfo>(
       valueListenable: notifier,
-      builder: (_, info, __) => Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 11,
-            fontFeatures: [FontFeature.tabularFigures()],
+      builder:
+          (_, info, __) => Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 11,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Temp: ${info.temperature.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: info.isSettled ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  Text(
+                    'Pinned: ${info.pinnedCount} / ${info.totalCount}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  Text(
+                    info.isSettled ? 'SETTLED' : 'ANIMATING',
+                    style: TextStyle(
+                      color: info.isSettled ? Colors.green : Colors.amber,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Temp: ${info.temperature.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: info.isSettled ? Colors.green : Colors.orange,
-                ),
-              ),
-              Text(
-                'Pinned: ${info.pinnedCount} / ${info.totalCount}',
-                style: const TextStyle(color: Colors.white70),
-              ),
-              Text(
-                info.isSettled ? 'SETTLED' : 'ANIMATING',
-                style: TextStyle(
-                  color: info.isSettled ? Colors.green : Colors.amber,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -519,7 +520,8 @@ class _MasteryLegend extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    entry.key.name[0].toUpperCase() + entry.key.name.substring(1),
+                    entry.key.name[0].toUpperCase() +
+                        entry.key.name.substring(1),
                     style: const TextStyle(color: Colors.white70, fontSize: 10),
                   ),
                 ],
@@ -554,7 +556,8 @@ final _initialConcepts = [
   Concept(
     id: 'a',
     name: 'Spaced Repetition',
-    description: 'Reviewing material at increasing intervals to combat forgetting',
+    description:
+        'Reviewing material at increasing intervals to combat forgetting',
     sourceDocumentId: 'doc-lab',
   ),
   Concept(
@@ -566,7 +569,8 @@ final _initialConcepts = [
   Concept(
     id: 'c',
     name: 'Active Recall',
-    description: 'Actively retrieving information from memory rather than re-reading',
+    description:
+        'Actively retrieving information from memory rather than re-reading',
     sourceDocumentId: 'doc-lab',
   ),
   Concept(
@@ -590,11 +594,36 @@ final _initialConcepts = [
 ];
 
 final _initialRelationships = [
-  const Relationship(id: 'r1', fromConceptId: 'b', toConceptId: 'a', label: 'depends on'),
-  const Relationship(id: 'r2', fromConceptId: 'd', toConceptId: 'c', label: 'depends on'),
-  const Relationship(id: 'r3', fromConceptId: 'c', toConceptId: 'a', label: 'relates to'),
-  const Relationship(id: 'r4', fromConceptId: 'e', toConceptId: 'a', label: 'relates to'),
-  const Relationship(id: 'r5', fromConceptId: 'f', toConceptId: 'e', label: 'relates to'),
+  const Relationship(
+    id: 'r1',
+    fromConceptId: 'b',
+    toConceptId: 'a',
+    label: 'depends on',
+  ),
+  const Relationship(
+    id: 'r2',
+    fromConceptId: 'd',
+    toConceptId: 'c',
+    label: 'depends on',
+  ),
+  const Relationship(
+    id: 'r3',
+    fromConceptId: 'c',
+    toConceptId: 'a',
+    label: 'relates to',
+  ),
+  const Relationship(
+    id: 'r4',
+    fromConceptId: 'e',
+    toConceptId: 'a',
+    label: 'relates to',
+  ),
+  const Relationship(
+    id: 'r5',
+    fromConceptId: 'f',
+    toConceptId: 'e',
+    label: 'relates to',
+  ),
 ];
 
 final _initialQuizItems = [
@@ -607,8 +636,8 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 30,
     repetitions: 5,
-    nextReview: _now.add(const Duration(days: 30)).toIso8601String(),
-    lastReview: _now.subtract(const Duration(days: 2)).toIso8601String(),
+    nextReview: _now.add(const Duration(days: 30)),
+    lastReview: _now.subtract(const Duration(days: 2)),
   ),
   // B → learning: repetitions ≥ 1 but interval < 21
   QuizItem(
@@ -619,8 +648,8 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 7,
     repetitions: 2,
-    nextReview: _now.add(const Duration(days: 7)).toIso8601String(),
-    lastReview: _now.subtract(const Duration(days: 1)).toIso8601String(),
+    nextReview: _now.add(const Duration(days: 7)),
+    lastReview: _now.subtract(const Duration(days: 1)),
   ),
   // C → due: never reviewed (repetitions = 0)
   QuizItem(
@@ -631,7 +660,7 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
   // D → locked: C is its prerequisite and C is not mastered
@@ -643,7 +672,7 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
   // E → fading: mastered (interval ≥ 21) but lastReview > 30 days ago
@@ -655,8 +684,8 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 30,
     repetitions: 3,
-    nextReview: _now.toIso8601String(),
-    lastReview: _now.subtract(const Duration(days: 45)).toIso8601String(),
+    nextReview: _now,
+    lastReview: _now.subtract(const Duration(days: 45)),
   ),
   // F → mastered: interval ≥ 21, recent review
   QuizItem(
@@ -667,8 +696,8 @@ final _initialQuizItems = [
     easeFactor: 2.5,
     interval: 25,
     repetitions: 4,
-    nextReview: _now.add(const Duration(days: 25)).toIso8601String(),
-    lastReview: _now.subtract(const Duration(days: 3)).toIso8601String(),
+    nextReview: _now.add(const Duration(days: 25)),
+    lastReview: _now.subtract(const Duration(days: 3)),
   ),
 ];
 
@@ -712,17 +741,43 @@ final _batch2Concepts = [
   Concept(
     id: 'k',
     name: 'Dual Coding',
-    description: 'Combining verbal and visual information for stronger encoding',
+    description:
+        'Combining verbal and visual information for stronger encoding',
     sourceDocumentId: 'doc-lab-2',
   ),
 ];
 
 final _batch2Relationships = [
-  const Relationship(id: 'r6', fromConceptId: 'g', toConceptId: 'a', label: 'relates to'),
-  const Relationship(id: 'r7', fromConceptId: 'h', toConceptId: 'c', label: 'relates to'),
-  const Relationship(id: 'r8', fromConceptId: 'i', toConceptId: 'c', label: 'depends on'),
-  const Relationship(id: 'r9', fromConceptId: 'j', toConceptId: 'h', label: 'depends on'),
-  const Relationship(id: 'r10', fromConceptId: 'k', toConceptId: 'g', label: 'relates to'),
+  const Relationship(
+    id: 'r6',
+    fromConceptId: 'g',
+    toConceptId: 'a',
+    label: 'relates to',
+  ),
+  const Relationship(
+    id: 'r7',
+    fromConceptId: 'h',
+    toConceptId: 'c',
+    label: 'relates to',
+  ),
+  const Relationship(
+    id: 'r8',
+    fromConceptId: 'i',
+    toConceptId: 'c',
+    label: 'depends on',
+  ),
+  const Relationship(
+    id: 'r9',
+    fromConceptId: 'j',
+    toConceptId: 'h',
+    label: 'depends on',
+  ),
+  const Relationship(
+    id: 'r10',
+    fromConceptId: 'k',
+    toConceptId: 'g',
+    label: 'relates to',
+  ),
 ];
 
 final _batch2QuizItems = [
@@ -735,8 +790,8 @@ final _batch2QuizItems = [
     easeFactor: 2.5,
     interval: 7,
     repetitions: 2,
-    nextReview: _now.add(const Duration(days: 7)).toIso8601String(),
-    lastReview: _now.subtract(const Duration(days: 1)).toIso8601String(),
+    nextReview: _now.add(const Duration(days: 7)),
+    lastReview: _now.subtract(const Duration(days: 1)),
   ),
   // H → due
   QuizItem(
@@ -747,7 +802,7 @@ final _batch2QuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
   // I → locked (depends on C which is due)
@@ -759,7 +814,7 @@ final _batch2QuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
   // J → locked (depends on H which is due)
@@ -771,7 +826,7 @@ final _batch2QuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
   // K → due
@@ -783,7 +838,7 @@ final _batch2QuizItems = [
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,
-    nextReview: _now.toIso8601String(),
+    nextReview: _now,
     lastReview: null,
   ),
 ];

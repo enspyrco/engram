@@ -10,10 +10,7 @@ void main() {
 
     setUp(() {
       firestore = FakeFirebaseFirestore();
-      repo = UserProfileRepository(
-        firestore: firestore,
-        userId: 'user1',
-      );
+      repo = UserProfileRepository(firestore: firestore, userId: 'user1');
     });
 
     test('load returns null when no profile exists', () async {
@@ -22,13 +19,13 @@ void main() {
     });
 
     test('save and load round-trips correctly', () async {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'user1',
         displayName: 'Alice',
         email: 'alice@example.com',
         photoUrl: 'https://photo.url/alice.jpg',
         currentStreak: 5,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
 
       await repo.save(profile);
@@ -43,11 +40,11 @@ void main() {
     });
 
     test('updateWikiUrl updates only the wiki URL field', () async {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'user1',
         displayName: 'Alice',
         currentStreak: 0,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
       await repo.save(profile);
 
@@ -59,11 +56,11 @@ void main() {
     });
 
     test('updateLastSession updates timestamp and streak', () async {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'user1',
         displayName: 'Alice',
         currentStreak: 0,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
       await repo.save(profile);
 
@@ -73,16 +70,16 @@ void main() {
       );
       final loaded = await repo.load();
 
-      expect(loaded!.lastSessionAt, '2025-06-15T10:00:00.000Z');
+      expect(loaded!.lastSessionAt, DateTime.utc(2025, 6, 15, 10));
       expect(loaded.currentStreak, 7);
     });
 
     test('watch emits profile updates', () async {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'user1',
         displayName: 'Alice',
         currentStreak: 0,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
 
       await repo.save(profile);
@@ -97,15 +94,15 @@ void main() {
 
   group('UserProfile model', () {
     test('fromJson/toJson round-trip', () {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'u1',
         displayName: 'Bob',
         email: 'bob@test.com',
         photoUrl: null,
         wikiUrl: 'https://wiki.test.com',
-        lastSessionAt: '2025-03-01T12:00:00.000Z',
+        lastSessionAt: DateTime.utc(2025, 3, 1, 12),
         currentStreak: 3,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
 
       final json = profile.toJson();
@@ -120,11 +117,11 @@ void main() {
     });
 
     test('withWikiUrl creates new instance', () {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'u1',
         displayName: 'Bob',
         currentStreak: 0,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
 
       final updated = profile.withWikiUrl('https://wiki.new.com');
@@ -134,18 +131,18 @@ void main() {
     });
 
     test('withLastSession creates new instance', () {
-      const profile = UserProfile(
+      final profile = UserProfile(
         uid: 'u1',
         displayName: 'Bob',
         currentStreak: 0,
-        createdAt: '2025-01-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025),
       );
 
       final updated = profile.withLastSession(
-        timestamp: '2025-06-15T10:00:00.000Z',
+        timestamp: DateTime.utc(2025, 6, 15, 10),
         streak: 5,
       );
-      expect(updated.lastSessionAt, '2025-06-15T10:00:00.000Z');
+      expect(updated.lastSessionAt, DateTime.utc(2025, 6, 15, 10));
       expect(updated.currentStreak, 5);
       expect(profile.currentStreak, 0); // original unchanged
     });

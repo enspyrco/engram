@@ -56,10 +56,7 @@ void main() {
     });
 
     test('fromJson handles null masterySnapshot', () {
-      final friend = Friend.fromJson(const {
-        'uid': 'f1',
-        'displayName': 'Bob',
-      });
+      final friend = Friend.fromJson(const {'uid': 'f1', 'displayName': 'Bob'});
 
       expect(friend.masterySnapshot, isNull);
     });
@@ -67,14 +64,17 @@ void main() {
 
   group('Challenge', () {
     test('fromJson/toJson round-trip', () {
-      const challenge = Challenge(
+      final challenge = Challenge(
         id: 'c1',
         fromUid: 'user1',
         fromName: 'Alice',
         toUid: 'user2',
-        quizItemSnapshot: {'question': 'What is Dart?', 'answer': 'A language'},
+        quizItemSnapshot: const {
+          'question': 'What is Dart?',
+          'answer': 'A language',
+        },
         conceptName: 'Dart',
-        createdAt: '2025-06-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
         status: ChallengeStatus.pending,
       );
 
@@ -88,14 +88,14 @@ void main() {
     });
 
     test('withStatus creates new instance', () {
-      const challenge = Challenge(
+      final challenge = Challenge(
         id: 'c1',
         fromUid: 'user1',
         fromName: 'Alice',
         toUid: 'user2',
-        quizItemSnapshot: {},
+        quizItemSnapshot: const {},
         conceptName: 'Dart',
-        createdAt: '2025-06-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
       );
 
       final accepted = challenge.withStatus(ChallengeStatus.accepted);
@@ -104,32 +104,34 @@ void main() {
     });
 
     test('withStatus includes score', () {
-      const challenge = Challenge(
+      final challenge = Challenge(
         id: 'c1',
         fromUid: 'user1',
         fromName: 'Alice',
         toUid: 'user2',
-        quizItemSnapshot: {},
+        quizItemSnapshot: const {},
         conceptName: 'Dart',
-        createdAt: '2025-06-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
       );
 
-      final completed =
-          challenge.withStatus(ChallengeStatus.completed, score: 4);
+      final completed = challenge.withStatus(
+        ChallengeStatus.completed,
+        score: 4,
+      );
       expect(completed.score, 4);
     });
   });
 
   group('Nudge', () {
     test('fromJson/toJson round-trip', () {
-      const nudge = Nudge(
+      final nudge = Nudge(
         id: 'n1',
         fromUid: 'user1',
         fromName: 'Alice',
         toUid: 'user2',
         conceptName: 'Docker',
         message: 'Time to review!',
-        createdAt: '2025-06-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
         status: NudgeStatus.pending,
       );
 
@@ -143,13 +145,13 @@ void main() {
     });
 
     test('withStatus creates new instance', () {
-      const nudge = Nudge(
+      final nudge = Nudge(
         id: 'n1',
         fromUid: 'user1',
         fromName: 'Alice',
         toUid: 'user2',
         conceptName: 'Docker',
-        createdAt: '2025-06-01T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
       );
 
       final seen = nudge.withStatus(NudgeStatus.seen);

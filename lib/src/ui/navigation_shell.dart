@@ -85,9 +85,9 @@ class NavigationShellState extends ConsumerState<NavigationShell>
           next.phase == SyncPhase.upToDate) {
         // Sync completed — graph is already updated by SyncNotifier,
         // dashboard stats will auto-rebuild via provider chain.
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sync complete')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Sync complete')));
       }
     });
 

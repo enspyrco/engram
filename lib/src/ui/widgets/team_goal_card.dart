@@ -23,10 +23,7 @@ class TeamGoalCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    goal.title,
-                    style: theme.textTheme.titleSmall,
-                  ),
+                  child: Text(goal.title, style: theme.textTheme.titleSmall),
                 ),
                 _GoalTypeBadge(type: goal.type),
               ],
@@ -76,23 +73,24 @@ class TeamGoalCard extends StatelessWidget {
             if (goal.contributions.isNotEmpty)
               Wrap(
                 spacing: 4,
-                children: goal.contributions.entries.map((entry) {
-                  return Chip(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    label: Text(
-                      '+${entry.value.toStringAsFixed(1)}',
-                      style: theme.textTheme.labelSmall,
-                    ),
-                    avatar: CircleAvatar(
-                      radius: 10,
-                      child: Text(
-                        entry.key.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
+                children:
+                    goal.contributions.entries.map((entry) {
+                      return Chip(
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        label: Text(
+                          '+${entry.value.toStringAsFixed(1)}',
+                          style: theme.textTheme.labelSmall,
+                        ),
+                        avatar: CircleAvatar(
+                          radius: 10,
+                          child: Text(
+                            entry.key.substring(0, 1).toUpperCase(),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }).toList(),
               ),
           ],
         ),
@@ -102,9 +100,8 @@ class TeamGoalCard extends StatelessWidget {
 
   Color _deadlineColor() {
     final now = DateTime.now().toUtc();
-    final deadline = DateTime.tryParse(goal.deadline);
-    final created = DateTime.tryParse(goal.createdAt);
-    if (deadline == null || created == null) return Colors.green;
+    final deadline = goal.deadline;
+    final created = goal.createdAt;
 
     if (now.isAfter(deadline)) return Colors.red;
 
@@ -120,9 +117,7 @@ class TeamGoalCard extends StatelessWidget {
   }
 
   String _deadlineText() {
-    final deadline = DateTime.tryParse(goal.deadline);
-    if (deadline == null) return '';
-
+    final deadline = goal.deadline;
     final now = DateTime.now().toUtc();
     final diff = deadline.difference(now);
 

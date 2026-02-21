@@ -45,8 +45,8 @@ class DocumentDiffError extends DocumentDiffState {
 
 final documentDiffProvider =
     NotifierProvider<DocumentDiffNotifier, DocumentDiffState>(
-  DocumentDiffNotifier.new,
-);
+      DocumentDiffNotifier.new,
+    );
 
 class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
   @override
@@ -54,17 +54,16 @@ class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
 
   /// Fetch the current document text and compare it against the stored
   /// [ingestedText] from [DocumentMetadata].
-  Future<void> fetchDiff({
-    required String documentId,
-  }) async {
+  Future<void> fetchDiff({required String documentId}) async {
     state = const DocumentDiffLoading();
 
     try {
       // Look up stored ingested text from the knowledge graph.
       final graph = ref.read(knowledgeGraphProvider).valueOrNull;
-      final meta = graph?.documentMetadata
-          .where((m) => m.documentId == documentId)
-          .firstOrNull;
+      final meta =
+          graph?.documentMetadata
+              .where((m) => m.documentId == documentId)
+              .firstOrNull;
 
       if (meta == null) {
         state = const DocumentDiffError('Document metadata not found');
@@ -87,7 +86,7 @@ class DocumentDiffNotifier extends Notifier<DocumentDiffState> {
       state = DocumentDiffLoaded(
         oldText: meta.ingestedText!,
         newText: currentText,
-        ingestedAt: DateTime.parse(meta.ingestedAt),
+        ingestedAt: meta.ingestedAt,
       );
     } on http.ClientException catch (e) {
       state = DocumentDiffError('Network error: $e');

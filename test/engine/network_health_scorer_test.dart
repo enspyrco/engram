@@ -9,8 +9,8 @@ import 'package:test/test.dart';
 void main() {
   group('NetworkHealthScorer', () {
     final now = DateTime.utc(2025, 6, 15);
-    final recentReview = DateTime.utc(2025, 6, 10).toIso8601String();
-    final oldReview = DateTime.utc(2025, 4, 1).toIso8601String();
+    final recentReview = DateTime.utc(2025, 6, 10);
+    final oldReview = DateTime.utc(2025, 4, 1);
 
     test('empty graph returns healthy with score 1.0', () {
       final graph = KnowledgeGraph();
@@ -28,14 +28,26 @@ void main() {
         ],
         quizItems: [
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
         ],
       );
@@ -57,15 +69,27 @@ void main() {
           Concept(id: 'b', name: 'B', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
-          const QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
-          const QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
         ],
       );
@@ -89,27 +113,51 @@ void main() {
         quizItems: [
           // a: mastered
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           // b: learning
           QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 6, repetitions: 2,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 6,
+            repetitions: 2,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           // c: due
-          const QuizItem(
-            id: 'q3', conceptId: 'c', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q3',
+            conceptId: 'c',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
           // d: fading
           QuizItem(
-            id: 'q4', conceptId: 'd', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: oldReview,
+            id: 'q4',
+            conceptId: 'd',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: oldReview,
           ),
         ],
       );
@@ -126,32 +174,75 @@ void main() {
     test('critical path penalty reduces score', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'hub', name: 'Hub', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'dep1', name: 'Dep1', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'dep2', name: 'Dep2', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'hub',
+            name: 'Hub',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'dep1',
+            name: 'Dep1',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'dep2',
+            name: 'Dep2',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
           // dep1 and dep2 both depend on hub → hub has out-degree 2
-          const Relationship(id: 'r1', fromConceptId: 'dep1', toConceptId: 'hub', label: 'depends on'),
-          const Relationship(id: 'r2', fromConceptId: 'dep2', toConceptId: 'hub', label: 'depends on'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'dep1',
+            toConceptId: 'hub',
+            label: 'depends on',
+          ),
+          const Relationship(
+            id: 'r2',
+            fromConceptId: 'dep2',
+            toConceptId: 'hub',
+            label: 'depends on',
+          ),
         ],
         quizItems: [
           // hub: due (at-risk critical path!)
-          const QuizItem(
-            id: 'q1', conceptId: 'hub', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q1',
+            conceptId: 'hub',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
           // dep1, dep2: locked (because hub not mastered)
-          const QuizItem(
-            id: 'q2', conceptId: 'dep1', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q2',
+            conceptId: 'dep1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
-          const QuizItem(
-            id: 'q3', conceptId: 'dep2', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q3',
+            conceptId: 'dep2',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
         ],
       );
@@ -183,18 +274,35 @@ void main() {
           Concept(id: 'b', name: 'B', description: '', sourceDocumentId: 'd'),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'a',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
         ],
         quizItems: [
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
         ],
       );
@@ -212,14 +320,26 @@ void main() {
         ],
         quizItems: [
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
         ],
       );
@@ -230,8 +350,10 @@ void main() {
 
       // Storm should produce a lower score due to reduced freshness
       expect(stormHealth.score, lessThanOrEqualTo(normalHealth.score));
-      expect(stormHealth.avgFreshness,
-          lessThanOrEqualTo(normalHealth.avgFreshness));
+      expect(
+        stormHealth.avgFreshness,
+        lessThanOrEqualTo(normalHealth.avgFreshness),
+      );
     });
 
     test('NetworkHealth JSON round-trip', () {

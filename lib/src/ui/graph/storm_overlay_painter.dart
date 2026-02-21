@@ -46,8 +46,8 @@ class StormOverlayPainter extends CustomPainter {
   }
 
   void _paintStormParticles(Canvas canvas, Size size) {
-    final particlePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3 * intensity);
+    final particlePaint =
+        Paint()..color = Colors.white.withValues(alpha: 0.3 * intensity);
 
     for (var i = 0; i < _particleCount; i++) {
       // Deterministic-looking chaos from index + animationProgress
@@ -56,10 +56,12 @@ class StormOverlayPainter extends CustomPainter {
       final radian = phase * pi / 180;
 
       // Sine wave drift + linear motion
-      final x = (seed % size.width) +
+      final x =
+          (seed % size.width) +
           sin(radian * 2) * 30 +
           animationProgress * 80 * (i.isEven ? 1 : -1);
-      final y = (seed * 0.618 % size.height) +
+      final y =
+          (seed * 0.618 % size.height) +
           cos(radian * 3) * 20 +
           animationProgress * 40;
 
@@ -76,10 +78,11 @@ class StormOverlayPainter extends CustomPainter {
   }
 
   void _paintEdgeJitter(Canvas canvas) {
-    final jitterPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06 * intensity)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+    final jitterPaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.06 * intensity)
+          ..strokeWidth = 1.0
+          ..style = PaintingStyle.stroke;
 
     for (var i = 0; i < edges.length; i++) {
       final edge = edges[i];

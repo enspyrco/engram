@@ -83,7 +83,7 @@ DateTime? _oldestLastReview(Iterable<QuizItem> items) {
   DateTime? oldest;
   for (final item in items) {
     if (item.lastReview == null) continue;
-    final date = DateTime.parse(item.lastReview!);
+    final date = item.lastReview!;
     if (oldest == null || date.isBefore(oldest)) {
       oldest = date;
     }

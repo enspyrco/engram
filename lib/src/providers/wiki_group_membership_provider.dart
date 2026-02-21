@@ -26,7 +26,8 @@ String hashWikiUrl(String url) {
 /// provider starts watching Firestore collections that require membership.
 ///
 /// Returns the wiki URL hash on success, or `null` if preconditions are not
-/// met (no user, no outline URL, no profile, no social repository).
+/// met (no user, no outline URL, no profile, no social repository, or
+/// friend discovery disabled in settings).
 ///
 /// All team providers depend on this indirectly via [teamRepositoryProvider],
 /// which watches this provider for the wiki hash. Since `joinWikiGroup` is
@@ -34,6 +35,9 @@ String hashWikiUrl(String url) {
 final wikiGroupMembershipProvider = FutureProvider<String?>((ref) async {
   final user = ref.watch(authStateProvider).valueOrNull;
   if (user == null) return null;
+
+  final repo = ref.watch(settingsRepositoryProvider);
+  if (!repo.getFriendDiscoveryEnabled()) return null;
 
   final config = ref.watch(settingsProvider);
   if (config.outlineApiUrl.isEmpty) return null;

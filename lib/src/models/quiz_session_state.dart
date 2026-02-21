@@ -16,8 +16,8 @@ class QuizSessionState {
     this.isComeback = false,
     this.sessionMode = SessionMode.full,
     this.daysSinceLastSession,
-  })  : items = IList(items),
-        ratings = IList(ratings);
+  }) : items = IList(items),
+       ratings = IList(ratings);
 
   const QuizSessionState._raw({
     required this.phase,

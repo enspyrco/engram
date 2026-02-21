@@ -56,12 +56,14 @@ class ParticleSystem {
     final particlesPerEdge = _particleCountForTier(tier);
     for (var i = 0; i < edges.length; i++) {
       for (var j = 0; j < particlesPerEdge; j++) {
-        _particles.add(Particle(
-          edgeIndex: i,
-          progress: _random.nextDouble(),
-          speed: _baseSpeedForTier(tier) * (0.5 + _random.nextDouble()),
-          opacity: _baseOpacityForTier(tier),
-        ));
+        _particles.add(
+          Particle(
+            edgeIndex: i,
+            progress: _random.nextDouble(),
+            speed: _baseSpeedForTier(tier) * (0.5 + _random.nextDouble()),
+            opacity: _baseOpacityForTier(tier),
+          ),
+        );
       }
     }
   }
@@ -83,8 +85,7 @@ class ParticleSystem {
           particle.opacity = 0.6 + 0.4 * sin(particle.progress * pi * 2);
         case HealthTier.brownout:
           // Flickering effect
-          particle.opacity =
-              0.3 + 0.5 * _random.nextDouble();
+          particle.opacity = 0.3 + 0.5 * _random.nextDouble();
         case HealthTier.cascade:
           // Erratic
           particle.speed =

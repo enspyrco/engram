@@ -11,8 +11,8 @@ void main() {
         name: 'Agent Skills',
         description: 'Anthropic agent skills course',
         documentIds: {'doc-1', 'doc-2', 'doc-3'},
-        createdAt: '2026-02-18T00:00:00.000Z',
-        lastIngestedAt: '2026-02-18T01:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
+        lastIngestedAt: DateTime.utc(2026, 2, 18, 1),
       );
 
       final json = topic.toJson();
@@ -42,7 +42,7 @@ void main() {
       final topic = Topic(
         id: 'topic-1',
         name: 'Test',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
 
       final json = topic.toJson();
@@ -56,12 +56,12 @@ void main() {
       final t1 = Topic(
         id: 'topic-1',
         name: 'Name 1',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
       final t2 = Topic(
         id: 'topic-1',
         name: 'Name 2',
-        createdAt: '2026-02-19T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 19),
       );
 
       expect(t1, equals(t2));
@@ -73,7 +73,7 @@ void main() {
         id: 'topic-1',
         name: 'Test',
         documentIds: {'doc-1'},
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
 
       final updated = topic.withDocumentIds({'doc-2', 'doc-3'});
@@ -88,12 +88,12 @@ void main() {
       final topic = Topic(
         id: 'topic-1',
         name: 'Test',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
 
-      final updated = topic.withLastIngestedAt('2026-02-18T12:00:00.000Z');
+      final updated = topic.withLastIngestedAt(DateTime.utc(2026, 2, 18, 12));
 
-      expect(updated.lastIngestedAt, '2026-02-18T12:00:00.000Z');
+      expect(updated.lastIngestedAt, DateTime.utc(2026, 2, 18, 12));
       expect(topic.lastIngestedAt, isNull);
     });
 
@@ -103,13 +103,14 @@ void main() {
         name: 'Agent Skills',
         description: 'Course on agent skills',
         documentIds: {'doc-a', 'doc-b'},
-        createdAt: '2026-02-18T00:00:00.000Z',
-        lastIngestedAt: '2026-02-18T01:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
+        lastIngestedAt: DateTime.utc(2026, 2, 18, 1),
       );
 
       final jsonStr = jsonEncode(topic.toJson());
-      final restored =
-          Topic.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      final restored = Topic.fromJson(
+        jsonDecode(jsonStr) as Map<String, dynamic>,
+      );
 
       expect(restored.id, topic.id);
       expect(restored.name, topic.name);

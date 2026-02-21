@@ -55,12 +55,13 @@ void main() {
       return ProviderScope(
         overrides: [
           firebaseAuthProvider.overrideWithValue(mockAuth),
-          friendsProvider
-              .overrideWith(() => _PreloadedFriendsNotifier(friends)),
-          challengeProvider
-              .overrideWith(() => _PreloadedChallengeNotifier(challenges)),
-          nudgeProvider
-              .overrideWith(() => _PreloadedNudgeNotifier(nudges)),
+          friendsProvider.overrideWith(
+            () => _PreloadedFriendsNotifier(friends),
+          ),
+          challengeProvider.overrideWith(
+            () => _PreloadedChallengeNotifier(challenges),
+          ),
+          nudgeProvider.overrideWith(() => _PreloadedNudgeNotifier(nudges)),
         ],
         child: const MaterialApp(home: FriendsScreen()),
       );
@@ -73,27 +74,30 @@ void main() {
       expect(find.text('No friends yet'), findsOneWidget);
       expect(
         find.text(
-            'Friends using the same Outline wiki will appear here automatically.'),
+          'Friends using the same Outline wiki will appear here automatically.',
+        ),
         findsOneWidget,
       );
     });
 
     testWidgets('shows friend cards', (tester) async {
-      await tester.pumpWidget(buildApp(
-        friends: [
-          const Friend(
-            uid: 'user2',
-            displayName: 'Bob',
-            masterySnapshot: MasterySnapshot(
-              totalConcepts: 20,
-              mastered: 10,
-              learning: 5,
-              newCount: 5,
-              streak: 3,
+      await tester.pumpWidget(
+        buildApp(
+          friends: [
+            const Friend(
+              uid: 'user2',
+              displayName: 'Bob',
+              masterySnapshot: MasterySnapshot(
+                totalConcepts: 20,
+                mastered: 10,
+                learning: 5,
+                newCount: 5,
+                streak: 3,
+              ),
             ),
-          ),
-        ],
-      ));
+          ],
+        ),
+      );
       await tester.pump();
 
       expect(find.text('Bob'), findsOneWidget);
@@ -102,22 +106,22 @@ void main() {
     });
 
     testWidgets('shows incoming challenge card', (tester) async {
-      await tester.pumpWidget(buildApp(
-        friends: [
-          const Friend(uid: 'user2', displayName: 'Bob'),
-        ],
-        challenges: [
-          const Challenge(
-            id: 'c1',
-            fromUid: 'user2',
-            fromName: 'Bob',
-            toUid: 'user1',
-            quizItemSnapshot: {},
-            conceptName: 'Dart basics',
-            createdAt: '2025-06-01T00:00:00.000Z',
-          ),
-        ],
-      ));
+      await tester.pumpWidget(
+        buildApp(
+          friends: [const Friend(uid: 'user2', displayName: 'Bob')],
+          challenges: [
+            Challenge(
+              id: 'c1',
+              fromUid: 'user2',
+              fromName: 'Bob',
+              toUid: 'user1',
+              quizItemSnapshot: const {},
+              conceptName: 'Dart basics',
+              createdAt: DateTime.utc(2025, 6),
+            ),
+          ],
+        ),
+      );
       await tester.pump();
 
       expect(find.text('Bob challenges you!'), findsOneWidget);
@@ -127,28 +131,25 @@ void main() {
     });
 
     testWidgets('shows incoming nudge card', (tester) async {
-      await tester.pumpWidget(buildApp(
-        friends: [
-          const Friend(uid: 'user2', displayName: 'Bob'),
-        ],
-        nudges: [
-          const Nudge(
-            id: 'n1',
-            fromUid: 'user2',
-            fromName: 'Bob',
-            toUid: 'user1',
-            conceptName: 'Kubernetes',
-            message: 'Hey, review this!',
-            createdAt: '2025-06-01T00:00:00.000Z',
-          ),
-        ],
-      ));
+      await tester.pumpWidget(
+        buildApp(
+          friends: [const Friend(uid: 'user2', displayName: 'Bob')],
+          nudges: [
+            Nudge(
+              id: 'n1',
+              fromUid: 'user2',
+              fromName: 'Bob',
+              toUid: 'user1',
+              conceptName: 'Kubernetes',
+              message: 'Hey, review this!',
+              createdAt: DateTime.utc(2025, 6),
+            ),
+          ],
+        ),
+      );
       await tester.pump();
 
-      expect(
-        find.text('Bob nudged you about Kubernetes!'),
-        findsOneWidget,
-      );
+      expect(find.text('Bob nudged you about Kubernetes!'), findsOneWidget);
       expect(find.text('"Hey, review this!"'), findsOneWidget);
       expect(find.text('Review now'), findsOneWidget);
     });

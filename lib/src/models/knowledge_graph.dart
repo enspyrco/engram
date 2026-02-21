@@ -28,11 +28,11 @@ class KnowledgeGraph {
     List<QuizItem> quizItems = const [],
     List<DocumentMetadata> documentMetadata = const [],
     List<Topic> topics = const [],
-  })  : concepts = IList(concepts),
-        relationships = IList(relationships),
-        quizItems = IList(quizItems),
-        documentMetadata = IList(documentMetadata),
-        topics = IList(topics);
+  }) : concepts = IList(concepts),
+       relationships = IList(relationships),
+       quizItems = IList(quizItems),
+       documentMetadata = IList(documentMetadata),
+       topics = IList(topics);
 
   const KnowledgeGraph._raw({
     required this.concepts,
@@ -44,24 +44,28 @@ class KnowledgeGraph {
 
   factory KnowledgeGraph.fromJson(Map<String, dynamic> json) {
     return KnowledgeGraph._raw(
-      concepts: (json['concepts'] as List<dynamic>?)
+      concepts:
+          (json['concepts'] as List<dynamic>?)
               ?.map((e) => Concept.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
-      relationships: (json['relationships'] as List<dynamic>?)
+      relationships:
+          (json['relationships'] as List<dynamic>?)
               ?.map((e) => Relationship.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
-      quizItems: (json['quizItems'] as List<dynamic>?)
+      quizItems:
+          (json['quizItems'] as List<dynamic>?)
               ?.map((e) => QuizItem.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
-      documentMetadata: (json['documentMetadata'] as List<dynamic>?)
-              ?.map(
-                  (e) => DocumentMetadata.fromJson(e as Map<String, dynamic>))
+      documentMetadata:
+          (json['documentMetadata'] as List<dynamic>?)
+              ?.map((e) => DocumentMetadata.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
-      topics: (json['topics'] as List<dynamic>?)
+      topics:
+          (json['topics'] as List<dynamic>?)
               ?.map((e) => Topic.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
@@ -89,50 +93,58 @@ class KnowledgeGraph {
     String? documentText,
   }) {
     // Remove old data from the same document
-    final oldConceptIds = concepts
-        .where((c) => c.sourceDocumentId == documentId)
-        .map((c) => c.id)
-        .toSet();
+    final oldConceptIds =
+        concepts
+            .where((c) => c.sourceDocumentId == documentId)
+            .map((c) => c.id)
+            .toSet();
 
-    final newConcepts = [
-      ...concepts.where((c) => c.sourceDocumentId != documentId),
-      ...result.concepts.map((c) => c.withSourceDocumentId(documentId)),
-    ].lock;
+    final newConcepts =
+        [
+          ...concepts.where((c) => c.sourceDocumentId != documentId),
+          ...result.concepts.map((c) => c.withSourceDocumentId(documentId)),
+        ].lock;
 
-    final newRelationships = [
-      // Keep relationships not referencing old concepts from this doc
-      ...relationships.where((r) =>
-          !oldConceptIds.contains(r.fromConceptId) &&
-          !oldConceptIds.contains(r.toConceptId)),
-      ...result.relationships,
-    ].lock;
+    final newRelationships =
+        [
+          // Keep relationships not referencing old concepts from this doc
+          ...relationships.where(
+            (r) =>
+                !oldConceptIds.contains(r.fromConceptId) &&
+                !oldConceptIds.contains(r.toConceptId),
+          ),
+          ...result.relationships,
+        ].lock;
 
-    final newQuizItems = [
-      // Keep quiz items not referencing old concepts from this doc
-      ...quizItems.where((q) => !oldConceptIds.contains(q.conceptId)),
-      ...result.quizItems,
-    ].lock;
+    final newQuizItems =
+        [
+          // Keep quiz items not referencing old concepts from this doc
+          ...quizItems.where((q) => !oldConceptIds.contains(q.conceptId)),
+          ...result.quizItems,
+        ].lock;
 
     // Update or add document metadata — preserve existing collection info
     // if new values are not supplied (e.g. during sync re-ingestion).
     final currentTime = now ?? DateTime.now().toUtc();
-    final existingIndex =
-        documentMetadata.indexWhere((m) => m.documentId == documentId);
+    final existingIndex = documentMetadata.indexWhere(
+      (m) => m.documentId == documentId,
+    );
     final existing =
         existingIndex >= 0 ? documentMetadata[existingIndex] : null;
     final meta = DocumentMetadata(
       documentId: documentId,
       title: documentTitle,
       updatedAt: updatedAt,
-      ingestedAt: currentTime.toIso8601String(),
+      ingestedAt: currentTime,
       collectionId: collectionId ?? existing?.collectionId,
       collectionName: collectionName ?? existing?.collectionName,
-      ingestedText: DocumentMetadata.capText(documentText) ??
-          existing?.ingestedText,
+      ingestedText:
+          DocumentMetadata.capText(documentText) ?? existing?.ingestedText,
     );
-    final newMetadata = existingIndex >= 0
-        ? documentMetadata.replace(existingIndex, meta)
-        : documentMetadata.add(meta);
+    final newMetadata =
+        existingIndex >= 0
+            ? documentMetadata.replace(existingIndex, meta)
+            : documentMetadata.add(meta);
 
     return KnowledgeGraph._raw(
       concepts: newConcepts,
@@ -227,10 +239,10 @@ class KnowledgeGraph {
   }
 
   Map<String, dynamic> toJson() => {
-        'concepts': concepts.map((c) => c.toJson()).toList(),
-        'relationships': relationships.map((r) => r.toJson()).toList(),
-        'quizItems': quizItems.map((q) => q.toJson()).toList(),
-        'documentMetadata': documentMetadata.map((m) => m.toJson()).toList(),
-        'topics': topics.map((t) => t.toJson()).toList(),
-      };
+    'concepts': concepts.map((c) => c.toJson()).toList(),
+    'relationships': relationships.map((r) => r.toJson()).toList(),
+    'quizItems': quizItems.map((q) => q.toJson()).toList(),
+    'documentMetadata': documentMetadata.map((m) => m.toJson()).toList(),
+    'topics': topics.map((t) => t.toJson()).toList(),
+  };
 }

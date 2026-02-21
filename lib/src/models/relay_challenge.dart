@@ -24,9 +24,18 @@ class RelayLeg {
       conceptName: json['conceptName'] as String,
       claimedByUid: json['claimedByUid'] as String?,
       claimedByName: json['claimedByName'] as String?,
-      claimedAt: json['claimedAt'] as String?,
-      completedAt: json['completedAt'] as String?,
-      lastStallNudgeAt: json['lastStallNudgeAt'] as String?,
+      claimedAt:
+          json['claimedAt'] != null
+              ? DateTime.parse(json['claimedAt'] as String)
+              : null,
+      completedAt:
+          json['completedAt'] != null
+              ? DateTime.parse(json['completedAt'] as String)
+              : null,
+      lastStallNudgeAt:
+          json['lastStallNudgeAt'] != null
+              ? DateTime.parse(json['lastStallNudgeAt'] as String)
+              : null,
     );
   }
 
@@ -34,11 +43,11 @@ class RelayLeg {
   final String conceptName;
   final String? claimedByUid;
   final String? claimedByName;
-  final String? claimedAt;
-  final String? completedAt;
+  final DateTime? claimedAt;
+  final DateTime? completedAt;
 
   /// Last time a stall nudge was sent for this leg (6h debounce).
-  final String? lastStallNudgeAt;
+  final DateTime? lastStallNudgeAt;
 
   /// Computed status based on field state at the given time.
   ///
@@ -46,9 +55,7 @@ class RelayLeg {
   RelayLegStatus statusAt(DateTime now) {
     if (completedAt != null) return RelayLegStatus.completed;
     if (claimedAt != null) {
-      return isOverdueAt(now)
-          ? RelayLegStatus.stalled
-          : RelayLegStatus.claimed;
+      return isOverdueAt(now) ? RelayLegStatus.stalled : RelayLegStatus.claimed;
     }
     return RelayLegStatus.unclaimed;
   }
@@ -56,7 +63,7 @@ class RelayLeg {
   /// Deadline is 24 hours after claiming.
   DateTime? get deadline {
     if (claimedAt == null) return null;
-    return DateTime.parse(claimedAt!).add(const Duration(hours: 24));
+    return claimedAt!.add(const Duration(hours: 24));
   }
 
   /// Whether the claim window has expired without completion at [now].
@@ -68,7 +75,7 @@ class RelayLeg {
   RelayLeg withClaimed({
     required String uid,
     required String displayName,
-    required String timestamp,
+    required DateTime timestamp,
   }) {
     return RelayLeg(
       conceptId: conceptId,
@@ -81,7 +88,7 @@ class RelayLeg {
     );
   }
 
-  RelayLeg withCompleted(String timestamp) {
+  RelayLeg withCompleted(DateTime timestamp) {
     return RelayLeg(
       conceptId: conceptId,
       conceptName: conceptName,
@@ -93,7 +100,7 @@ class RelayLeg {
     );
   }
 
-  RelayLeg withStallNudgeAt(String timestamp) {
+  RelayLeg withStallNudgeAt(DateTime timestamp) {
     return RelayLeg(
       conceptId: conceptId,
       conceptName: conceptName,
@@ -106,14 +113,14 @@ class RelayLeg {
   }
 
   Map<String, dynamic> toJson() => {
-        'conceptId': conceptId,
-        'conceptName': conceptName,
-        'claimedByUid': claimedByUid,
-        'claimedByName': claimedByName,
-        'claimedAt': claimedAt,
-        'completedAt': completedAt,
-        'lastStallNudgeAt': lastStallNudgeAt,
-      };
+    'conceptId': conceptId,
+    'conceptName': conceptName,
+    'claimedByUid': claimedByUid,
+    'claimedByName': claimedByName,
+    'claimedAt': claimedAt?.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+    'lastStallNudgeAt': lastStallNudgeAt?.toIso8601String(),
+  };
 }
 
 /// A cooperative relay challenge — a chain of concepts that must be mastered
@@ -142,22 +149,26 @@ class RelayChallenge {
     return RelayChallenge._raw(
       id: json['id'] as String,
       title: json['title'] as String,
-      legs: (json['legs'] as List<dynamic>?)
+      legs:
+          (json['legs'] as List<dynamic>?)
               ?.map((e) => RelayLeg.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
-      createdAt: json['createdAt'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
       createdByUid: json['createdByUid'] as String,
-      completedAt: json['completedAt'] as String?,
+      completedAt:
+          json['completedAt'] != null
+              ? DateTime.parse(json['completedAt'] as String)
+              : null,
     );
   }
 
   final String id;
   final String title;
   final IList<RelayLeg> legs;
-  final String createdAt;
+  final DateTime createdAt;
   final String createdByUid;
-  final String? completedAt;
+  final DateTime? completedAt;
 
   /// Whether every leg has been completed.
   bool get isComplete => completedAt != null;
@@ -187,7 +198,7 @@ class RelayChallenge {
     int legIndex, {
     required String uid,
     required String displayName,
-    required String timestamp,
+    required DateTime timestamp,
   }) {
     final updatedLegs = legs.replace(
       legIndex,
@@ -207,7 +218,7 @@ class RelayChallenge {
     );
   }
 
-  RelayChallenge withLegCompleted(int legIndex, String timestamp) {
+  RelayChallenge withLegCompleted(int legIndex, DateTime timestamp) {
     final updatedLegs = legs.replace(
       legIndex,
       legs[legIndex].withCompleted(timestamp),
@@ -222,16 +233,16 @@ class RelayChallenge {
     );
   }
 
-  RelayChallenge withCompleted(String timestamp) => RelayChallenge._raw(
-        id: id,
-        title: title,
-        legs: legs,
-        createdAt: createdAt,
-        createdByUid: createdByUid,
-        completedAt: timestamp,
-      );
+  RelayChallenge withCompleted(DateTime timestamp) => RelayChallenge._raw(
+    id: id,
+    title: title,
+    legs: legs,
+    createdAt: createdAt,
+    createdByUid: createdByUid,
+    completedAt: timestamp,
+  );
 
-  RelayChallenge withLegStallNudge(int legIndex, String timestamp) {
+  RelayChallenge withLegStallNudge(int legIndex, DateTime timestamp) {
     final updatedLegs = legs.replace(
       legIndex,
       legs[legIndex].withStallNudgeAt(timestamp),
@@ -247,11 +258,11 @@ class RelayChallenge {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'legs': legs.map((l) => l.toJson()).toList(),
-        'createdAt': createdAt,
-        'createdByUid': createdByUid,
-        'completedAt': completedAt,
-      };
+    'id': id,
+    'title': title,
+    'legs': legs.map((l) => l.toJson()).toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'createdByUid': createdByUid,
+    'completedAt': completedAt?.toIso8601String(),
+  };
 }

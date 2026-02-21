@@ -23,12 +23,13 @@ void main() {
           photoUrl: 'https://photo.url/alice.jpg',
         );
 
-        final doc = await firestore
-            .collection('wikiGroups')
-            .doc('abc123')
-            .collection('members')
-            .doc('user1')
-            .get();
+        final doc =
+            await firestore
+                .collection('wikiGroups')
+                .doc('abc123')
+                .collection('members')
+                .doc('user1')
+                .get();
 
         expect(doc.exists, isTrue);
         expect(doc.data()!['displayName'], 'Alice');
@@ -37,10 +38,7 @@ void main() {
 
       test('watchWikiGroupMembers excludes self', () async {
         // Add self
-        await repo.joinWikiGroup(
-          wikiUrlHash: 'abc123',
-          displayName: 'Alice',
-        );
+        await repo.joinWikiGroup(wikiUrlHash: 'abc123', displayName: 'Alice');
 
         // Add another user directly
         await firestore
@@ -49,14 +47,13 @@ void main() {
             .collection('members')
             .doc('user2')
             .set({
-          'uid': 'user2',
-          'displayName': 'Bob',
-          'photoUrl': null,
-          'joinedAt': '2025-01-01T00:00:00.000Z',
-        });
+              'uid': 'user2',
+              'displayName': 'Bob',
+              'photoUrl': null,
+              'joinedAt': '2025-01-01T00:00:00.000Z',
+            });
 
-        final members =
-            await repo.watchWikiGroupMembers('abc123').first;
+        final members = await repo.watchWikiGroupMembers('abc123').first;
 
         expect(members.length, 1);
         expect(members[0].uid, 'user2');
@@ -83,24 +80,25 @@ void main() {
 
     group('challenges', () {
       test('sendChallenge writes to Firestore', () async {
-        const challenge = Challenge(
+        final challenge = Challenge(
           id: 'c1',
           fromUid: 'user1',
           fromName: 'Alice',
           toUid: 'user2',
-          quizItemSnapshot: {'question': 'What is X?', 'answer': 'Y'},
+          quizItemSnapshot: const {'question': 'What is X?', 'answer': 'Y'},
           conceptName: 'Testing',
-          createdAt: '2025-06-01T00:00:00.000Z',
+          createdAt: DateTime.utc(2025, 6, 1),
         );
 
         await repo.sendChallenge(challenge);
 
-        final doc = await firestore
-            .collection('social')
-            .doc('challenges')
-            .collection('items')
-            .doc('c1')
-            .get();
+        final doc =
+            await firestore
+                .collection('social')
+                .doc('challenges')
+                .collection('items')
+                .doc('c1')
+                .get();
 
         expect(doc.exists, isTrue);
         expect(doc.data()!['fromUid'], 'user1');
@@ -116,15 +114,15 @@ void main() {
             .collection('items')
             .doc('c1')
             .set({
-          'id': 'c1',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'quizItemSnapshot': {},
-          'conceptName': 'Dart',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'pending',
-        });
+              'id': 'c1',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'quizItemSnapshot': {},
+              'conceptName': 'Dart',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'pending',
+            });
 
         // Challenge for someone else (should not appear)
         await firestore
@@ -133,15 +131,15 @@ void main() {
             .collection('items')
             .doc('c2')
             .set({
-          'id': 'c2',
-          'fromUid': 'user1',
-          'fromName': 'Alice',
-          'toUid': 'user3',
-          'quizItemSnapshot': {},
-          'conceptName': 'Flutter',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'pending',
-        });
+              'id': 'c2',
+              'fromUid': 'user1',
+              'fromName': 'Alice',
+              'toUid': 'user3',
+              'quizItemSnapshot': {},
+              'conceptName': 'Flutter',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'pending',
+            });
 
         final challenges = await repo.watchIncomingChallenges().first;
 
@@ -157,24 +155,25 @@ void main() {
             .collection('items')
             .doc('c1')
             .set({
-          'id': 'c1',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'quizItemSnapshot': {},
-          'conceptName': 'Dart',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'pending',
-        });
+              'id': 'c1',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'quizItemSnapshot': {},
+              'conceptName': 'Dart',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'pending',
+            });
 
         await repo.updateChallengeStatus('c1', ChallengeStatus.accepted);
 
-        final doc = await firestore
-            .collection('social')
-            .doc('challenges')
-            .collection('items')
-            .doc('c1')
-            .get();
+        final doc =
+            await firestore
+                .collection('social')
+                .doc('challenges')
+                .collection('items')
+                .doc('c1')
+                .get();
         expect(doc.data()!['status'], 'accepted');
       });
 
@@ -185,15 +184,15 @@ void main() {
             .collection('items')
             .doc('c1')
             .set({
-          'id': 'c1',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'quizItemSnapshot': {},
-          'conceptName': 'Dart',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'accepted',
-        });
+              'id': 'c1',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'quizItemSnapshot': {},
+              'conceptName': 'Dart',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'accepted',
+            });
 
         await repo.updateChallengeStatus(
           'c1',
@@ -201,12 +200,13 @@ void main() {
           score: 4,
         );
 
-        final doc = await firestore
-            .collection('social')
-            .doc('challenges')
-            .collection('items')
-            .doc('c1')
-            .get();
+        final doc =
+            await firestore
+                .collection('social')
+                .doc('challenges')
+                .collection('items')
+                .doc('c1')
+                .get();
         expect(doc.data()!['status'], 'completed');
         expect(doc.data()!['score'], 4);
       });
@@ -214,24 +214,25 @@ void main() {
 
     group('nudges', () {
       test('sendNudge writes to Firestore', () async {
-        const nudge = Nudge(
+        final nudge = Nudge(
           id: 'n1',
           fromUid: 'user1',
           fromName: 'Alice',
           toUid: 'user2',
           conceptName: 'Docker',
           message: 'Time to review!',
-          createdAt: '2025-06-01T00:00:00.000Z',
+          createdAt: DateTime.utc(2025, 6, 1),
         );
 
         await repo.sendNudge(nudge);
 
-        final doc = await firestore
-            .collection('social')
-            .doc('nudges')
-            .collection('items')
-            .doc('n1')
-            .get();
+        final doc =
+            await firestore
+                .collection('social')
+                .doc('nudges')
+                .collection('items')
+                .doc('n1')
+                .get();
 
         expect(doc.exists, isTrue);
         expect(doc.data()!['conceptName'], 'Docker');
@@ -246,14 +247,14 @@ void main() {
             .collection('items')
             .doc('n1')
             .set({
-          'id': 'n1',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'conceptName': 'K8s',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'pending',
-        });
+              'id': 'n1',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'conceptName': 'K8s',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'pending',
+            });
 
         // Already seen nudge (should not appear)
         await firestore
@@ -262,14 +263,14 @@ void main() {
             .collection('items')
             .doc('n2')
             .set({
-          'id': 'n2',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'conceptName': 'CI/CD',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'seen',
-        });
+              'id': 'n2',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'conceptName': 'CI/CD',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'seen',
+            });
 
         final nudges = await repo.watchIncomingNudges().first;
 
@@ -284,23 +285,24 @@ void main() {
             .collection('items')
             .doc('n1')
             .set({
-          'id': 'n1',
-          'fromUid': 'user2',
-          'fromName': 'Bob',
-          'toUid': 'user1',
-          'conceptName': 'K8s',
-          'createdAt': '2025-06-01T00:00:00.000Z',
-          'status': 'pending',
-        });
+              'id': 'n1',
+              'fromUid': 'user2',
+              'fromName': 'Bob',
+              'toUid': 'user1',
+              'conceptName': 'K8s',
+              'createdAt': '2025-06-01T00:00:00.000Z',
+              'status': 'pending',
+            });
 
         await repo.markNudgeSeen('n1');
 
-        final doc = await firestore
-            .collection('social')
-            .doc('nudges')
-            .collection('items')
-            .doc('n1')
-            .get();
+        final doc =
+            await firestore
+                .collection('social')
+                .doc('nudges')
+                .collection('items')
+                .doc('n1')
+                .get();
         expect(doc.data()!['status'], 'seen');
       });
     });

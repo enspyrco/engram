@@ -23,7 +23,7 @@ class Nudge {
       toUid: json['toUid'] as String,
       conceptName: json['conceptName'] as String,
       message: json['message'] as String?,
-      createdAt: json['createdAt'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
       status: NudgeStatus.values.firstWhere(
         (s) => s.name == json['status'],
         orElse: () => NudgeStatus.pending,
@@ -37,28 +37,28 @@ class Nudge {
   final String toUid;
   final String conceptName;
   final String? message;
-  final String createdAt;
+  final DateTime createdAt;
   final NudgeStatus status;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'fromUid': fromUid,
-        'fromName': fromName,
-        'toUid': toUid,
-        'conceptName': conceptName,
-        'message': message,
-        'createdAt': createdAt,
-        'status': status.name,
-      };
+    'id': id,
+    'fromUid': fromUid,
+    'fromName': fromName,
+    'toUid': toUid,
+    'conceptName': conceptName,
+    'message': message,
+    'createdAt': createdAt.toIso8601String(),
+    'status': status.name,
+  };
 
   Nudge withStatus(NudgeStatus newStatus) => Nudge(
-        id: id,
-        fromUid: fromUid,
-        fromName: fromName,
-        toUid: toUid,
-        conceptName: conceptName,
-        message: message,
-        createdAt: createdAt,
-        status: newStatus,
-      );
+    id: id,
+    fromUid: fromUid,
+    fromName: fromName,
+    toUid: toUid,
+    conceptName: conceptName,
+    message: message,
+    createdAt: createdAt,
+    status: newStatus,
+  );
 }

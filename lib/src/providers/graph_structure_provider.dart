@@ -17,12 +17,14 @@ import 'knowledge_graph_provider.dart';
 /// [knowledgeGraphProvider].
 final graphStructureProvider = Provider<KnowledgeGraph?>((ref) {
   final concepts = ref.watch(
-    knowledgeGraphProvider
-        .select((AsyncValue<KnowledgeGraph> av) => av.valueOrNull?.concepts),
+    knowledgeGraphProvider.select(
+      (AsyncValue<KnowledgeGraph> av) => av.valueOrNull?.concepts,
+    ),
   );
   final relationships = ref.watch(
     knowledgeGraphProvider.select(
-        (AsyncValue<KnowledgeGraph> av) => av.valueOrNull?.relationships),
+      (AsyncValue<KnowledgeGraph> av) => av.valueOrNull?.relationships,
+    ),
   );
 
   if (concepts == null || concepts.isEmpty) return null;

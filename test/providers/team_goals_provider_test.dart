@@ -4,14 +4,14 @@ import 'package:test/test.dart';
 void main() {
   group('TeamGoal computed properties', () {
     test('progressFraction handles zero targetValue', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 0.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
       );
 
@@ -19,34 +19,34 @@ void main() {
     });
 
     test('isComplete reflects completedAt', () {
-      const incomplete = TeamGoal(
+      final incomplete = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.healthTarget,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
       );
 
       expect(incomplete.isComplete, isFalse);
 
-      final complete = incomplete.withCompleted('2025-06-05T00:00:00.000Z');
+      final complete = incomplete.withCompleted(DateTime.utc(2025, 6, 5));
       expect(complete.isComplete, isTrue);
     });
 
     test('withContribution is additive for same user', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test',
         description: '',
         type: GoalType.clusterMastery,
         targetValue: 1.0,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
-        contributions: {'user1': 0.2, 'user2': 0.1},
+        contributions: const {'user1': 0.2, 'user2': 0.1},
       );
 
       final updated = goal.withContribution('user1', 0.3);
@@ -55,20 +55,20 @@ void main() {
     });
 
     test('withCompleted preserves all other fields', () {
-      const goal = TeamGoal(
+      final goal = TeamGoal(
         id: 'g1',
         title: 'Test Goal',
         description: 'A description',
         type: GoalType.streakTarget,
         targetCluster: 'Cluster A',
         targetValue: 0.9,
-        createdAt: '2025-06-01T00:00:00.000Z',
-        deadline: '2025-06-08T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 1),
+        deadline: DateTime.utc(2025, 6, 8),
         createdByUid: 'user1',
-        contributions: {'user1': 0.5},
+        contributions: const {'user1': 0.5},
       );
 
-      final completed = goal.withCompleted('2025-06-07T00:00:00.000Z');
+      final completed = goal.withCompleted(DateTime.utc(2025, 6, 7));
       expect(completed.id, goal.id);
       expect(completed.title, goal.title);
       expect(completed.description, goal.description);
@@ -79,7 +79,7 @@ void main() {
       expect(completed.deadline, goal.deadline);
       expect(completed.createdByUid, goal.createdByUid);
       expect(completed.contributions, goal.contributions);
-      expect(completed.completedAt, '2025-06-07T00:00:00.000Z');
+      expect(completed.completedAt, DateTime.utc(2025, 6, 7));
     });
   });
 }

@@ -14,7 +14,9 @@ void main() {
   Widget buildApp(KnowledgeGraph graph) {
     return ProviderScope(
       overrides: [
-        knowledgeGraphProvider.overrideWith(() => _PreloadedGraphNotifier(graph)),
+        knowledgeGraphProvider.overrideWith(
+          () => _PreloadedGraphNotifier(graph),
+        ),
         // Override health to healthy so catastrophe animations don't block
         // pumpAndSettle. These tests verify dashboard stats, not catastrophe UI.
         networkHealthProvider.overrideWithValue(
@@ -76,8 +78,9 @@ void main() {
       expect(find.byIcon(Icons.info_outline), findsOneWidget);
     });
 
-    testWidgets('info button opens bottom sheet with full stats',
-        (tester) async {
+    testWidgets('info button opens bottom sheet with full stats', (
+      tester,
+    ) async {
       final graph = KnowledgeGraph(
         concepts: [
           Concept(

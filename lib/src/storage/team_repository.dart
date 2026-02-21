@@ -25,8 +25,8 @@ class TeamRepository {
   TeamRepository({
     required FirebaseFirestore firestore,
     required String wikiUrlHash,
-  })  : _firestore = firestore,
-        _wikiUrlHash = wikiUrlHash;
+  }) : _firestore = firestore,
+       _wikiUrlHash = wikiUrlHash;
 
   final FirebaseFirestore _firestore;
   final String _wikiUrlHash;
@@ -46,11 +46,9 @@ class TeamRepository {
 
   /// Stream the current network health.
   Stream<NetworkHealth?> watchNetworkHealth() {
-    return _groupDoc
-        .collection('networkState')
-        .doc('current')
-        .snapshots()
-        .map((doc) {
+    return _groupDoc.collection('networkState').doc('current').snapshots().map((
+      doc,
+    ) {
       if (!doc.exists || doc.data() == null) return null;
       return NetworkHealth.fromJson(doc.data()!);
     });
@@ -65,10 +63,9 @@ class TeamRepository {
 
   /// Mark a catastrophe event as resolved.
   Future<void> resolveCatastropheEvent(String eventId, String timestamp) async {
-    await _groupDoc
-        .collection('events')
-        .doc(eventId)
-        .update({'resolvedAt': timestamp});
+    await _groupDoc.collection('events').doc(eventId).update({
+      'resolvedAt': timestamp,
+    });
   }
 
   /// Stream unresolved catastrophe events.
@@ -77,17 +74,25 @@ class TeamRepository {
         .collection('events')
         .where('resolvedAt', isNull: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => CatastropheEvent.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => CatastropheEvent.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Stream all catastrophe events (for history).
   Stream<List<CatastropheEvent>> watchAllEvents() {
-    return _groupDoc.collection('events').snapshots().map((snapshot) =>
-        snapshot.docs
-            .map((doc) => CatastropheEvent.fromJson(doc.data()))
-            .toList());
+    return _groupDoc
+        .collection('events')
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => CatastropheEvent.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   // --- Concept Clusters ---
@@ -116,18 +121,22 @@ class TeamRepository {
     String clusterDocId,
     String? guardianUid,
   ) async {
-    await _groupDoc
-        .collection('clusters')
-        .doc(clusterDocId)
-        .update({'guardianUid': guardianUid});
+    await _groupDoc.collection('clusters').doc(clusterDocId).update({
+      'guardianUid': guardianUid,
+    });
   }
 
   /// Stream current clusters.
   Stream<List<ConceptCluster>> watchClusters() {
-    return _groupDoc.collection('clusters').snapshots().map((snapshot) =>
-        snapshot.docs
-            .map((doc) => ConceptCluster.fromJson(doc.data()))
-            .toList());
+    return _groupDoc
+        .collection('clusters')
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ConceptCluster.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   // --- Repair Missions ---
@@ -154,9 +163,12 @@ class TeamRepository {
         .collection('missions')
         .where('completedAt', isNull: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => RepairMission.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => RepairMission.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   // --- Team Goals ---
@@ -172,9 +184,12 @@ class TeamRepository {
         .collection('goals')
         .where('completedAt', isNull: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TeamGoal.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => TeamGoal.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Update a goal's contribution map for a specific user.
@@ -189,21 +204,17 @@ class TeamRepository {
   }
 
   /// Mark a goal as completed.
-  Future<void> completeGoal(String goalId, String timestamp) async {
-    await _groupDoc
-        .collection('goals')
-        .doc(goalId)
-        .update({'completedAt': timestamp});
+  Future<void> completeGoal(String goalId, DateTime timestamp) async {
+    await _groupDoc.collection('goals').doc(goalId).update({
+      'completedAt': timestamp.toIso8601String(),
+    });
   }
 
   // --- Glory Board ---
 
   /// Write or update a glory entry for a user.
   Future<void> writeGloryEntry(GloryEntry entry) async {
-    await _groupDoc
-        .collection('glory')
-        .doc(entry.uid)
-        .set(entry.toJson());
+    await _groupDoc.collection('glory').doc(entry.uid).set(entry.toJson());
   }
 
   /// Increment a specific point category for a user.
@@ -233,24 +244,28 @@ class TeamRepository {
     }
     if (updates.isEmpty) return;
 
-    await _groupDoc.collection('glory').doc(uid).set(updates, SetOptions(merge: true));
+    await _groupDoc
+        .collection('glory')
+        .doc(uid)
+        .set(updates, SetOptions(merge: true));
   }
 
   /// Stream the full glory board (all members, sorted client-side).
   Stream<List<GloryEntry>> watchGloryBoard() {
-    return _groupDoc.collection('glory').snapshots().map((snapshot) =>
-        snapshot.docs
-            .map((doc) => GloryEntry.fromJson(doc.data()))
-            .toList());
+    return _groupDoc
+        .collection('glory')
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => GloryEntry.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Stream a single user's glory entry.
   Stream<GloryEntry?> watchGloryEntry(String uid) {
-    return _groupDoc
-        .collection('glory')
-        .doc(uid)
-        .snapshots()
-        .map((doc) {
+    return _groupDoc.collection('glory').doc(uid).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;
       return GloryEntry.fromJson(doc.data()!);
     });
@@ -274,9 +289,12 @@ class TeamRepository {
         .collection('relays')
         .where('completedAt', isNull: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => RelayChallenge.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => RelayChallenge.fromJson(doc.data()))
+                  .toList(),
+        );
   }
 
   // --- Entropy Storms ---
@@ -300,8 +318,8 @@ class TeamRepository {
         .limit(1)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) return null;
-      return EntropyStorm.fromJson(snapshot.docs.first.data());
-    });
+          if (snapshot.docs.isEmpty) return null;
+          return EntropyStorm.fromJson(snapshot.docs.first.data());
+        });
   }
 }

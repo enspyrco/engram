@@ -32,12 +32,14 @@ class ForceDirectedLayout {
     if (initialPositions == null) {
       _temperature = fullTemp;
     } else {
-      final newCount = initialPositions.where((p) => p == null).length +
+      final newCount =
+          initialPositions.where((p) => p == null).length +
           math.max(0, nodeCount - initialPositions.length);
       final fraction = nodeCount > 0 ? newCount / nodeCount : 1.0;
-      _temperature = fraction >= 1.0
-          ? fullTemp
-          : math.max(fullTemp * fraction, fullTemp * 0.15);
+      _temperature =
+          fraction >= 1.0
+              ? fullTemp
+              : math.max(fullTemp * fraction, fullTemp * 0.15);
     }
     _initialTemperature = _temperature;
   }
@@ -141,8 +143,7 @@ class ForceDirectedLayout {
       // Damping: oppose relative velocity projected onto edge direction
       if (edgeDamping > 0) {
         final relVel = _velocities[tgt] - _velocities[src];
-        final relSpeed =
-            relVel.dx * normalized.dx + relVel.dy * normalized.dy;
+        final relSpeed = relVel.dx * normalized.dx + relVel.dy * normalized.dy;
         force -= edgeDamping * _k * relSpeed;
       }
 
@@ -220,7 +221,9 @@ class ForceDirectedLayout {
   /// Move a node to [position] immediately and zero its velocity.
   void setNodePosition(int index, Offset position) {
     assert(
-        index >= 0 && index < nodeCount, 'setNodePosition index out of range');
+      index >= 0 && index < nodeCount,
+      'setNodePosition index out of range',
+    );
     _positions[index] = position;
     _velocities[index] = Offset.zero;
   }

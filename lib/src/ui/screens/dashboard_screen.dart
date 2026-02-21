@@ -28,18 +28,14 @@ class DashboardScreen extends ConsumerWidget {
     final isLoading = ref.watch(
       knowledgeGraphProvider.select((av) => av.isLoading),
     );
-    final error = ref.watch(
-      knowledgeGraphProvider.select((av) => av.error),
-    );
+    final error = ref.watch(knowledgeGraphProvider.select((av) => av.error));
     final structure = ref.watch(graphStructureProvider);
     final syncStatus = ref.watch(syncProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        actions: [
-          _SyncIconButton(syncStatus: syncStatus),
-        ],
+        actions: [_SyncIconButton(syncStatus: syncStatus)],
       ),
       body: Column(
         children: [
@@ -47,17 +43,16 @@ class DashboardScreen extends ConsumerWidget {
               syncStatus.staleDocumentCount > 0)
             _SyncBanner(syncStatus: syncStatus),
           if (syncStatus.newCollections.isNotEmpty)
-            _NewCollectionsBanner(
-              collections: syncStatus.newCollections,
-            ),
+            _NewCollectionsBanner(collections: syncStatus.newCollections),
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : error != null
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
                     ? Center(child: Text('Error: $error'))
                     : structure == null
-                        ? const _EmptyState()
-                        : const _DashboardContent(),
+                    ? const _EmptyState()
+                    : const _DashboardContent(),
           ),
         ],
       ),
@@ -89,12 +84,13 @@ class _SyncIconButton extends ConsumerWidget {
         syncStatus.phase == SyncPhase.updatesAvailable
             ? Icons.cloud_download
             : syncStatus.phase == SyncPhase.error
-                ? Icons.cloud_off
-                : Icons.cloud_done,
+            ? Icons.cloud_off
+            : Icons.cloud_done,
       ),
-      tooltip: syncStatus.phase == SyncPhase.error
-          ? syncStatus.errorMessage
-          : 'Check for updates',
+      tooltip:
+          syncStatus.phase == SyncPhase.error
+              ? syncStatus.errorMessage
+              : 'Check for updates',
       onPressed: () => ref.read(syncProvider.notifier).checkForUpdates(),
     );
   }
@@ -109,9 +105,8 @@ class _SyncBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final staleCount = syncStatus.staleDocumentCount;
-    final changedDocs = syncStatus.staleDocuments
-        .where((d) => d.hasBeenIngested)
-        .toList();
+    final changedDocs =
+        syncStatus.staleDocuments.where((d) => d.hasBeenIngested).toList();
 
     return MaterialBanner(
       content: Text(
@@ -155,28 +150,29 @@ class _SyncBanner extends ConsumerWidget {
   ) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Changed documents',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+      builder:
+          (context) => ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Changed documents',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              for (final doc in changedDocs)
+                ListTile(
+                  leading: const Icon(Icons.description),
+                  title: Text(doc.title),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    DocumentDiffSheet.show(context, ref, documentId: doc.id);
+                  },
+                ),
+            ],
           ),
-          for (final doc in changedDocs)
-            ListTile(
-              leading: const Icon(Icons.description),
-              title: Text(doc.title),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pop();
-                DocumentDiffSheet.show(context, ref, documentId: doc.id);
-              },
-            ),
-        ],
-      ),
     );
   }
 }
@@ -190,10 +186,11 @@ class _NewCollectionsBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final names = collections.map((c) => c['name']!).toList();
-    final label = names.length == 1
-        ? 'New collection: ${names.first}'
-        : '${names.length} new collections: ${names.take(3).join(', ')}'
-            '${names.length > 3 ? '...' : ''}';
+    final label =
+        names.length == 1
+            ? 'New collection: ${names.first}'
+            : '${names.length} new collections: ${names.take(3).join(', ')}'
+                '${names.length > 3 ? '...' : ''}';
 
     return MaterialBanner(
       content: Text(label),
@@ -207,7 +204,8 @@ class _NewCollectionsBanner extends ConsumerWidget {
           child: const Text('Learn'),
         ),
         TextButton(
-          onPressed: () => ref.read(syncProvider.notifier).dismissNewCollections(),
+          onPressed:
+              () => ref.read(syncProvider.notifier).dismissNewCollections(),
           child: const Text('Dismiss'),
         ),
       ],
@@ -226,7 +224,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.school_outlined, size: 64, color: theme.colorScheme.primary),
+          Icon(
+            Icons.school_outlined,
+            size: 64,
+            color: theme.colorScheme.primary,
+          ),
           const SizedBox(height: 16),
           Text('No knowledge graph yet', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
@@ -255,16 +257,17 @@ class _DashboardContent extends ConsumerWidget {
         // Full-screen animated graph — LayoutBuilder passes actual screen
         // dimensions so the force-directed layout fills available space.
         Positioned.fill(
-          child: graph != null
-              ? LayoutBuilder(
-                  builder: (context, constraints) =>
-                      ForceDirectedGraphWidget(
-                    graph: graph,
-                    layoutWidth: constraints.maxWidth,
-                    layoutHeight: constraints.maxHeight,
-                  ),
-                )
-              : const Center(child: Text('No concepts to display')),
+          child:
+              graph != null
+                  ? LayoutBuilder(
+                    builder:
+                        (context, constraints) => ForceDirectedGraphWidget(
+                          graph: graph,
+                          layoutWidth: constraints.maxWidth,
+                          layoutHeight: constraints.maxHeight,
+                        ),
+                  )
+                  : const Center(child: Text('No concepts to display')),
         ),
         // Collection filter chips at top
         const Positioned(
@@ -310,17 +313,20 @@ class _CollectionChipBar extends ConsumerWidget {
             FilterChip(
               label: const Text('All'),
               selected: selected == null,
-              onSelected: (_) =>
-                  ref.read(selectedCollectionIdProvider.notifier).state = null,
+              onSelected:
+                  (_) =>
+                      ref.read(selectedCollectionIdProvider.notifier).state =
+                          null,
             ),
             const SizedBox(width: 8),
             for (final col in collections) ...[
               FilterChip(
                 label: Text(col.name),
                 selected: selected == col.id,
-                onSelected: (_) =>
-                    ref.read(selectedCollectionIdProvider.notifier).state =
-                        selected == col.id ? null : col.id,
+                onSelected:
+                    (_) =>
+                        ref.read(selectedCollectionIdProvider.notifier).state =
+                            selected == col.id ? null : col.id,
               ),
               const SizedBox(width: 8),
             ],
@@ -495,8 +501,11 @@ class _GraphStatusCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.warning_amber,
-                      color: Colors.orange.shade700, size: 18),
+                  Icon(
+                    Icons.warning_amber,
+                    color: Colors.orange.shade700,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   const Text('Dependency cycle detected'),
                 ],

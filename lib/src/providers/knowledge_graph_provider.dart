@@ -13,8 +13,8 @@ import 'graph_store_provider.dart';
 
 final knowledgeGraphProvider =
     AsyncNotifierProvider<KnowledgeGraphNotifier, KnowledgeGraph>(
-  KnowledgeGraphNotifier.new,
-);
+      KnowledgeGraphNotifier.new,
+    );
 
 class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   @override
@@ -27,9 +27,11 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     if (graph.topics.isEmpty && graph.documentMetadata.isNotEmpty) {
       graph = _autoMigrateTopics(graph);
       // Persist the migration
-      unawaited(repo.save(graph).catchError((e) {
-        debugPrint('[KnowledgeGraph] Failed to persist topic migration: $e');
-      }));
+      unawaited(
+        repo.save(graph).catchError((e) {
+          debugPrint('[KnowledgeGraph] Failed to persist topic migration: $e');
+        }),
+      );
     }
 
     return graph;
@@ -39,7 +41,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   KnowledgeGraph _autoMigrateTopics(KnowledgeGraph graph) {
     final collectionDocs = <String, List<String>>{};
     final collectionNames = <String, String>{};
-    final now = ref.read(clockProvider)().toIso8601String();
+    final now = ref.read(clockProvider)();
 
     for (final meta in graph.documentMetadata) {
       final cId = meta.collectionId;
@@ -62,8 +64,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       result = result.withTopic(topic);
     }
 
-    debugPrint('[KnowledgeGraph] Auto-migrated ${collectionDocs.length} '
-        'collection(s) to topics');
+    debugPrint(
+      '[KnowledgeGraph] Auto-migrated ${collectionDocs.length} '
+      'collection(s) to topics',
+    );
     return result;
   }
 
@@ -135,11 +139,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
 
     // Step 1: Clear old concepts from this document (graph shrinks)
     final cleared = current.withNewExtraction(
-      const ExtractionResult(
-        concepts: [],
-        relationships: [],
-        quizItems: [],
-      ),
+      const ExtractionResult(concepts: [], relationships: [], quizItems: []),
       documentId: documentId,
       documentTitle: documentTitle,
       updatedAt: updatedAt,
@@ -164,14 +164,18 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
 
       final partial = ExtractionResult(
         concepts: revealedConcepts,
-        relationships: result.relationships
-            .where((r) =>
-                validIds.contains(r.fromConceptId) &&
-                validIds.contains(r.toConceptId))
-            .toList(),
-        quizItems: result.quizItems
-            .where((q) => revealedIds.contains(q.conceptId))
-            .toList(),
+        relationships:
+            result.relationships
+                .where(
+                  (r) =>
+                      validIds.contains(r.fromConceptId) &&
+                      validIds.contains(r.toConceptId),
+                )
+                .toList(),
+        quizItems:
+            result.quizItems
+                .where((q) => revealedIds.contains(q.conceptId))
+                .toList(),
       );
 
       final graph = cleared.withNewExtraction(
@@ -243,7 +247,9 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     // Fire-and-forget — in-memory state is already correct.
     final repo = ref.read(graphRepositoryProvider);
     repo.save(newGraph).catchError((e) {
-      debugPrint('[KnowledgeGraph] Storage error in backfillCollectionInfo: $e');
+      debugPrint(
+        '[KnowledgeGraph] Storage error in backfillCollectionInfo: $e',
+      );
     });
   }
 

@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/clock_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/wiki_group_membership_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -24,8 +25,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final config = ref.read(settingsProvider);
     _outlineUrlController = TextEditingController(text: config.outlineApiUrl);
     _outlineKeyController = TextEditingController(text: config.outlineApiKey);
-    _anthropicKeyController =
-        TextEditingController(text: config.anthropicApiKey);
+    _anthropicKeyController = TextEditingController(
+      text: config.anthropicApiKey,
+    );
   }
 
   @override
@@ -55,12 +57,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               labelText: 'API URL',
               hintText: 'https://wiki.example.com',
               border: const OutlineInputBorder(),
-              suffixIcon: config.outlineApiUrl.isNotEmpty
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : null,
+              suffixIcon:
+                  config.outlineApiUrl.isNotEmpty
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : null,
             ),
-            onChanged: (value) =>
-                ref.read(settingsProvider.notifier).setOutlineApiUrl(value),
+            onChanged:
+                (value) =>
+                    ref.read(settingsProvider.notifier).setOutlineApiUrl(value),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -68,13 +72,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             decoration: InputDecoration(
               labelText: 'API Key',
               border: const OutlineInputBorder(),
-              suffixIcon: config.outlineApiKey.isNotEmpty
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : null,
+              suffixIcon:
+                  config.outlineApiKey.isNotEmpty
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : null,
             ),
             obscureText: true,
-            onChanged: (value) =>
-                ref.read(settingsProvider.notifier).setOutlineApiKey(value),
+            onChanged:
+                (value) =>
+                    ref.read(settingsProvider.notifier).setOutlineApiKey(value),
           ),
           const SizedBox(height: 24),
           Text('Anthropic (Claude)', style: theme.textTheme.titleMedium),
@@ -85,13 +91,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               labelText: 'API Key',
               hintText: 'sk-ant-...',
               border: const OutlineInputBorder(),
-              suffixIcon: config.anthropicApiKey.isNotEmpty
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : null,
+              suffixIcon:
+                  config.anthropicApiKey.isNotEmpty
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : null,
             ),
             obscureText: true,
-            onChanged: (value) =>
-                ref.read(settingsProvider.notifier).setAnthropicApiKey(value),
+            onChanged:
+                (value) => ref
+                    .read(settingsProvider.notifier)
+                    .setAnthropicApiKey(value),
           ),
           const SizedBox(height: 24),
           Card(
@@ -103,9 +112,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     config.isFullyConfigured
                         ? Icons.check_circle
                         : Icons.warning_amber,
-                    color: config.isFullyConfigured
-                        ? Colors.green
-                        : Colors.orange,
+                    color:
+                        config.isFullyConfigured ? Colors.green : Colors.orange,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -172,6 +180,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _lastSyncLabel(repo.getLastSyncTimestamp()),
               style: theme.textTheme.bodySmall,
             ),
+          ),
+          const SizedBox(height: 24),
+          Text('Social', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Friend discovery'),
+            subtitle: const Text('Discover teammates from your wiki group'),
+            value: repo.getFriendDiscoveryEnabled(),
+            onChanged: (value) async {
+              await repo.setFriendDiscoveryEnabled(value);
+              ref.invalidate(wikiGroupMembershipProvider);
+              setState(() {});
+            },
           ),
           const SizedBox(height: 32),
           Center(

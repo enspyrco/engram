@@ -5,21 +5,21 @@ import 'package:test/test.dart';
 void main() {
   group('DetailedMasterySnapshot', () {
     test('round-trip JSON serialization', () {
-      const snapshot = DetailedMasterySnapshot(
-        summary: MasterySnapshot(
+      final snapshot = DetailedMasterySnapshot(
+        summary: const MasterySnapshot(
           totalConcepts: 10,
           mastered: 5,
           learning: 3,
           newCount: 2,
           streak: 7,
         ),
-        conceptMastery: {
+        conceptMastery: const {
           'c1': 'mastered',
           'c2': 'learning',
           'c3': 'mastered',
           'c4': 'due',
         },
-        updatedAt: '2025-06-15T12:00:00.000Z',
+        updatedAt: DateTime.utc(2025, 6, 15, 12),
       );
 
       final json = snapshot.toJson();
@@ -29,7 +29,7 @@ void main() {
       expect(restored.summary.mastered, 5);
       expect(restored.conceptMastery, hasLength(4));
       expect(restored.conceptMastery['c1'], 'mastered');
-      expect(restored.updatedAt, '2025-06-15T12:00:00.000Z');
+      expect(restored.updatedAt, DateTime.utc(2025, 6, 15, 12));
     });
 
     test('masteredConceptIds filters correctly', () {
@@ -49,11 +49,7 @@ void main() {
     test('learningConceptIds filters correctly', () {
       const snapshot = DetailedMasterySnapshot(
         summary: MasterySnapshot(),
-        conceptMastery: {
-          'c1': 'mastered',
-          'c2': 'learning',
-          'c3': 'learning',
-        },
+        conceptMastery: {'c1': 'mastered', 'c2': 'learning', 'c3': 'learning'},
       );
 
       expect(snapshot.learningConceptIds, unorderedEquals(['c2', 'c3']));

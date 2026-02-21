@@ -6,8 +6,8 @@ import 'guardian_provider.dart';
 /// Streams the glory board leaderboard from Firestore, sorted by total points.
 final gloryBoardProvider =
     AsyncNotifierProvider<GloryBoardNotifier, List<GloryEntry>>(
-  GloryBoardNotifier.new,
-);
+      GloryBoardNotifier.new,
+    );
 
 class GloryBoardNotifier extends AsyncNotifier<List<GloryEntry>> {
   @override
@@ -39,10 +39,8 @@ class GloryBoardNotifier extends AsyncNotifier<List<GloryEntry>> {
     final existing = await teamRepo.watchGloryEntry(uid).first;
     if (existing != null) return;
 
-    await teamRepo.writeGloryEntry(GloryEntry(
-      uid: uid,
-      displayName: displayName,
-      photoUrl: photoUrl,
-    ));
+    await teamRepo.writeGloryEntry(
+      GloryEntry(uid: uid, displayName: displayName, photoUrl: photoUrl),
+    );
   }
 }

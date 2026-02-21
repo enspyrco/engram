@@ -22,33 +22,36 @@ class QuizScreen extends ConsumerWidget {
     final session = ref.watch(quizSessionProvider);
     final hasItems = ref.watch(
       knowledgeGraphProvider.select(
-          (av) => av.valueOrNull?.quizItems.isNotEmpty ?? false),
+        (av) => av.valueOrNull?.quizItems.isNotEmpty ?? false,
+      ),
     );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Quiz')),
       body: switch (session.phase) {
         QuizPhase.idle => _IdleView(
-            hasItems: hasItems,
-            isComeback: session.isComeback,
-            daysSinceLastSession: session.daysSinceLastSession,
-            onStart: ({
-              required SessionMode mode,
-              String? collectionId,
-              String? topicId,
-            }) =>
-                ref.read(quizSessionProvider.notifier).startSession(
-                      mode: mode,
-                      collectionId: collectionId,
-                      topicId: topicId,
-                    ),
-          ),
+          hasItems: hasItems,
+          isComeback: session.isComeback,
+          daysSinceLastSession: session.daysSinceLastSession,
+          onStart:
+              ({
+                required SessionMode mode,
+                String? collectionId,
+                String? topicId,
+              }) => ref
+                  .read(quizSessionProvider.notifier)
+                  .startSession(
+                    mode: mode,
+                    collectionId: collectionId,
+                    topicId: topicId,
+                  ),
+        ),
         QuizPhase.question => _QuestionView(session: session),
         QuizPhase.revealed => _RevealedView(session: session),
         QuizPhase.summary => SessionSummary(
-            state: session,
-            onDone: () => ref.read(quizSessionProvider.notifier).reset(),
-          ),
+          state: session,
+          onDone: () => ref.read(quizSessionProvider.notifier).reset(),
+        ),
       },
     );
   }
@@ -69,7 +72,8 @@ class _IdleView extends ConsumerWidget {
     required SessionMode mode,
     String? collectionId,
     String? topicId,
-  }) onStart;
+  })
+  onStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,8 +84,11 @@ class _IdleView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.quiz_outlined, size: 64,
-                color: theme.colorScheme.primary),
+            Icon(
+              Icons.quiz_outlined,
+              size: 64,
+              color: theme.colorScheme.primary,
+            ),
             const SizedBox(height: 16),
             Text('No quiz items yet', style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
@@ -112,10 +119,7 @@ class _IdleView extends ConsumerWidget {
                 }
               },
               items: [
-                const DropdownMenuItem(
-                  value: null,
-                  child: Text('All topics'),
-                ),
+                const DropdownMenuItem(value: null, child: Text('All topics')),
                 for (final t in topics)
                   DropdownMenuItem(value: t.id, child: Text(t.name)),
               ],
@@ -126,8 +130,10 @@ class _IdleView extends ConsumerWidget {
           if (collections.isNotEmpty && selectedTopicId == null) ...[
             DropdownButton<String?>(
               value: selectedCollectionId,
-              onChanged: (value) =>
-                  ref.read(selectedCollectionIdProvider.notifier).state = value,
+              onChanged:
+                  (value) =>
+                      ref.read(selectedCollectionIdProvider.notifier).state =
+                          value,
               items: [
                 const DropdownMenuItem(
                   value: null,
@@ -140,13 +146,9 @@ class _IdleView extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
           if (isComeback && daysSinceLastSession != null) ...[
-            Icon(Icons.waving_hand, size: 48,
-                color: theme.colorScheme.primary),
+            Icon(Icons.waving_hand, size: 48, color: theme.colorScheme.primary),
             const SizedBox(height: 12),
-            Text(
-              'Welcome back!',
-              style: theme.textTheme.headlineSmall,
-            ),
+            Text('Welcome back!', style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(
               "It's been $daysSinceLastSession days. Quick refresher (5 items).",
@@ -154,41 +156,45 @@ class _IdleView extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () => onStart(
-                mode: SessionMode.quick,
-                collectionId: selectedCollectionId,
-                topicId: selectedTopicId,
-              ),
+              onPressed:
+                  () => onStart(
+                    mode: SessionMode.quick,
+                    collectionId: selectedCollectionId,
+                    topicId: selectedTopicId,
+                  ),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Refresher'),
             ),
           ] else ...[
             FilledButton.icon(
-              onPressed: () => onStart(
-                mode: SessionMode.full,
-                collectionId: selectedCollectionId,
-                topicId: selectedTopicId,
-              ),
+              onPressed:
+                  () => onStart(
+                    mode: SessionMode.full,
+                    collectionId: selectedCollectionId,
+                    topicId: selectedTopicId,
+                  ),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Full Session'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(
-                mode: SessionMode.quick,
-                collectionId: selectedCollectionId,
-                topicId: selectedTopicId,
-              ),
+              onPressed:
+                  () => onStart(
+                    mode: SessionMode.quick,
+                    collectionId: selectedCollectionId,
+                    topicId: selectedTopicId,
+                  ),
               icon: const Icon(Icons.bolt),
               label: const Text('Quick (5 min)'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => onStart(
-                mode: SessionMode.allDue,
-                collectionId: selectedCollectionId,
-                topicId: selectedTopicId,
-              ),
+              onPressed:
+                  () => onStart(
+                    mode: SessionMode.allDue,
+                    collectionId: selectedCollectionId,
+                    topicId: selectedTopicId,
+                  ),
               icon: const Icon(Icons.all_inclusive),
               label: const Text('All Due'),
             ),
@@ -226,8 +232,8 @@ class _QuestionView extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.tonal(
-              onPressed: () =>
-                  ref.read(quizSessionProvider.notifier).revealAnswer(),
+              onPressed:
+                  () => ref.read(quizSessionProvider.notifier).revealAnswer(),
               child: const Text('Reveal Answer'),
             ),
           ),
@@ -263,8 +269,9 @@ class _RevealedView extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           QualityRatingBar(
-            onRate: (quality) =>
-                ref.read(quizSessionProvider.notifier).rateItem(quality),
+            onRate:
+                (quality) =>
+                    ref.read(quizSessionProvider.notifier).rateItem(quality),
           ),
           const SizedBox(height: 8),
           TextButton.icon(
@@ -282,19 +289,20 @@ class _RevealedView extends ConsumerWidget {
     final graph = ref.read(knowledgeGraphProvider).valueOrNull;
     if (graph == null) return;
 
-    final concept = graph.concepts
-        .where((c) => c.id == item.conceptId)
-        .firstOrNull;
+    final concept =
+        graph.concepts.where((c) => c.id == item.conceptId).firstOrNull;
     if (concept == null) return;
 
-    ref.read(splitConceptProvider.notifier).requestSplit(
-      conceptId: concept.id,
-      conceptName: concept.name,
-      conceptDescription: concept.description,
-      sourceDocumentId: concept.sourceDocumentId,
-      quizQuestion: item.question,
-      quizAnswer: item.answer,
-    );
+    ref
+        .read(splitConceptProvider.notifier)
+        .requestSplit(
+          conceptId: concept.id,
+          conceptName: concept.name,
+          conceptDescription: concept.description,
+          sourceDocumentId: concept.sourceDocumentId,
+          quizQuestion: item.question,
+          quizAnswer: item.answer,
+        );
 
     showModalBottomSheet(
       context: context,

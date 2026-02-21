@@ -7,8 +7,8 @@ class UserProfileRepository {
   UserProfileRepository({
     required FirebaseFirestore firestore,
     required String userId,
-  })  : _firestore = firestore,
-        _userId = userId;
+  }) : _firestore = firestore,
+       _userId = userId;
 
   final FirebaseFirestore _firestore;
   final String _userId;

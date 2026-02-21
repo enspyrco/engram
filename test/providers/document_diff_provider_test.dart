@@ -45,15 +45,16 @@ void main() {
               httpClient: httpClient,
             ),
           ),
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(graph)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(graph),
+          ),
         ],
       );
     }
 
     KnowledgeGraph graphWithMetadata({
       required String documentId,
-      required String ingestedAt,
+      required DateTime ingestedAt,
       String? ingestedText,
     }) {
       return KnowledgeGraph(
@@ -89,63 +90,59 @@ void main() {
       expect(state, isA<DocumentDiffIdle>());
     });
 
-    test('fetchDiff loads current text and compares with ingestedText',
-        () async {
-      final mockClient = MockClient((request) async {
-        if (request.url.path == '/api/documents.info') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'id': 'doc-1',
-                'title': 'Test Doc',
-                'text': '# Updated\nNew paragraph.',
-              },
-            }),
-            200,
-          );
-        }
-        return http.Response('{}', 200);
-      });
+    test(
+      'fetchDiff loads current text and compares with ingestedText',
+      () async {
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/api/documents.info') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'id': 'doc-1',
+                  'title': 'Test Doc',
+                  'text': '# Updated\nNew paragraph.',
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response('{}', 200);
+        });
 
-      final graph = graphWithMetadata(
-        documentId: 'doc-1',
-        ingestedAt: '2026-02-18T00:00:00Z',
-        ingestedText: '# Original',
-      );
+        final graph = graphWithMetadata(
+          documentId: 'doc-1',
+          ingestedAt: DateTime.utc(2026, 2, 18),
+          ingestedText: '# Original',
+        );
 
-      final container = createContainer(
-        httpClient: mockClient,
-        graph: graph,
-      );
+        final container = createContainer(httpClient: mockClient, graph: graph);
 
-      // Wait for graph to load.
-      await container.read(knowledgeGraphProvider.future);
+        // Wait for graph to load.
+        await container.read(knowledgeGraphProvider.future);
 
-      final notifier = container.read(documentDiffProvider.notifier);
-      await notifier.fetchDiff(documentId: 'doc-1');
+        final notifier = container.read(documentDiffProvider.notifier);
+        await notifier.fetchDiff(documentId: 'doc-1');
 
-      final state = container.read(documentDiffProvider);
-      expect(state, isA<DocumentDiffLoaded>());
+        final state = container.read(documentDiffProvider);
+        expect(state, isA<DocumentDiffLoaded>());
 
-      final loaded = state as DocumentDiffLoaded;
-      expect(loaded.oldText, '# Original');
-      expect(loaded.newText, '# Updated\nNew paragraph.');
-      expect(loaded.ingestedAt, DateTime.utc(2026, 2, 18));
-    });
+        final loaded = state as DocumentDiffLoaded;
+        expect(loaded.oldText, '# Original');
+        expect(loaded.newText, '# Updated\nNew paragraph.');
+        expect(loaded.ingestedAt, DateTime.utc(2026, 2, 18));
+      },
+    );
 
     test('returns error when no ingestedText stored', () async {
       final mockClient = MockClient((_) async => http.Response('{}', 200));
 
       final graph = graphWithMetadata(
         documentId: 'doc-1',
-        ingestedAt: '2026-02-18T00:00:00Z',
+        ingestedAt: DateTime.utc(2026, 2, 18),
         ingestedText: null, // no stored text
       );
 
-      final container = createContainer(
-        httpClient: mockClient,
-        graph: graph,
-      );
+      final container = createContainer(httpClient: mockClient, graph: graph);
       await container.read(knowledgeGraphProvider.future);
 
       final notifier = container.read(documentDiffProvider.notifier);
@@ -186,14 +183,11 @@ void main() {
 
       final graph = graphWithMetadata(
         documentId: 'doc-1',
-        ingestedAt: '2026-02-18T00:00:00Z',
+        ingestedAt: DateTime.utc(2026, 2, 18),
         ingestedText: '# Old text',
       );
 
-      final container = createContainer(
-        httpClient: mockClient,
-        graph: graph,
-      );
+      final container = createContainer(httpClient: mockClient, graph: graph);
       await container.read(knowledgeGraphProvider.future);
 
       final notifier = container.read(documentDiffProvider.notifier);
@@ -219,14 +213,11 @@ void main() {
 
       final graph = graphWithMetadata(
         documentId: 'doc-1',
-        ingestedAt: '2026-02-18T00:00:00Z',
+        ingestedAt: DateTime.utc(2026, 2, 18),
         ingestedText: '# Old',
       );
 
-      final container = createContainer(
-        httpClient: mockClient,
-        graph: graph,
-      );
+      final container = createContainer(httpClient: mockClient, graph: graph);
       await container.read(knowledgeGraphProvider.future);
 
       final notifier = container.read(documentDiffProvider.notifier);

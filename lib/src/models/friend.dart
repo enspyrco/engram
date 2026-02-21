@@ -17,10 +17,12 @@ class Friend {
       uid: json['uid'] as String,
       displayName: json['displayName'] as String,
       photoUrl: json['photoUrl'] as String?,
-      masterySnapshot: json['masterySnapshot'] != null
-          ? MasterySnapshot.fromJson(
-              json['masterySnapshot'] as Map<String, dynamic>)
-          : null,
+      masterySnapshot:
+          json['masterySnapshot'] != null
+              ? MasterySnapshot.fromJson(
+                json['masterySnapshot'] as Map<String, dynamic>,
+              )
+              : null,
       lastActiveAt: json['lastActiveAt'] as String?,
     );
   }
@@ -29,13 +31,15 @@ class Friend {
   final String displayName;
   final String? photoUrl;
   final MasterySnapshot? masterySnapshot;
+
+  /// Firestore passthrough — kept as String since it's only used for display.
   final String? lastActiveAt;
 
   Map<String, dynamic> toJson() => {
-        'uid': uid,
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'masterySnapshot': masterySnapshot?.toJson(),
-        'lastActiveAt': lastActiveAt,
-      };
+    'uid': uid,
+    'displayName': displayName,
+    'photoUrl': photoUrl,
+    'masterySnapshot': masterySnapshot?.toJson(),
+    'lastActiveAt': lastActiveAt,
+  };
 }

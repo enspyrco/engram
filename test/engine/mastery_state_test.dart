@@ -12,75 +12,128 @@ void main() {
     test('locked when prerequisites not mastered', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'prereq', name: 'P', description: 'D', sourceDocumentId: 'doc1'),
-          Concept(id: 'dep', name: 'D', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'prereq',
+            name: 'P',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
+          Concept(
+            id: 'dep',
+            name: 'D',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'dep', toConceptId: 'prereq', label: 'depends on'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'dep',
+            toConceptId: 'prereq',
+            label: 'depends on',
+          ),
         ],
         quizItems: [
-          const QuizItem(id: 'q1', conceptId: 'prereq', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 0, repetitions: 0,
-              nextReview: '2020-01-01T00:00:00.000Z', lastReview: null),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'prereq',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('dep', graph, analyzer),
-        MasteryState.locked,
-      );
+      expect(masteryStateOf('dep', graph, analyzer), MasteryState.locked);
     });
 
     test('due when unlocked but no reviews', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          const QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 0, repetitions: 0,
-              nextReview: '2020-01-01T00:00:00.000Z', lastReview: null),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer),
-        MasteryState.due,
-      );
+      expect(masteryStateOf('c1', graph, analyzer), MasteryState.due);
     });
 
     test('learning when reviewed but interval < 21', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          const QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 6, repetitions: 2,
-              nextReview: '2099-01-01T00:00:00.000Z', lastReview: null),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 6,
+            repetitions: 2,
+            nextReview: DateTime.utc(2099),
+            lastReview: null,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer),
-        MasteryState.learning,
-      );
+      expect(masteryStateOf('c1', graph, analyzer), MasteryState.learning);
     });
 
     test('mastered when interval >= 21 and recently reviewed', () {
       final now = DateTime.utc(2025, 6, 15);
-      final recentReview = DateTime.utc(2025, 6, 10).toIso8601String();
+      final recentReview = DateTime.utc(2025, 6, 10);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z', lastReview: recentReview),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
@@ -94,33 +147,56 @@ void main() {
     test('mastered when interval >= 21 and no lastReview', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          const QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z', lastReview: null),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: null,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer),
-        MasteryState.mastered,
-      );
+      expect(masteryStateOf('c1', graph, analyzer), MasteryState.mastered);
     });
 
     test('fading when mastered but lastReview > 30 days ago', () {
       final now = DateTime.utc(2025, 6, 15);
-      final oldReview = DateTime.utc(2025, 5, 1).toIso8601String(); // 45 days ago
+      final oldReview = DateTime.utc(2025, 5, 1); // 45 days ago
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z', lastReview: oldReview),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: oldReview,
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
@@ -134,15 +210,17 @@ void main() {
     test('mastered when no quiz items (informational node)', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer),
-        MasteryState.mastered,
-      );
+      expect(masteryStateOf('c1', graph, analyzer), MasteryState.mastered);
     });
   });
 
@@ -151,73 +229,113 @@ void main() {
       final now = DateTime.utc(2025, 6, 15);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z',
-              lastReview: now.toIso8601String()),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: now,
+          ),
         ],
       );
 
-      expect(
-        freshnessOf('c1', graph, now: now),
-        closeTo(1.0, 0.01),
-      );
+      expect(freshnessOf('c1', graph, now: now), closeTo(1.0, 0.01));
     });
 
     test('returns ~0.65 for 30 days ago', () {
       final now = DateTime.utc(2025, 6, 15);
-      final thirtyDaysAgo = DateTime.utc(2025, 5, 16).toIso8601String();
+      final thirtyDaysAgo = DateTime.utc(2025, 5, 16);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z',
-              lastReview: thirtyDaysAgo),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: thirtyDaysAgo,
+          ),
         ],
       );
 
-      expect(
-        freshnessOf('c1', graph, now: now),
-        closeTo(0.65, 0.02),
-      );
+      expect(freshnessOf('c1', graph, now: now), closeTo(0.65, 0.02));
     });
 
     test('returns 0.3 for 60+ days ago', () {
       final now = DateTime.utc(2025, 6, 15);
-      final sixtyDaysAgo = DateTime.utc(2025, 4, 16).toIso8601String();
+      final sixtyDaysAgo = DateTime.utc(2025, 4, 16);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z',
-              lastReview: sixtyDaysAgo),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: sixtyDaysAgo,
+          ),
         ],
       );
 
-      expect(
-        freshnessOf('c1', graph, now: now),
-        closeTo(0.3, 0.02),
-      );
+      expect(freshnessOf('c1', graph, now: now), closeTo(0.3, 0.02));
     });
 
     test('returns 1.0 when no lastReview', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          const QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 0, repetitions: 0,
-              nextReview: '2020-01-01T00:00:00.000Z', lastReview: null),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
+          ),
         ],
       );
 
@@ -227,16 +345,28 @@ void main() {
     test('decayMultiplier 2.0 doubles effective decay', () {
       final now = DateTime.utc(2025, 6, 15);
       // 30 days ago: normal freshness ~0.65, with 2x should be ~0.30
-      final thirtyDaysAgo = DateTime.utc(2025, 5, 16).toIso8601String();
+      final thirtyDaysAgo = DateTime.utc(2025, 5, 16);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z',
-              lastReview: thirtyDaysAgo),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: thirtyDaysAgo,
+          ),
         ],
       );
 
@@ -251,16 +381,28 @@ void main() {
 
     test('decayMultiplier 1.0 is default behavior', () {
       final now = DateTime.utc(2025, 6, 15);
-      final review = DateTime.utc(2025, 5, 16).toIso8601String();
+      final review = DateTime.utc(2025, 5, 16);
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'c1', name: 'C', description: 'D', sourceDocumentId: 'doc1'),
+          Concept(
+            id: 'c1',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
         ],
         quizItems: [
-          QuizItem(id: 'q1', conceptId: 'c1', question: 'Q?', answer: 'A.',
-              easeFactor: 2.5, interval: 25, repetitions: 5,
-              nextReview: '2099-01-01T00:00:00.000Z',
-              lastReview: review),
+          QuizItem(
+            id: 'q1',
+            conceptId: 'c1',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: review,
+          ),
         ],
       );
 

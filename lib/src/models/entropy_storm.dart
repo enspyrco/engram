@@ -38,15 +38,16 @@ class EntropyStorm {
   factory EntropyStorm.fromJson(Map<String, dynamic> json) {
     return EntropyStorm._raw(
       id: json['id'] as String,
-      scheduledStart: json['scheduledStart'] as String,
-      scheduledEnd: json['scheduledEnd'] as String,
+      scheduledStart: DateTime.parse(json['scheduledStart'] as String),
+      scheduledEnd: DateTime.parse(json['scheduledEnd'] as String),
       healthThreshold: (json['healthThreshold'] as num?)?.toDouble() ?? 0.7,
       status: StormStatus.values.firstWhere(
         (s) => s.name == json['status'],
         orElse: () => StormStatus.scheduled,
       ),
       lowestHealth: (json['lowestHealth'] as num?)?.toDouble(),
-      participantUids: (json['participantUids'] as List<dynamic>?)
+      participantUids:
+          (json['participantUids'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toIList() ??
           const IListConst([]),
@@ -55,8 +56,8 @@ class EntropyStorm {
   }
 
   final String id;
-  final String scheduledStart;
-  final String scheduledEnd;
+  final DateTime scheduledStart;
+  final DateTime scheduledEnd;
   final double healthThreshold;
   final StormStatus status;
 
@@ -76,25 +77,21 @@ class EntropyStorm {
     if (status != StormStatus.active && status != StormStatus.scheduled) {
       return false;
     }
-    final start = DateTime.parse(scheduledStart);
-    final end = DateTime.parse(scheduledEnd);
-    return now.isAfter(start) && now.isBefore(end);
+    return now.isAfter(scheduledStart) && now.isBefore(scheduledEnd);
   }
 
   /// Remaining duration of the storm (null if not active).
   Duration? remainingDuration({DateTime? now}) {
     final currentTime = now ?? DateTime.now().toUtc();
-    final end = DateTime.parse(scheduledEnd);
-    if (currentTime.isAfter(end)) return Duration.zero;
-    return end.difference(currentTime);
+    if (currentTime.isAfter(scheduledEnd)) return Duration.zero;
+    return scheduledEnd.difference(currentTime);
   }
 
   /// Duration until the storm starts (null if already started).
   Duration? timeUntilStart({DateTime? now}) {
     final currentTime = now ?? DateTime.now().toUtc();
-    final start = DateTime.parse(scheduledStart);
-    if (currentTime.isAfter(start)) return Duration.zero;
-    return start.difference(currentTime);
+    if (currentTime.isAfter(scheduledStart)) return Duration.zero;
+    return scheduledStart.difference(currentTime);
   }
 
   EntropyStorm withParticipant(String uid) {
@@ -125,35 +122,35 @@ class EntropyStorm {
   }
 
   EntropyStorm withStatus(StormStatus newStatus) => EntropyStorm._raw(
-        id: id,
-        scheduledStart: scheduledStart,
-        scheduledEnd: scheduledEnd,
-        healthThreshold: healthThreshold,
-        status: newStatus,
-        lowestHealth: lowestHealth,
-        participantUids: participantUids,
-        createdByUid: createdByUid,
-      );
+    id: id,
+    scheduledStart: scheduledStart,
+    scheduledEnd: scheduledEnd,
+    healthThreshold: healthThreshold,
+    status: newStatus,
+    lowestHealth: lowestHealth,
+    participantUids: participantUids,
+    createdByUid: createdByUid,
+  );
 
   EntropyStorm withLowestHealth(double health) => EntropyStorm._raw(
-        id: id,
-        scheduledStart: scheduledStart,
-        scheduledEnd: scheduledEnd,
-        healthThreshold: healthThreshold,
-        status: status,
-        lowestHealth: health,
-        participantUids: participantUids,
-        createdByUid: createdByUid,
-      );
+    id: id,
+    scheduledStart: scheduledStart,
+    scheduledEnd: scheduledEnd,
+    healthThreshold: healthThreshold,
+    status: status,
+    lowestHealth: health,
+    participantUids: participantUids,
+    createdByUid: createdByUid,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'scheduledStart': scheduledStart,
-        'scheduledEnd': scheduledEnd,
-        'healthThreshold': healthThreshold,
-        'status': status.name,
-        'lowestHealth': lowestHealth,
-        'participantUids': participantUids.toList(),
-        'createdByUid': createdByUid,
-      };
+    'id': id,
+    'scheduledStart': scheduledStart.toIso8601String(),
+    'scheduledEnd': scheduledEnd.toIso8601String(),
+    'healthThreshold': healthThreshold,
+    'status': status.name,
+    'lowestHealth': lowestHealth,
+    'participantUids': participantUids.toList(),
+    'createdByUid': createdByUid,
+  };
 }

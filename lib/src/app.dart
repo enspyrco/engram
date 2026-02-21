@@ -41,9 +41,9 @@ class _AuthGate extends ConsumerWidget {
         if (user == null) return const SignInScreen();
         return NavigationShell(key: navigationShellKey);
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, __) => const SignInScreen(),
     );
   }

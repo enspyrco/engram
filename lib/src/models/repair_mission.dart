@@ -14,8 +14,8 @@ class RepairMission {
     required this.createdAt,
     this.completedAt,
     this.catastropheEventId,
-  })  : conceptIds = IList(conceptIds),
-        reviewedConceptIds = IList(reviewedConceptIds);
+  }) : conceptIds = IList(conceptIds),
+       reviewedConceptIds = IList(reviewedConceptIds);
 
   const RepairMission._raw({
     required this.id,
@@ -29,16 +29,21 @@ class RepairMission {
   factory RepairMission.fromJson(Map<String, dynamic> json) {
     return RepairMission._raw(
       id: json['id'] as String,
-      conceptIds: (json['conceptIds'] as List<dynamic>?)
+      conceptIds:
+          (json['conceptIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toIList() ??
           const IListConst([]),
-      reviewedConceptIds: (json['reviewedConceptIds'] as List<dynamic>?)
+      reviewedConceptIds:
+          (json['reviewedConceptIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toIList() ??
           const IListConst([]),
-      createdAt: json['createdAt'] as String,
-      completedAt: json['completedAt'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      completedAt:
+          json['completedAt'] != null
+              ? DateTime.parse(json['completedAt'] as String)
+              : null,
       catastropheEventId: json['catastropheEventId'] as String?,
     );
   }
@@ -51,8 +56,8 @@ class RepairMission {
   /// Concept IDs that have been reviewed so far.
   final IList<String> reviewedConceptIds;
 
-  final String createdAt;
-  final String? completedAt;
+  final DateTime createdAt;
+  final DateTime? completedAt;
   final String? catastropheEventId;
 
   bool get isComplete => completedAt != null;
@@ -75,20 +80,17 @@ class RepairMission {
       conceptIds: conceptIds,
       reviewedConceptIds: updated,
       createdAt: createdAt,
-      completedAt:
-          updated.length >= conceptIds.length
-              ? now.toUtc().toIso8601String()
-              : null,
+      completedAt: updated.length >= conceptIds.length ? now.toUtc() : null,
       catastropheEventId: catastropheEventId,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'conceptIds': conceptIds.toList(),
-        'reviewedConceptIds': reviewedConceptIds.toList(),
-        'createdAt': createdAt,
-        'completedAt': completedAt,
-        'catastropheEventId': catastropheEventId,
-      };
+    'id': id,
+    'conceptIds': conceptIds.toList(),
+    'reviewedConceptIds': reviewedConceptIds.toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+    'catastropheEventId': catastropheEventId,
+  };
 }

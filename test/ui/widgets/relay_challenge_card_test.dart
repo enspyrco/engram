@@ -12,18 +12,18 @@ void main() {
         id: 'relay_1',
         title: 'CI/CD Pipeline',
         legs: [
-          const RelayLeg(
+          RelayLeg(
             conceptId: 'c1',
             conceptName: 'Git Basics',
             claimedByUid: 'u1',
             claimedByName: 'Alice',
-            claimedAt: '2025-06-15T10:00:00.000Z',
-            completedAt: '2025-06-15T12:00:00.000Z',
+            claimedAt: DateTime.utc(2025, 6, 15, 10),
+            completedAt: DateTime.utc(2025, 6, 15, 12),
           ),
           const RelayLeg(conceptId: 'c2', conceptName: 'Branching'),
           const RelayLeg(conceptId: 'c3', conceptName: 'CI Pipelines'),
         ],
-        createdAt: '2025-06-14T00:00:00.000Z',
+        createdAt: DateTime.utc(2025, 6, 14),
         createdByUid: 'creator1',
       );
     });
@@ -32,10 +32,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RelayChallengeCard(
-              relay: relay,
-              currentUid: 'u1',
-            ),
+            body: RelayChallengeCard(relay: relay, currentUid: 'u1'),
           ),
         ),
       );
@@ -65,10 +62,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RelayChallengeCard(
-              relay: relay,
-              currentUid: 'u1',
-            ),
+            body: RelayChallengeCard(relay: relay, currentUid: 'u1'),
           ),
         ),
       );
@@ -101,10 +95,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RelayChallengeCard(
-              relay: relay,
-              currentUid: 'u1',
-            ),
+            body: RelayChallengeCard(relay: relay, currentUid: 'u1'),
           ),
         ),
       );

@@ -17,11 +17,7 @@ NotificationCopy buildNotificationCopy({
 }) {
   // All caught up, nothing new → skip
   if (dueCount == 0 && !hasNewConcepts) {
-    return (
-      title: 'All caught up!',
-      body: 'Nothing due today.',
-      skip: true,
-    );
+    return (title: 'All caught up!', body: 'Nothing due today.', skip: true);
   }
 
   // New concepts available
@@ -38,7 +34,8 @@ NotificationCopy buildNotificationCopy({
   if (daysSinceLastSession != null && daysSinceLastSession > 3) {
     return (
       title: 'Welcome back!',
-      body: 'Quick review to refresh? $dueCount concept${dueCount == 1 ? '' : 's'} waiting.',
+      body:
+          'Quick review to refresh? $dueCount concept${dueCount == 1 ? '' : 's'} waiting.',
       skip: false,
     );
   }
@@ -83,15 +80,17 @@ class NotificationService {
 
     tz.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
-    const linuxSettings =
-        LinuxInitializationSettings(defaultActionName: 'Open Engram');
+    const linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open Engram',
+    );
 
     await _plugin.initialize(
       settings: const InitializationSettings(
@@ -108,17 +107,25 @@ class NotificationService {
 
   Future<bool> requestPermissions() async {
     // Android 13+
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android =
+        _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
     if (android != null) {
       return await android.requestNotificationsPermission() ?? false;
     }
 
     // iOS / macOS
-    final darwin = _plugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>() ??
-        _plugin.resolvePlatformSpecificImplementation<
-            MacOSFlutterLocalNotificationsPlugin>();
+    final darwin =
+        _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >() ??
+        _plugin
+            .resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin
+            >();
     if (darwin is IOSFlutterLocalNotificationsPlugin) {
       return await darwin.requestPermissions(
             alert: true,

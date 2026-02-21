@@ -17,7 +17,7 @@ class DocumentMetadata {
       documentId: json['documentId'] as String,
       title: json['title'] as String,
       updatedAt: json['updatedAt'] as String,
-      ingestedAt: json['ingestedAt'] as String,
+      ingestedAt: DateTime.parse(json['ingestedAt'] as String),
       collectionId: json['collectionId'] as String?,
       collectionName: json['collectionName'] as String?,
       ingestedText: json['ingestedText'] as String?,
@@ -32,8 +32,11 @@ class DocumentMetadata {
 
   final String documentId;
   final String title;
+
+  /// Outline API passthrough — kept as String.
   final String updatedAt;
-  final String ingestedAt;
+
+  final DateTime ingestedAt;
   final String? collectionId;
   final String? collectionName;
 
@@ -59,7 +62,7 @@ class DocumentMetadata {
       documentId: documentId,
       title: title,
       updatedAt: updatedAt,
-      ingestedAt: currentTime.toIso8601String(),
+      ingestedAt: currentTime,
       collectionId: collectionId,
       collectionName: collectionName,
       ingestedText: ingestedText ?? this.ingestedText,
@@ -67,14 +70,14 @@ class DocumentMetadata {
   }
 
   Map<String, dynamic> toJson() => {
-        'documentId': documentId,
-        'title': title,
-        'updatedAt': updatedAt,
-        'ingestedAt': ingestedAt,
-        if (collectionId != null) 'collectionId': collectionId,
-        if (collectionName != null) 'collectionName': collectionName,
-        if (ingestedText != null) 'ingestedText': ingestedText,
-      };
+    'documentId': documentId,
+    'title': title,
+    'updatedAt': updatedAt,
+    'ingestedAt': ingestedAt.toIso8601String(),
+    if (collectionId != null) 'collectionId': collectionId,
+    if (collectionName != null) 'collectionName': collectionName,
+    if (ingestedText != null) 'ingestedText': ingestedText,
+  };
 
   @override
   bool operator ==(Object other) =>

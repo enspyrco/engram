@@ -43,8 +43,13 @@ enum RelationshipType {
   /// an explicit `type` field stored in JSON/Firestore.
   static RelationshipType inferFromLabel(String label) {
     final lower = label.toLowerCase();
-    if (['depends on', 'requires', 'prerequisite', 'builds on', 'assumes']
-        .any((kw) => lower.contains(kw))) {
+    if ([
+      'depends on',
+      'requires',
+      'prerequisite',
+      'builds on',
+      'assumes',
+    ].any((kw) => lower.contains(kw))) {
       return prerequisite;
     }
     if (lower.contains('type of')) return generalization;
@@ -78,9 +83,10 @@ class Relationship {
       toConceptId: json['toConceptId'] as String,
       label: label,
       description: json['description'] as String?,
-      type: typeStr != null
-          ? RelationshipType.tryParse(typeStr) ?? RelationshipType.relatedTo
-          : null,
+      type:
+          typeStr != null
+              ? RelationshipType.tryParse(typeStr) ?? RelationshipType.relatedTo
+              : null,
     );
   }
 
@@ -98,13 +104,13 @@ class Relationship {
       type ?? RelationshipType.inferFromLabel(label);
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'fromConceptId': fromConceptId,
-        'toConceptId': toConceptId,
-        'label': label,
-        if (description != null) 'description': description,
-        'type': resolvedType.name,
-      };
+    'id': id,
+    'fromConceptId': fromConceptId,
+    'toConceptId': toConceptId,
+    'label': label,
+    if (description != null) 'description': description,
+    'type': resolvedType.name,
+  };
 
   @override
   bool operator ==(Object other) =>

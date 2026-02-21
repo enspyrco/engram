@@ -14,23 +14,27 @@ void main() {
     final concepts = <Concept>[];
     final items = <QuizItem>[];
     for (var i = 0; i < count; i++) {
-      concepts.add(Concept(
-        id: 'c$i',
-        name: 'Concept $i',
-        description: 'Desc $i',
-        sourceDocumentId: 'doc1',
-      ));
-      items.add(QuizItem(
-        id: 'q$i',
-        conceptId: 'c$i',
-        question: 'Question $i?',
-        answer: 'Answer $i.',
-        easeFactor: 2.5,
-        interval: 0,
-        repetitions: 0,
-        nextReview: '2020-01-01T00:00:00.000Z',
-        lastReview: null,
-      ));
+      concepts.add(
+        Concept(
+          id: 'c$i',
+          name: 'Concept $i',
+          description: 'Desc $i',
+          sourceDocumentId: 'doc1',
+        ),
+      );
+      items.add(
+        QuizItem(
+          id: 'q$i',
+          conceptId: 'c$i',
+          question: 'Question $i?',
+          answer: 'Answer $i.',
+          easeFactor: 2.5,
+          interval: 0,
+          repetitions: 0,
+          nextReview: DateTime.utc(2020),
+          lastReview: null,
+        ),
+      );
     }
     return KnowledgeGraph(concepts: concepts, quizItems: items);
   }
@@ -41,8 +45,9 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        knowledgeGraphProvider
-            .overrideWith(() => _PreloadedGraphNotifier(graph)),
+        knowledgeGraphProvider.overrideWith(
+          () => _PreloadedGraphNotifier(graph),
+        ),
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: const MaterialApp(home: QuizScreen()),

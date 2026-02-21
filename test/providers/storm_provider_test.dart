@@ -11,8 +11,8 @@ void main() {
     setUp(() {
       storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.scheduled,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
@@ -21,7 +21,7 @@ void main() {
 
     test('scheduled → active when current time passes start', () {
       final now = DateTime.utc(2025, 6, 15, 1);
-      final start = DateTime.parse(storm.scheduledStart);
+      final start = storm.scheduledStart;
       expect(now.isAfter(start), isTrue);
 
       final active = storm.withStatus(StormStatus.active);
@@ -31,7 +31,7 @@ void main() {
 
     test('remains scheduled before start time', () {
       final now = DateTime.utc(2025, 6, 14);
-      final start = DateTime.parse(storm.scheduledStart);
+      final start = storm.scheduledStart;
       expect(now.isAfter(start), isFalse);
     });
 
@@ -40,7 +40,8 @@ void main() {
           .withStatus(StormStatus.active)
           .withLowestHealth(0.75);
 
-      final survived = active.lowestHealth != null &&
+      final survived =
+          active.lowestHealth != null &&
           active.lowestHealth! >= active.healthThreshold;
       expect(survived, isTrue);
     });
@@ -50,7 +51,8 @@ void main() {
           .withStatus(StormStatus.active)
           .withLowestHealth(0.55);
 
-      final survived = active.lowestHealth != null &&
+      final survived =
+          active.lowestHealth != null &&
           active.lowestHealth! >= active.healthThreshold;
       expect(survived, isFalse);
     });
@@ -59,7 +61,8 @@ void main() {
       final active = storm.withStatus(StormStatus.active);
 
       // lowestHealth is null — storm failed (can't prove survival)
-      final survived = active.lowestHealth != null &&
+      final survived =
+          active.lowestHealth != null &&
           active.lowestHealth! >= active.healthThreshold;
       expect(survived, isFalse);
     });
@@ -69,8 +72,8 @@ void main() {
     test('opt-in only allowed during scheduled status', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.scheduled,
         participantUids: ['u1'],
         createdByUid: 'u1',
@@ -86,8 +89,8 @@ void main() {
     test('opt-out removes participant', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.scheduled,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
@@ -103,8 +106,8 @@ void main() {
     test('lowestHealth tracks minimum', () {
       var storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.active,
         createdByUid: 'u1',
       );
@@ -133,8 +136,8 @@ void main() {
     test('active storm produces multiplier 2.0', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.active,
         createdByUid: 'u1',
       );
@@ -146,8 +149,8 @@ void main() {
     test('non-active storm produces multiplier 1.0', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.scheduled,
         createdByUid: 'u1',
       );
@@ -168,15 +171,16 @@ void main() {
     test('survived storm awards 10 points to each participant', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.active,
         participantUids: ['u1', 'u2', 'u3'],
         createdByUid: 'u1',
         lowestHealth: 0.75,
       );
 
-      final survived = storm.lowestHealth != null &&
+      final survived =
+          storm.lowestHealth != null &&
           storm.lowestHealth! >= storm.healthThreshold;
       expect(survived, isTrue);
 
@@ -188,15 +192,16 @@ void main() {
     test('failed storm awards no points', () {
       final storm = EntropyStorm(
         id: 's1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.active,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
         lowestHealth: 0.5,
       );
 
-      final survived = storm.lowestHealth != null &&
+      final survived =
+          storm.lowestHealth != null &&
           storm.lowestHealth! >= storm.healthThreshold;
       expect(survived, isFalse);
     });

@@ -11,11 +11,13 @@ void main() {
     test('produces TeamNodes for friends with non-empty snapshots', () async {
       final container = ProviderContainer(
         overrides: [
-          friendsProvider.overrideWith(() => _FixedFriendsNotifier([
-                const Friend(uid: 'u1', displayName: 'Alice'),
-                const Friend(uid: 'u2', displayName: 'Bob'),
-                const Friend(uid: 'u3', displayName: 'Charlie'),
-              ])),
+          friendsProvider.overrideWith(
+            () => _FixedFriendsNotifier([
+              const Friend(uid: 'u1', displayName: 'Alice'),
+              const Friend(uid: 'u2', displayName: 'Bob'),
+              const Friend(uid: 'u3', displayName: 'Charlie'),
+            ]),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -40,15 +42,20 @@ void main() {
 
       // Bob has no snapshot → excluded. Alice and Charlie included.
       expect(teamNodes, hasLength(2));
-      expect(teamNodes.map((n) => n.displayName), containsAll(['Alice', 'Charlie']));
+      expect(
+        teamNodes.map((n) => n.displayName),
+        containsAll(['Alice', 'Charlie']),
+      );
     });
 
     test('excludes friends with empty conceptMastery', () async {
       final container = ProviderContainer(
         overrides: [
-          friendsProvider.overrideWith(() => _FixedFriendsNotifier([
-                const Friend(uid: 'u1', displayName: 'Alice'),
-              ])),
+          friendsProvider.overrideWith(
+            () => _FixedFriendsNotifier([
+              const Friend(uid: 'u1', displayName: 'Alice'),
+            ]),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -69,9 +76,11 @@ void main() {
     test('TeamNode healthRatio computes correctly', () async {
       final container = ProviderContainer(
         overrides: [
-          friendsProvider.overrideWith(() => _FixedFriendsNotifier([
-                const Friend(uid: 'u1', displayName: 'Alice'),
-              ])),
+          friendsProvider.overrideWith(
+            () => _FixedFriendsNotifier([
+              const Friend(uid: 'u1', displayName: 'Alice'),
+            ]),
+          ),
         ],
       );
       addTearDown(container.dispose);

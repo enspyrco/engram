@@ -6,9 +6,9 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Models**: Immutable data classes with `fromJson`/`toJson` and `withXxx()` update methods
 - **Scheduling Engine**: Currently SM-2 (pure function, no class state), migrating to FSRS (`fsrs` pub package). FSRS closes the extraction↔scheduling loop: Claude predicts quiz item difficulty at extraction time, FSRS uses it as initial D₀. See `docs/FSRS_MIGRATION.md`. Scheduling state lives on `QuizItem`. `scheduleDueItems` supports optional `collectionId` filter — unlocking remains graph-wide, only item selection is scoped
 - **Graph Analyzer**: Dependency-aware concept unlocking, topological sort, cycle detection
-- **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`); `SettingsRepository` — API keys via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
+- **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`). Firestore save uses upsert + orphan cleanup (not destructive delete-all), batched in 500-op chunks. `SettingsRepository` — API keys + social settings via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
-- **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes. Wiki group membership flows through a provider dependency chain: `wikiGroupMembershipProvider` (ensures `joinWikiGroup` before any Firestore listener) → `teamRepositoryProvider` → all team notifiers (storms, relays, goals, guardians, glory board). `socialRepositoryProvider` lives in its own file to avoid circular imports
+- **State Management**: Riverpod (manual, no codegen) — `Notifier`/`AsyncNotifier` classes. Wiki group membership flows through a provider dependency chain: `wikiGroupMembershipProvider` (gated by friend discovery setting, ensures `joinWikiGroup` before any Firestore listener) → `teamRepositoryProvider` → all team notifiers (storms, relays, goals, guardians, glory board). `socialRepositoryProvider` lives in its own file to avoid circular imports
 - **Knowledge Graph**: Custom `ForceDirectedGraphWidget` with `CustomPainter` + Fruchterman-Reingold layout, nodes colored by mastery (grey→red→amber→green), team avatar overlay. Incremental layout: existing nodes are pinned as immovable anchors, new nodes animate into position via force simulation
 - **Network Health**: `NetworkHealthScorer` computes composite health from mastery + freshness + critical paths; `ClusterDetector` finds concept communities via label propagation
 - **Services**: `OutlineClient` (HTTP), `ExtractionService` (Claude API via `anthropic_sdk_dart`)
@@ -62,7 +62,6 @@ When starting a new session, remind the user about these architectural decisions
 
 All tracked in GitHub. Key groupings:
 
-**Tech debt:** #14 (migrator memory), #15 (destructive Firestore save), #18 (bloated pubspec), #25 (DateTime timestamps), #28 (friend discovery opt-in)
 **Architecture:** #39 (concept embeddings), #40 (local-first Drift/SQLite), #41 (CRDT sync)
 **Graph:** #51 (incremental ingestion), #55 (isolate layout)
 **Features:** #48 (mobile + haptics), #49 (teach mode)
@@ -96,6 +95,7 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Tech debt sweep PR 1 — #8 closed (already fixed), #12 `ensureSignedInProvider`, #23 `googleSignInProvider`, #24 Firebase config assertion, #30 `toContentSnapshot()`, #17 test hygiene (#82)
 - ✓ Tech debt sweep PR 2 — #29 `StreamNotifier` migration (challenge + nudge), #9 ingest helper extraction, #16 auth_provider tests (#83)
 - ✓ **#61** — Preserve team node positions across graph rebuilds (#85)
+- ✓ Tech debt sweep PR 3 — #18 closed (all deps active), #14 GraphMigrator doc, #15 non-destructive Firestore save, #25 DateTime timestamps across 12 models, #28 friend discovery opt-in
 
 ### Next up
 1. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop

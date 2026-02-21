@@ -101,10 +101,7 @@ void main() {
         pinnedNodes: {0, 1, 2},
       );
 
-      final coldStart = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final coldStart = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
 
       final pinnedSteps = runToSettled(allPinned);
       final coldSteps = runToSettled(coldStart);
@@ -121,10 +118,7 @@ void main() {
 
   group('Temperature scaling', () {
     test('cold start temperature equals min(w,h) / 6', () {
-      final layout = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final layout = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
 
       // Default 800x600 → min(800, 600) / 6 = 100
       expect(layout.temperature, 100.0);
@@ -186,10 +180,7 @@ void main() {
   group('Incremental layout stability', () {
     test('adding nodes does not displace pinned nodes', () {
       // Phase 1: settle a 3-node layout
-      final initial = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final initial = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
       runToSettled(initial);
       final settledPositions = List<Offset>.from(initial.positions);
 
@@ -216,10 +207,7 @@ void main() {
 
     test('incremental add settles faster than cold start', () {
       // Settle 3 nodes first
-      final seed = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final seed = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
       runToSettled(seed);
       final settledPositions = List<Offset>.from(seed.positions);
 
@@ -261,14 +249,7 @@ void main() {
       final batch = makeLayout(
         nodeCount: 10,
         edges: List.generate(9, (i) => (i, i + 1)),
-        initialPositions: [
-          ...settledPositions,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ],
+        initialPositions: [...settledPositions, null, null, null, null, null],
         pinnedNodes: {0, 1, 2, 3, 4},
       );
       runToSettled(batch);
@@ -378,8 +359,10 @@ void main() {
       }
 
       // With gravity, average distance from center should be smaller
-      expect(avgDist(withGravity.positions),
-          lessThan(avgDist(noGravity.positions)));
+      expect(
+        avgDist(withGravity.positions),
+        lessThan(avgDist(noGravity.positions)),
+      );
     });
 
     test('gravity: 0.0 disables centering', () {
@@ -412,10 +395,22 @@ void main() {
       final noGravity = makeLayout(
         nodeCount: 20,
         edges: [
-          (0, 1), (1, 2), (2, 3), (3, 4),
-          (5, 6), (6, 7), (7, 8), (8, 9),
-          (10, 11), (11, 12), (12, 13), (13, 14),
-          (15, 16), (16, 17), (17, 18), (18, 19),
+          (0, 1),
+          (1, 2),
+          (2, 3),
+          (3, 4),
+          (5, 6),
+          (6, 7),
+          (7, 8),
+          (8, 9),
+          (10, 11),
+          (11, 12),
+          (12, 13),
+          (13, 14),
+          (15, 16),
+          (16, 17),
+          (17, 18),
+          (18, 19),
         ],
         gravity: 0.0,
       );
@@ -430,57 +425,59 @@ void main() {
         return sum / positions.length;
       }
 
-      expect(avgDist(withGravity.positions),
-          lessThan(avgDist(noGravity.positions)));
+      expect(
+        avgDist(withGravity.positions),
+        lessThan(avgDist(noGravity.positions)),
+      );
     });
   });
 
   group('Drag and release equilibrium', () {
-    test('dragging node far away and releasing shifts neighbors to new equilibrium', () {
-      // Phase 1: settle a 4-node chain
-      final layout = makeLayout(
-        nodeCount: 4,
-        edges: [(0, 1), (1, 2), (2, 3)],
-      );
-      runToSettled(layout);
-      final originalPositions = List<Offset>.from(layout.positions);
+    test(
+      'dragging node far away and releasing shifts neighbors to new equilibrium',
+      () {
+        // Phase 1: settle a 4-node chain
+        final layout = makeLayout(
+          nodeCount: 4,
+          edges: [(0, 1), (1, 2), (2, 3)],
+        );
+        runToSettled(layout);
+        final originalPositions = List<Offset>.from(layout.positions);
 
-      // Phase 2: simulate a drag — pin node 1 and move it far from its
-      // settled position
-      layout.pinNode(1);
-      final dragTarget = Offset(
-        originalPositions[1].dx + 200,
-        originalPositions[1].dy + 150,
-      );
-      layout.setNodePosition(1, dragTarget);
+        // Phase 2: simulate a drag — pin node 1 and move it far from its
+        // settled position
+        layout.pinNode(1);
+        final dragTarget = Offset(
+          originalPositions[1].dx + 200,
+          originalPositions[1].dy + 150,
+        );
+        layout.setNodePosition(1, dragTarget);
 
-      // Phase 3: release — unpin and reheat to let neighbors re-settle
-      layout.unpinNode(1);
-      layout.reheat();
-      runToSettled(layout);
+        // Phase 3: release — unpin and reheat to let neighbors re-settle
+        layout.unpinNode(1);
+        layout.reheat();
+        runToSettled(layout);
 
-      // The released node and its neighbors should have shifted to a new
-      // equilibrium that differs from the original positions
-      var totalDisplacement = 0.0;
-      for (var i = 0; i < layout.positions.length; i++) {
-        totalDisplacement +=
-            (layout.positions[i] - originalPositions[i]).distance;
-      }
+        // The released node and its neighbors should have shifted to a new
+        // equilibrium that differs from the original positions
+        var totalDisplacement = 0.0;
+        for (var i = 0; i < layout.positions.length; i++) {
+          totalDisplacement +=
+              (layout.positions[i] - originalPositions[i]).distance;
+        }
 
-      // Significant movement expected — at least 50px total across all nodes
-      expect(totalDisplacement, greaterThan(50.0));
+        // Significant movement expected — at least 50px total across all nodes
+        expect(totalDisplacement, greaterThan(50.0));
 
-      // Layout should be settled (converged to new equilibrium)
-      expect(layout.isSettled, isTrue);
-    });
+        // Layout should be settled (converged to new equilibrium)
+        expect(layout.isSettled, isTrue);
+      },
+    );
   });
 
   group('Convergence guarantees', () {
     test('cooling rate is 0.97 per step', () {
-      final layout = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final layout = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
 
       final tempBefore = layout.temperature;
       layout.step();
@@ -490,10 +487,7 @@ void main() {
     });
 
     test('step returns false when settled', () {
-      final layout = makeLayout(
-        nodeCount: 3,
-        edges: [(0, 1), (1, 2)],
-      );
+      final layout = makeLayout(nodeCount: 3, edges: [(0, 1), (1, 2)]);
 
       runToSettled(layout);
       expect(layout.isSettled, isTrue);

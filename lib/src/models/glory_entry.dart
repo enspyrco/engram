@@ -54,68 +54,68 @@ class GloryEntry {
       guardianPoints + missionPoints + goalPoints + relayPoints + stormPoints;
 
   GloryEntry withGuardianPoints(int points) => GloryEntry(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        guardianPoints: points,
-        missionPoints: missionPoints,
-        goalPoints: goalPoints,
-        relayPoints: relayPoints,
-        stormPoints: stormPoints,
-      );
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    guardianPoints: points,
+    missionPoints: missionPoints,
+    goalPoints: goalPoints,
+    relayPoints: relayPoints,
+    stormPoints: stormPoints,
+  );
 
   GloryEntry withMissionPoints(int points) => GloryEntry(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        guardianPoints: guardianPoints,
-        missionPoints: points,
-        goalPoints: goalPoints,
-        relayPoints: relayPoints,
-        stormPoints: stormPoints,
-      );
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    guardianPoints: guardianPoints,
+    missionPoints: points,
+    goalPoints: goalPoints,
+    relayPoints: relayPoints,
+    stormPoints: stormPoints,
+  );
 
   GloryEntry withGoalPoints(int points) => GloryEntry(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        guardianPoints: guardianPoints,
-        missionPoints: missionPoints,
-        goalPoints: points,
-        relayPoints: relayPoints,
-        stormPoints: stormPoints,
-      );
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    guardianPoints: guardianPoints,
+    missionPoints: missionPoints,
+    goalPoints: points,
+    relayPoints: relayPoints,
+    stormPoints: stormPoints,
+  );
 
   GloryEntry withRelayPoints(int points) => GloryEntry(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        guardianPoints: guardianPoints,
-        missionPoints: missionPoints,
-        goalPoints: goalPoints,
-        relayPoints: points,
-        stormPoints: stormPoints,
-      );
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    guardianPoints: guardianPoints,
+    missionPoints: missionPoints,
+    goalPoints: goalPoints,
+    relayPoints: points,
+    stormPoints: stormPoints,
+  );
 
   GloryEntry withStormPoints(int points) => GloryEntry(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        guardianPoints: guardianPoints,
-        missionPoints: missionPoints,
-        goalPoints: goalPoints,
-        relayPoints: relayPoints,
-        stormPoints: points,
-      );
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    guardianPoints: guardianPoints,
+    missionPoints: missionPoints,
+    goalPoints: goalPoints,
+    relayPoints: relayPoints,
+    stormPoints: points,
+  );
 
   Map<String, dynamic> toJson() => {
-        'uid': uid,
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'guardianPoints': guardianPoints,
-        'missionPoints': missionPoints,
-        'goalPoints': goalPoints,
-        'relayPoints': relayPoints,
-        'stormPoints': stormPoints,
-      };
+    'uid': uid,
+    'displayName': displayName,
+    'photoUrl': photoUrl,
+    'guardianPoints': guardianPoints,
+    'missionPoints': missionPoints,
+    'goalPoints': goalPoints,
+    'relayPoints': relayPoints,
+    'stormPoints': stormPoints,
+  };
 }

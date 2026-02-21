@@ -54,10 +54,9 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           dataDirProvider.overrideWithValue('/tmp/engram_test'),
           settingsRepositoryProvider.overrideWithValue(settingsRepo),
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(
-                    graph ?? KnowledgeGraph.empty,
-                  )),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(graph ?? KnowledgeGraph.empty),
+          ),
           outlineClientProvider.overrideWithValue(
             OutlineClient(
               apiUrl: 'https://wiki.test.com',
@@ -80,11 +79,11 @@ void main() {
     test('checkForUpdates finds stale documents', () async {
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
+            ingestedAt: DateTime.utc(2025, 1, 1, 12),
           ),
         ],
       );
@@ -92,7 +91,9 @@ void main() {
       final client = MockClient((request) async {
         if (request.url.path == '/api/collections.list') {
           return http.Response(
-            _collectionsJson([{'id': 'col1', 'name': 'DevOps'}]),
+            _collectionsJson([
+              {'id': 'col1', 'name': 'DevOps'},
+            ]),
             200,
           );
         }
@@ -127,11 +128,11 @@ void main() {
     test('checkForUpdates reports up-to-date when no changes', () async {
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
+            ingestedAt: DateTime.utc(2025, 1, 1, 12),
           ),
         ],
       );
@@ -139,7 +140,9 @@ void main() {
       final client = MockClient((request) async {
         if (request.url.path == '/api/collections.list') {
           return http.Response(
-            _collectionsJson([{'id': 'col1', 'name': 'DevOps'}]),
+            _collectionsJson([
+              {'id': 'col1', 'name': 'DevOps'},
+            ]),
             200,
           );
         }
@@ -169,103 +172,111 @@ void main() {
       expect(state.phase, SyncPhase.upToDate);
     });
 
-    test('checkForUpdates detects new documents in existing collection', () async {
-      // Graph has doc1, but Outline returns doc1 + doc2 (new)
-      final graph = KnowledgeGraph(
-        documentMetadata: [
-          const DocumentMetadata(
-            documentId: 'doc1',
-            title: 'Docker Guide',
-            updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
-          ),
-        ],
-      );
+    test(
+      'checkForUpdates detects new documents in existing collection',
+      () async {
+        // Graph has doc1, but Outline returns doc1 + doc2 (new)
+        final graph = KnowledgeGraph(
+          documentMetadata: [
+            DocumentMetadata(
+              documentId: 'doc1',
+              title: 'Docker Guide',
+              updatedAt: '2025-01-01T00:00:00.000Z',
+              ingestedAt: DateTime.utc(2025, 1, 1, 12),
+            ),
+          ],
+        );
 
-      final client = MockClient((request) async {
-        if (request.url.path == '/api/collections.list') {
-          return http.Response(
-            _collectionsJson([{'id': 'col1', 'name': 'DevOps'}]),
-            200,
-          );
-        }
-        if (request.url.path == '/api/documents.list') {
-          return http.Response(
-            jsonEncode({
-              'data': [
-                {
-                  'id': 'doc1',
-                  'title': 'Docker Guide',
-                  'updatedAt': '2025-01-01T00:00:00.000Z', // unchanged
-                },
-                {
-                  'id': 'doc2',
-                  'title': 'Kubernetes Guide',
-                  'updatedAt': '2025-02-01T00:00:00.000Z', // new doc
-                },
-              ],
-              'pagination': {'total': 2},
-            }),
-            200,
-          );
-        }
-        return http.Response('{}', 200);
-      });
+        final client = MockClient((request) async {
+          if (request.url.path == '/api/collections.list') {
+            return http.Response(
+              _collectionsJson([
+                {'id': 'col1', 'name': 'DevOps'},
+              ]),
+              200,
+            );
+          }
+          if (request.url.path == '/api/documents.list') {
+            return http.Response(
+              jsonEncode({
+                'data': [
+                  {
+                    'id': 'doc1',
+                    'title': 'Docker Guide',
+                    'updatedAt': '2025-01-01T00:00:00.000Z', // unchanged
+                  },
+                  {
+                    'id': 'doc2',
+                    'title': 'Kubernetes Guide',
+                    'updatedAt': '2025-02-01T00:00:00.000Z', // new doc
+                  },
+                ],
+                'pagination': {'total': 2},
+              }),
+              200,
+            );
+          }
+          return http.Response('{}', 200);
+        });
 
-      final container = createContainer(httpClient: client, graph: graph);
-      await container.read(knowledgeGraphProvider.future);
-      await container.read(syncProvider.notifier).checkForUpdates();
+        final container = createContainer(httpClient: client, graph: graph);
+        await container.read(knowledgeGraphProvider.future);
+        await container.read(syncProvider.notifier).checkForUpdates();
 
-      final state = container.read(syncProvider);
-      expect(state.phase, SyncPhase.updatesAvailable);
-      expect(state.staleDocumentCount, 1); // doc2 is new
-    });
+        final state = container.read(syncProvider);
+        expect(state.phase, SyncPhase.updatesAvailable);
+        expect(state.staleDocumentCount, 1); // doc2 is new
+      },
+    );
 
-    test('checkForUpdates reports up-to-date when no collections exist', () async {
-      // Override with empty ingested collection list
-      SharedPreferences.setMockInitialValues({
-        'outline_api_url': 'https://wiki.test.com',
-        'outline_api_key': 'test-key',
-        'anthropic_api_key': 'sk-ant-test',
-      });
-      prefs = await SharedPreferences.getInstance();
-      settingsRepo = SettingsRepository(prefs);
+    test(
+      'checkForUpdates reports up-to-date when no collections exist',
+      () async {
+        // Override with empty ingested collection list
+        SharedPreferences.setMockInitialValues({
+          'outline_api_url': 'https://wiki.test.com',
+          'outline_api_key': 'test-key',
+          'anthropic_api_key': 'sk-ant-test',
+        });
+        prefs = await SharedPreferences.getInstance();
+        settingsRepo = SettingsRepository(prefs);
 
-      final graph = KnowledgeGraph(
-        documentMetadata: [
-          const DocumentMetadata(
-            documentId: 'doc1',
-            title: 'Docker Guide',
-            updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
-          ),
-        ],
-      );
+        final graph = KnowledgeGraph(
+          documentMetadata: [
+            DocumentMetadata(
+              documentId: 'doc1',
+              title: 'Docker Guide',
+              updatedAt: '2025-01-01T00:00:00.000Z',
+              ingestedAt: DateTime.utc(2025, 1, 1, 12),
+            ),
+          ],
+        );
 
-      // Outline also has no collections
-      final client = MockClient((request) async {
-        if (request.url.path == '/api/collections.list') {
-          return http.Response(_collectionsJson([]), 200);
-        }
-        return http.Response('{}', 200);
-      });
-      final container = createContainer(httpClient: client, graph: graph);
-      await container.read(knowledgeGraphProvider.future);
-      await container.read(syncProvider.notifier).checkForUpdates();
+        // Outline also has no collections
+        final client = MockClient((request) async {
+          if (request.url.path == '/api/collections.list') {
+            return http.Response(_collectionsJson([]), 200);
+          }
+          return http.Response('{}', 200);
+        });
+        final container = createContainer(httpClient: client, graph: graph);
+        await container.read(knowledgeGraphProvider.future);
+        await container.read(syncProvider.notifier).checkForUpdates();
 
-      final state = container.read(syncProvider);
-      expect(state.phase, SyncPhase.upToDate);
-    });
+        final state = container.read(syncProvider);
+        expect(state.phase, SyncPhase.upToDate);
+      },
+    );
 
     test('checkForUpdates discovers new collections in Outline', () async {
       // col1 is ingested, but Outline now has col1 + col2
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
+            ingestedAt: DateTime.utc(2025, 1, 1, 12),
           ),
         ],
       );
@@ -309,69 +320,72 @@ void main() {
       expect(state.newCollections.first['name'], 'Kubernetes');
     });
 
-    test('dismissNewCollections clears banner and returns to upToDate', () async {
-      final graph = KnowledgeGraph(
-        documentMetadata: [
-          const DocumentMetadata(
-            documentId: 'doc1',
-            title: 'Docker Guide',
-            updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
-          ),
-        ],
-      );
+    test(
+      'dismissNewCollections clears banner and returns to upToDate',
+      () async {
+        final graph = KnowledgeGraph(
+          documentMetadata: [
+            DocumentMetadata(
+              documentId: 'doc1',
+              title: 'Docker Guide',
+              updatedAt: '2025-01-01T00:00:00.000Z',
+              ingestedAt: DateTime.utc(2025, 1, 1, 12),
+            ),
+          ],
+        );
 
-      final client = MockClient((request) async {
-        if (request.url.path == '/api/collections.list') {
-          return http.Response(
-            _collectionsJson([
-              {'id': 'col1', 'name': 'DevOps'},
-              {'id': 'col2', 'name': 'Kubernetes'},
-            ]),
-            200,
-          );
-        }
-        if (request.url.path == '/api/documents.list') {
-          return http.Response(
-            jsonEncode({
-              'data': [
-                {
-                  'id': 'doc1',
-                  'title': 'Docker Guide',
-                  'updatedAt': '2025-01-01T00:00:00.000Z',
-                },
-              ],
-              'pagination': {'total': 1},
-            }),
-            200,
-          );
-        }
-        return http.Response('{}', 200);
-      });
+        final client = MockClient((request) async {
+          if (request.url.path == '/api/collections.list') {
+            return http.Response(
+              _collectionsJson([
+                {'id': 'col1', 'name': 'DevOps'},
+                {'id': 'col2', 'name': 'Kubernetes'},
+              ]),
+              200,
+            );
+          }
+          if (request.url.path == '/api/documents.list') {
+            return http.Response(
+              jsonEncode({
+                'data': [
+                  {
+                    'id': 'doc1',
+                    'title': 'Docker Guide',
+                    'updatedAt': '2025-01-01T00:00:00.000Z',
+                  },
+                ],
+                'pagination': {'total': 1},
+              }),
+              200,
+            );
+          }
+          return http.Response('{}', 200);
+        });
 
-      final container = createContainer(httpClient: client, graph: graph);
-      await container.read(knowledgeGraphProvider.future);
-      await container.read(syncProvider.notifier).checkForUpdates();
+        final container = createContainer(httpClient: client, graph: graph);
+        await container.read(knowledgeGraphProvider.future);
+        await container.read(syncProvider.notifier).checkForUpdates();
 
-      // Verify new collections detected
-      expect(container.read(syncProvider).newCollections, hasLength(1));
+        // Verify new collections detected
+        expect(container.read(syncProvider).newCollections, hasLength(1));
 
-      // Dismiss
-      container.read(syncProvider.notifier).dismissNewCollections();
+        // Dismiss
+        container.read(syncProvider.notifier).dismissNewCollections();
 
-      final state = container.read(syncProvider);
-      expect(state.newCollections, isEmpty);
-      expect(state.phase, SyncPhase.upToDate);
-    });
+        final state = container.read(syncProvider);
+        expect(state.newCollections, isEmpty);
+        expect(state.phase, SyncPhase.upToDate);
+      },
+    );
 
     test('checkForUpdates handles API errors gracefully', () async {
       final graph = KnowledgeGraph(
         documentMetadata: [
-          const DocumentMetadata(
+          DocumentMetadata(
             documentId: 'doc1',
             title: 'Docker Guide',
             updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T12:00:00.000Z',
+            ingestedAt: DateTime.utc(2025, 1, 1, 12),
           ),
         ],
       );

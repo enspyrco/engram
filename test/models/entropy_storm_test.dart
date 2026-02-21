@@ -8,8 +8,8 @@ void main() {
     setUp(() {
       storm = EntropyStorm(
         id: 'storm_1',
-        scheduledStart: '2025-06-15T00:00:00.000Z',
-        scheduledEnd: '2025-06-17T00:00:00.000Z',
+        scheduledStart: DateTime.utc(2025, 6, 15),
+        scheduledEnd: DateTime.utc(2025, 6, 17),
         status: StormStatus.scheduled,
         participantUids: ['u1', 'u2'],
         createdByUid: 'u1',
@@ -21,8 +21,8 @@ void main() {
       final restored = EntropyStorm.fromJson(json);
 
       expect(restored.id, 'storm_1');
-      expect(restored.scheduledStart, '2025-06-15T00:00:00.000Z');
-      expect(restored.scheduledEnd, '2025-06-17T00:00:00.000Z');
+      expect(restored.scheduledStart, DateTime.utc(2025, 6, 15));
+      expect(restored.scheduledEnd, DateTime.utc(2025, 6, 17));
       expect(restored.healthThreshold, 0.7);
       expect(restored.status, StormStatus.scheduled);
       expect(restored.participantUids.length, 2);
@@ -30,7 +30,7 @@ void main() {
     });
 
     test('fromJson handles missing optional fields', () {
-      final restored = EntropyStorm.fromJson(const {
+      final restored = EntropyStorm.fromJson({
         'id': 's1',
         'scheduledStart': '2025-06-15T00:00:00.000Z',
         'scheduledEnd': '2025-06-17T00:00:00.000Z',
@@ -74,23 +74,17 @@ void main() {
     });
 
     test('remainingDuration is zero after end', () {
-      final remaining = storm.remainingDuration(
-        now: DateTime.utc(2025, 6, 18),
-      );
+      final remaining = storm.remainingDuration(now: DateTime.utc(2025, 6, 18));
       expect(remaining, Duration.zero);
     });
 
     test('timeUntilStart computes correctly', () {
-      final until = storm.timeUntilStart(
-        now: DateTime.utc(2025, 6, 14),
-      );
+      final until = storm.timeUntilStart(now: DateTime.utc(2025, 6, 14));
       expect(until, const Duration(hours: 24));
     });
 
     test('timeUntilStart is zero after start', () {
-      final until = storm.timeUntilStart(
-        now: DateTime.utc(2025, 6, 16),
-      );
+      final until = storm.timeUntilStart(now: DateTime.utc(2025, 6, 16));
       expect(until, Duration.zero);
     });
 

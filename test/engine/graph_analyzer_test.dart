@@ -6,39 +6,37 @@ import 'package:engram/src/models/relationship.dart';
 import 'package:test/test.dart';
 
 Concept _concept(String id) => Concept(
-      id: id,
-      name: id,
-      description: 'desc',
-      sourceDocumentId: 'doc1',
-      tags: const [],
-    );
+  id: id,
+  name: id,
+  description: 'desc',
+  sourceDocumentId: 'doc1',
+  tags: const [],
+);
 
 Relationship _rel(
   String from,
   String to, {
   String label = 'depends on',
   RelationshipType? type,
-}) =>
-    Relationship(
-      id: '$from-$to',
-      fromConceptId: from,
-      toConceptId: to,
-      label: label,
-      type: type,
-    );
+}) => Relationship(
+  id: '$from-$to',
+  fromConceptId: from,
+  toConceptId: to,
+  label: label,
+  type: type,
+);
 
-QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) =>
-    QuizItem(
-      id: id,
-      conceptId: conceptId,
-      question: 'Q?',
-      answer: 'A.',
-      easeFactor: 2.5,
-      interval: 1,
-      repetitions: repetitions,
-      nextReview: '2025-06-15T00:00:00.000Z',
-      lastReview: null,
-    );
+QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) => QuizItem(
+  id: id,
+  conceptId: conceptId,
+  question: 'Q?',
+  answer: 'A.',
+  easeFactor: 2.5,
+  interval: 1,
+  repetitions: repetitions,
+  nextReview: DateTime.utc(2025, 6, 15),
+  lastReview: null,
+);
 
 void main() {
   group('isDependencyEdge', () {
@@ -107,7 +105,12 @@ void main() {
       // Label says "related to" but type is prerequisite — should be dependency
       expect(
         GraphAnalyzer.isDependencyEdge(
-          _rel('a', 'b', label: 'related to', type: RelationshipType.prerequisite),
+          _rel(
+            'a',
+            'b',
+            label: 'related to',
+            type: RelationshipType.prerequisite,
+          ),
         ),
         isTrue,
       );
@@ -137,7 +140,11 @@ void main() {
   group('prerequisitesOf / dependentsOf', () {
     // compose --depends on--> containers --depends on--> images
     final graph = KnowledgeGraph(
-      concepts: [_concept('compose'), _concept('containers'), _concept('images')],
+      concepts: [
+        _concept('compose'),
+        _concept('containers'),
+        _concept('images'),
+      ],
       relationships: [
         _rel('compose', 'containers'),
         _rel('containers', 'images'),
@@ -292,7 +299,10 @@ void main() {
     });
 
     test('lockedConcepts includes concepts with unmastered prerequisites', () {
-      expect(analyzer.lockedConcepts, unorderedEquals(['compose', 'containers']));
+      expect(
+        analyzer.lockedConcepts,
+        unorderedEquals(['compose', 'containers']),
+      );
     });
   });
 
@@ -315,10 +325,7 @@ void main() {
       expect(sorted, isNotNull);
       // images before containers before compose
       expect(sorted!.indexOf('images'), lessThan(sorted.indexOf('containers')));
-      expect(
-        sorted.indexOf('containers'),
-        lessThan(sorted.indexOf('compose')),
-      );
+      expect(sorted.indexOf('containers'), lessThan(sorted.indexOf('compose')));
     });
 
     test('returns null for cyclic graph', () {

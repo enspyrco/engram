@@ -38,10 +38,7 @@ class RelayChallengeCard extends StatelessWidget {
                 const Icon(Icons.sync, size: 18, color: Colors.cyan),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    relay.title,
-                    style: theme.textTheme.titleSmall,
-                  ),
+                  child: Text(relay.title, style: theme.textTheme.titleSmall),
                 ),
                 Text(
                   '${relay.completedLegs}/${relay.legs.length}',
@@ -59,17 +56,24 @@ class RelayChallengeCard extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: relay.legs.length,
-                separatorBuilder: (_, __) => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
-                ),
-                itemBuilder: (context, index) => _LegChip(
-                  leg: relay.legs[index],
-                  index: index,
-                  now: now,
-                  canClaim: _canClaim(index, now),
-                  onClaim: onClaimLeg != null ? () => onClaimLeg!(index) : null,
-                ),
+                separatorBuilder:
+                    (_, __) => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                itemBuilder:
+                    (context, index) => _LegChip(
+                      leg: relay.legs[index],
+                      index: index,
+                      now: now,
+                      canClaim: _canClaim(index, now),
+                      onClaim:
+                          onClaimLeg != null ? () => onClaimLeg!(index) : null,
+                    ),
               ),
             ),
 
@@ -227,9 +231,9 @@ class _CountdownTextState extends State<_CountdownText> {
       return Text(
         'Overdue!',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Colors.red,
+          fontWeight: FontWeight.bold,
+        ),
       );
     }
 
@@ -237,9 +241,9 @@ class _CountdownTextState extends State<_CountdownText> {
     final minutes = remaining.inMinutes % 60;
     return Text(
       '${hours}h ${minutes}m left',
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.cyan,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(color: Colors.cyan),
     );
   }
 }

@@ -33,8 +33,18 @@ void main() {
           Concept(id: 'c', name: 'C', description: '', sourceDocumentId: 'd'),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
-          const Relationship(id: 'r2', fromConceptId: 'b', toConceptId: 'c', label: 'relates to'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'a',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
+          const Relationship(
+            id: 'r2',
+            fromConceptId: 'b',
+            toConceptId: 'c',
+            label: 'relates to',
+          ),
         ],
       );
 
@@ -52,8 +62,18 @@ void main() {
           Concept(id: 'y', name: 'Y', description: '', sourceDocumentId: 'd'),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
-          const Relationship(id: 'r2', fromConceptId: 'x', toConceptId: 'y', label: 'relates to'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'a',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
+          const Relationship(
+            id: 'r2',
+            fromConceptId: 'x',
+            toConceptId: 'y',
+            label: 'relates to',
+          ),
         ],
       );
 
@@ -69,15 +89,50 @@ void main() {
       // Hub 'b' has degree 3, others have degree 1
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Leaf-A', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Hub-B', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'c', name: 'Leaf-C', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'd', name: 'Leaf-D', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Leaf-A',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Hub-B',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'c',
+            name: 'Leaf-C',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'd',
+            name: 'Leaf-D',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
-          const Relationship(id: 'r2', fromConceptId: 'c', toConceptId: 'b', label: 'relates to'),
-          const Relationship(id: 'r3', fromConceptId: 'd', toConceptId: 'b', label: 'relates to'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'a',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
+          const Relationship(
+            id: 'r2',
+            fromConceptId: 'c',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
+          const Relationship(
+            id: 'r3',
+            fromConceptId: 'd',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
         ],
       );
 
@@ -94,8 +149,18 @@ void main() {
           Concept(id: 'c', name: 'C', description: '', sourceDocumentId: 'd'),
         ],
         relationships: [
-          const Relationship(id: 'r1', fromConceptId: 'a', toConceptId: 'b', label: 'relates to'),
-          const Relationship(id: 'r2', fromConceptId: 'b', toConceptId: 'c', label: 'relates to'),
+          const Relationship(
+            id: 'r1',
+            fromConceptId: 'a',
+            toConceptId: 'b',
+            label: 'relates to',
+          ),
+          const Relationship(
+            id: 'r2',
+            fromConceptId: 'b',
+            toConceptId: 'c',
+            label: 'relates to',
+          ),
         ],
       );
 

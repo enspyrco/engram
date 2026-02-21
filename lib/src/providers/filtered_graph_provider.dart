@@ -32,21 +32,24 @@ final filteredGraphProvider = Provider<KnowledgeGraph?>((ref) {
   final conceptIds = concepts.map((c) => c.id).toSet();
 
   // Keep only relationships where both endpoints survive.
-  final relationships = graph.relationships
-      .where((r) =>
-          conceptIds.contains(r.fromConceptId) &&
-          conceptIds.contains(r.toConceptId))
-      .toList();
+  final relationships =
+      graph.relationships
+          .where(
+            (r) =>
+                conceptIds.contains(r.fromConceptId) &&
+                conceptIds.contains(r.toConceptId),
+          )
+          .toList();
 
   // Keep quiz items for surviving concepts.
-  final quizItems = graph.quizItems
-      .where((q) => conceptIds.contains(q.conceptId))
-      .toList();
+  final quizItems =
+      graph.quizItems.where((q) => conceptIds.contains(q.conceptId)).toList();
 
   // Keep metadata for the selected collection's documents.
-  final metadata = graph.documentMetadata
-      .where((m) => docIds.contains(m.documentId))
-      .toList();
+  final metadata =
+      graph.documentMetadata
+          .where((m) => docIds.contains(m.documentId))
+          .toList();
 
   return KnowledgeGraph(
     concepts: concepts,
@@ -59,13 +62,15 @@ final filteredGraphProvider = Provider<KnowledgeGraph?>((ref) {
 /// Compact stats derived from the filtered graph for the dashboard overlay.
 ///
 /// Cached by Riverpod — only recomputes when [filteredGraphProvider] changes.
-final filteredStatsProvider = Provider<({int concepts, int mastered, int due})>((ref) {
-  final graph = ref.watch(filteredGraphProvider);
-  if (graph == null) return (concepts: 0, mastered: 0, due: 0);
+final filteredStatsProvider = Provider<({int concepts, int mastered, int due})>(
+  (ref) {
+    final graph = ref.watch(filteredGraphProvider);
+    if (graph == null) return (concepts: 0, mastered: 0, due: 0);
 
-  return (
-    concepts: graph.concepts.length,
-    mastered: graph.quizItems.where((q) => q.interval >= 21).length,
-    due: scheduleDueItems(graph, maxItems: null).length,
-  );
-});
+    return (
+      concepts: graph.concepts.length,
+      mastered: graph.quizItems.where((q) => q.interval >= 21).length,
+      due: scheduleDueItems(graph, maxItems: null).length,
+    );
+  },
+);

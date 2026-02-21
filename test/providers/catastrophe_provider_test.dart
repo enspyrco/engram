@@ -13,8 +13,9 @@ void main() {
     test('initial state is healthy with no events', () {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -28,24 +29,31 @@ void main() {
 
     test('detects worsening transition and creates event', () {
       // Start with healthy graph
-      final recentReview = DateTime.utc(2025, 6, 10).toIso8601String();
+      final recentReview = DateTime.utc(2025, 6, 10);
       final healthyGraph = KnowledgeGraph(
         concepts: [
           Concept(id: 'a', name: 'A', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
         ],
       );
 
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(healthyGraph)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(healthyGraph),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -63,10 +71,16 @@ void main() {
           Concept(id: 'a', name: 'A', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
-          const QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
         ],
       );
@@ -86,8 +100,9 @@ void main() {
     test('recordMissionReview marks concept reviewed', () {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -108,8 +123,9 @@ void main() {
       // Start with an empty graph (async load hasn't completed)
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -120,10 +136,16 @@ void main() {
           Concept(id: 'a', name: 'A', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
-          const QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
         ],
       );
@@ -145,8 +167,9 @@ void main() {
     test('improving transition only resolves events worse than new tier', () {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -161,15 +184,27 @@ void main() {
           Concept(id: 'b', name: 'B', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
-          const QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
-          const QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 0, repetitions: 0,
-            nextReview: '2020-01-01', lastReview: null,
+          QuizItem(
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 0,
+            repetitions: 0,
+            nextReview: DateTime.utc(2020),
+            lastReview: null,
           ),
         ],
       );
@@ -180,7 +215,7 @@ void main() {
       expect(afterDegrade.activeEvents, isNotEmpty);
 
       // Now improve back to healthy
-      final recentReview = DateTime.utc(2025, 6, 10).toIso8601String();
+      final recentReview = DateTime.utc(2025, 6, 10);
       final healthyGraph = KnowledgeGraph(
         concepts: [
           Concept(id: 'a', name: 'A', description: '', sourceDocumentId: 'd'),
@@ -188,14 +223,26 @@ void main() {
         ],
         quizItems: [
           QuizItem(
-            id: 'q1', conceptId: 'a', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q1',
+            conceptId: 'a',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
           QuizItem(
-            id: 'q2', conceptId: 'b', question: 'Q?', answer: 'A.',
-            easeFactor: 2.5, interval: 25, repetitions: 5,
-            nextReview: '2099-01-01', lastReview: recentReview,
+            id: 'q2',
+            conceptId: 'b',
+            question: 'Q?',
+            answer: 'A.',
+            easeFactor: 2.5,
+            interval: 25,
+            repetitions: 5,
+            nextReview: DateTime.utc(2099),
+            lastReview: recentReview,
           ),
         ],
       );

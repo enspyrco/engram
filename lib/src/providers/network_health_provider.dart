@@ -20,7 +20,9 @@ final networkHealthProvider = Provider<NetworkHealth>((ref) {
   }
   final clusters = ref.watch(clusterProvider);
   final decayMultiplier = ref.watch(freshnessDecayMultiplierProvider);
-  return NetworkHealthScorer(graph,
-          clusters: clusters, decayMultiplier: decayMultiplier)
-      .score();
+  return NetworkHealthScorer(
+    graph,
+    clusters: clusters,
+    decayMultiplier: decayMultiplier,
+  ).score();
 });

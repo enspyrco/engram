@@ -7,10 +7,8 @@ import 'quiz_item.dart';
 /// A single sub-concept entry within a split suggestion.
 @immutable
 class SubConceptEntry {
-  SubConceptEntry({
-    required this.concept,
-    List<QuizItem> quizItems = const [],
-  }) : quizItems = IList(quizItems);
+  SubConceptEntry({required this.concept, List<QuizItem> quizItems = const []})
+    : quizItems = IList(quizItems);
 
   final Concept concept;
   final IList<QuizItem> quizItems;
@@ -20,7 +18,7 @@ class SubConceptEntry {
 @immutable
 class SubConceptSuggestion {
   SubConceptSuggestion({List<SubConceptEntry> entries = const []})
-      : entries = IList(entries);
+    : entries = IList(entries);
 
   final IList<SubConceptEntry> entries;
 }

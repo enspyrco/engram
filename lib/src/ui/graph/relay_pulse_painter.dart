@@ -24,11 +24,11 @@ class RelayPulse {
   final double speed;
 
   RelayPulse advanced() => RelayPulse(
-        fromConceptId: fromConceptId,
-        toConceptId: toConceptId,
-        progress: progress + speed,
-        speed: speed,
-      );
+    fromConceptId: fromConceptId,
+    toConceptId: toConceptId,
+    progress: progress + speed,
+    speed: speed,
+  );
 
   bool get isComplete => progress >= 1.0;
 }
@@ -82,7 +82,10 @@ class RelayPulsePainter extends CustomPainter {
 
       // Trail dots (behind the lead)
       for (var i = _trailCount; i >= 1; i--) {
-        final trailProgress = (pulse.progress - i * _trailSpacing).clamp(0.0, 1.0);
+        final trailProgress = (pulse.progress - i * _trailSpacing).clamp(
+          0.0,
+          1.0,
+        );
         final trailPos = Offset.lerp(src, tgt, trailProgress)!;
         final trailOpacity = (1.0 - i / (_trailCount + 1)) * 0.6;
         final trailRadius = _leadRadius * (1.0 - i * 0.15);
@@ -111,14 +114,10 @@ class RelayPulsePainter extends CustomPainter {
         leadPos,
         _leadRadius * 3.0,
         Paint()
-          ..shader = ui.Gradient.radial(
-            leadPos,
-            _leadRadius * 3.0,
-            [
-              Colors.white.withValues(alpha: 0.6),
-              Colors.cyan.withValues(alpha: 0.0),
-            ],
-          ),
+          ..shader = ui.Gradient.radial(leadPos, _leadRadius * 3.0, [
+            Colors.white.withValues(alpha: 0.6),
+            Colors.cyan.withValues(alpha: 0.0),
+          ]),
       );
       // White-cyan core
       canvas.drawCircle(

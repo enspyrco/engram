@@ -6,25 +6,24 @@ import 'package:engram/src/models/relationship.dart';
 import 'package:test/test.dart';
 
 Concept _concept(String id, {String? parentConceptId}) => Concept(
-      id: id,
-      name: id,
-      description: 'desc',
-      sourceDocumentId: 'doc1',
-      parentConceptId: parentConceptId,
-    );
+  id: id,
+  name: id,
+  description: 'desc',
+  sourceDocumentId: 'doc1',
+  parentConceptId: parentConceptId,
+);
 
-QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) =>
-    QuizItem(
-      id: id,
-      conceptId: conceptId,
-      question: 'Q?',
-      answer: 'A.',
-      easeFactor: 2.5,
-      interval: 1,
-      repetitions: repetitions,
-      nextReview: '2025-06-15T00:00:00.000Z',
-      lastReview: null,
-    );
+QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) => QuizItem(
+  id: id,
+  conceptId: conceptId,
+  question: 'Q?',
+  answer: 'A.',
+  easeFactor: 2.5,
+  interval: 1,
+  repetitions: repetitions,
+  nextReview: DateTime.utc(2025, 6, 15),
+  lastReview: null,
+);
 
 void main() {
   group('sub-concept parent-child relationships', () {
@@ -101,9 +100,7 @@ void main() {
           _concept('parent'),
           _concept('child1', parentConceptId: 'parent'),
         ],
-        quizItems: [
-          _quiz('q1', 'child1', repetitions: 0),
-        ],
+        quizItems: [_quiz('q1', 'child1', repetitions: 0)],
       );
       final analyzer = GraphAnalyzer(graph);
       // Parent has no own quiz items, but has children → delegates

@@ -31,8 +31,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(graph)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(graph),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -49,8 +50,9 @@ void main() {
     test('returns null when graph has no concepts', () async {
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(KnowledgeGraph())),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(KnowledgeGraph()),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -92,8 +94,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          knowledgeGraphProvider
-              .overrideWith(() => _PreloadedGraphNotifier(graph)),
+          knowledgeGraphProvider.overrideWith(
+            () => _PreloadedGraphNotifier(graph),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -112,7 +115,7 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
       final newGraph = fullBefore.withUpdatedQuizItem(updated);
       container.read(knowledgeGraphProvider.notifier).setGraph(newGraph);

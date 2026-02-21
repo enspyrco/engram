@@ -34,10 +34,10 @@ class IngestState {
     Set<String> selectedDocumentIds = const {},
     this.topicName = '',
     this.topicDescription = '',
-  })  : collections = IList(collections),
-        sessionConceptIds = ISet(sessionConceptIds),
-        availableDocuments = IList(availableDocuments),
-        selectedDocumentIds = ISet(selectedDocumentIds);
+  }) : collections = IList(collections),
+       sessionConceptIds = ISet(sessionConceptIds),
+       availableDocuments = IList(availableDocuments),
+       selectedDocumentIds = ISet(selectedDocumentIds);
 
   const IngestState._({
     this.phase = IngestPhase.idle,
@@ -114,9 +114,10 @@ class IngestState {
     return IngestState._(
       phase: phase ?? this.phase,
       collections: collections ?? this.collections,
-      selectedCollection: selectedCollection != null
-          ? selectedCollection()
-          : this.selectedCollection,
+      selectedCollection:
+          selectedCollection != null
+              ? selectedCollection()
+              : this.selectedCollection,
       totalDocuments: totalDocuments ?? this.totalDocuments,
       processedDocuments: processedDocuments ?? this.processedDocuments,
       extractedCount: extractedCount ?? this.extractedCount,

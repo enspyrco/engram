@@ -154,7 +154,7 @@ void main() {
     });
 
     test('fromJson/toJson round-trips with FSRS fields', () {
-      const item = QuizItem(
+      final item = QuizItem(
         id: 'q1',
         conceptId: 'c1',
         question: 'What is X?',
@@ -162,8 +162,8 @@ void main() {
         easeFactor: 2.5,
         interval: 6,
         repetitions: 2,
-        nextReview: '2025-01-10T00:00:00.000Z',
-        lastReview: '2025-01-04T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 10),
+        lastReview: DateTime.utc(2025, 1, 4),
         difficulty: 5.5,
         stability: 12.3,
         fsrsState: 2,
@@ -246,7 +246,7 @@ void main() {
         fsrsState: 2,
         lapses: 0,
         interval: 10,
-        nextReview: '2025-01-11T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 11),
       );
 
       // FSRS fields updated
@@ -255,7 +255,7 @@ void main() {
       expect(updated.fsrsState, 2);
       expect(updated.lapses, 0);
       expect(updated.interval, 10);
-      expect(updated.nextReview, '2025-01-11T00:00:00.000Z');
+      expect(updated.nextReview, DateTime.utc(2025, 1, 11));
       expect(updated.lastReview, isNotNull);
 
       // SM-2 fields preserved
@@ -268,7 +268,7 @@ void main() {
     });
 
     test('withReview preserves FSRS fields', () {
-      const item = QuizItem(
+      final item = QuizItem(
         id: 'q1',
         conceptId: 'c1',
         question: 'What is X?',
@@ -276,7 +276,7 @@ void main() {
         easeFactor: 2.5,
         interval: 0,
         repetitions: 0,
-        nextReview: '2025-01-01T00:00:00.000Z',
+        nextReview: DateTime.utc(2025),
         lastReview: null,
         difficulty: 6.0,
         stability: 3.26,
@@ -288,7 +288,7 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
 
       // FSRS fields preserved
@@ -310,13 +310,13 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
 
       expect(updated.easeFactor, 2.6);
       expect(updated.interval, 1);
       expect(updated.repetitions, 1);
-      expect(updated.nextReview, '2025-01-02T00:00:00.000Z');
+      expect(updated.nextReview, DateTime.utc(2025, 1, 2));
       expect(updated.lastReview, isNotNull);
       // Original unchanged
       expect(item.easeFactor, 2.5);
@@ -325,11 +325,11 @@ void main() {
 
   group('DocumentMetadata', () {
     test('fromJson/toJson round-trips', () {
-      const meta = DocumentMetadata(
+      final meta = DocumentMetadata(
         documentId: 'doc-1',
         title: 'Test Doc',
         updatedAt: '2025-01-01T00:00:00.000Z',
-        ingestedAt: '2025-01-01T01:00:00.000Z',
+        ingestedAt: DateTime.utc(2025, 1, 1, 1),
       );
 
       final json = meta.toJson();
@@ -379,19 +379,20 @@ void main() {
             answer: 'A.',
           ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc-1',
             title: 'Doc 1',
             updatedAt: '2025-01-01T00:00:00.000Z',
-            ingestedAt: '2025-01-01T01:00:00.000Z',
+            ingestedAt: DateTime.utc(2025, 1, 1, 1),
           ),
         ],
       );
 
       final jsonStr = jsonEncode(graph.toJson());
-      final restored =
-          KnowledgeGraph.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      final restored = KnowledgeGraph.fromJson(
+        jsonDecode(jsonStr) as Map<String, dynamic>,
+      );
 
       expect(restored.concepts.length, 1);
       expect(restored.relationships.length, 1);
@@ -454,12 +455,12 @@ void main() {
             answer: 'Old A.',
           ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc-1',
             title: 'Doc 1',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
           ),
         ],
       );
@@ -595,12 +596,12 @@ void main() {
             sourceDocumentId: 'doc-1',
           ),
         ],
-        documentMetadata: const [
+        documentMetadata: [
           DocumentMetadata(
             documentId: 'doc-1',
             title: 'Doc 1',
             updatedAt: '2025-01-01',
-            ingestedAt: '2025-01-01',
+            ingestedAt: DateTime.utc(2025),
             collectionId: 'col-1',
             collectionName: 'Engineering',
           ),
@@ -655,7 +656,7 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
 
       final newGraph = graph.withUpdatedQuizItem(updated);
@@ -671,7 +672,7 @@ void main() {
         id: 'topic-1',
         name: 'Agent Skills',
         documentIds: {'doc-1', 'doc-2'},
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
 
       final updated = graph.withTopic(topic);
@@ -685,7 +686,7 @@ void main() {
       final topic1 = Topic(
         id: 'topic-1',
         name: 'Version 1',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
       final graph = KnowledgeGraph(topics: [topic1]);
 
@@ -693,7 +694,7 @@ void main() {
         id: 'topic-1',
         name: 'Version 2',
         documentIds: {'doc-1'},
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
 
       final updated = graph.withTopic(topic1Updated);
@@ -704,18 +705,20 @@ void main() {
     });
 
     test('withoutTopic removes topic by ID', () {
-      final graph = KnowledgeGraph(topics: [
-        Topic(
-          id: 'topic-1',
-          name: 'Keep',
-          createdAt: '2026-02-18T00:00:00.000Z',
-        ),
-        Topic(
-          id: 'topic-2',
-          name: 'Remove',
-          createdAt: '2026-02-18T00:00:00.000Z',
-        ),
-      ]);
+      final graph = KnowledgeGraph(
+        topics: [
+          Topic(
+            id: 'topic-1',
+            name: 'Keep',
+            createdAt: DateTime.utc(2026, 2, 18),
+          ),
+          Topic(
+            id: 'topic-2',
+            name: 'Remove',
+            createdAt: DateTime.utc(2026, 2, 18),
+          ),
+        ],
+      );
 
       final updated = graph.withoutTopic('topic-2');
 
@@ -727,7 +730,7 @@ void main() {
       final topic = Topic(
         id: 'topic-1',
         name: 'Persisted Topic',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
       final graph = KnowledgeGraph(topics: [topic]);
 
@@ -759,7 +762,7 @@ void main() {
       final topic = Topic(
         id: 'topic-1',
         name: 'Persisted',
-        createdAt: '2026-02-18T00:00:00.000Z',
+        createdAt: DateTime.utc(2026, 2, 18),
       );
       final graph = KnowledgeGraph(
         topics: [topic],
@@ -777,7 +780,7 @@ void main() {
         easeFactor: 2.6,
         interval: 1,
         repetitions: 1,
-        nextReview: '2025-01-02T00:00:00.000Z',
+        nextReview: DateTime.utc(2025, 1, 2),
       );
 
       final newGraph = graph.withUpdatedQuizItem(updated);
@@ -794,15 +797,16 @@ void main() {
             name: 'Agent Skills',
             description: 'Course',
             documentIds: {'doc-1', 'doc-2'},
-            createdAt: '2026-02-18T00:00:00.000Z',
-            lastIngestedAt: '2026-02-18T01:00:00.000Z',
+            createdAt: DateTime.utc(2026, 2, 18),
+            lastIngestedAt: DateTime.utc(2026, 2, 18, 1),
           ),
         ],
       );
 
       final jsonStr = jsonEncode(graph.toJson());
-      final restored =
-          KnowledgeGraph.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      final restored = KnowledgeGraph.fromJson(
+        jsonDecode(jsonStr) as Map<String, dynamic>,
+      );
 
       expect(restored.topics, hasLength(1));
       expect(restored.topics.first.id, 'topic-1');

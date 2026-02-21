@@ -22,10 +22,10 @@ void main() {
 
     test('save and load round-trips config', () async {
       final config = repo.load().copyWith(
-            outlineApiUrl: 'https://wiki.example.com',
-            outlineApiKey: 'ol_key_123',
-            anthropicApiKey: 'sk-ant-123',
-          );
+        outlineApiUrl: 'https://wiki.example.com',
+        outlineApiKey: 'ol_key_123',
+        anthropicApiKey: 'sk-ant-123',
+      );
       await repo.save(config);
 
       final loaded = repo.load();
@@ -52,6 +52,18 @@ void main() {
 
       final config2 = config.copyWith(outlineApiKey: 'key');
       expect(config2.isOutlineConfigured, isTrue);
+    });
+
+    test('friend discovery defaults to false', () {
+      expect(repo.getFriendDiscoveryEnabled(), isFalse);
+    });
+
+    test('setFriendDiscoveryEnabled persists value', () async {
+      await repo.setFriendDiscoveryEnabled(true);
+      expect(repo.getFriendDiscoveryEnabled(), isTrue);
+
+      await repo.setFriendDiscoveryEnabled(false);
+      expect(repo.getFriendDiscoveryEnabled(), isFalse);
     });
   });
 }
