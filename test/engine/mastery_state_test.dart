@@ -40,9 +40,7 @@ void main() {
             conceptId: 'prereq',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 0,
-            repetitions: 0,
             nextReview: DateTime.utc(2020),
             lastReview: null,
           ),
@@ -69,9 +67,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 0,
-            repetitions: 0,
             nextReview: DateTime.utc(2020),
             lastReview: null,
           ),
@@ -101,9 +97,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 5,
-            repetitions: 3,
             nextReview: DateTime.utc(2025, 6, 10),
             lastReview: lastReview,
             difficulty: 5.0,
@@ -150,9 +144,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 100,
-            repetitions: 5,
             nextReview: DateTime.utc(2025, 9, 23),
             lastReview: recentReview,
             difficulty: 5.0,
@@ -197,9 +189,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 25,
-            repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: null,
             difficulty: 5.0,
@@ -234,9 +224,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 1000,
-            repetitions: 10,
             nextReview: DateTime.utc(2028),
             lastReview: oldReview,
             difficulty: 3.0,
@@ -297,9 +285,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 0,
-            repetitions: 0,
             nextReview: DateTime.utc(2020),
             lastReview: null,
             difficulty: 5.0,
@@ -332,9 +318,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 1,
-            repetitions: 1,
             nextReview: DateTime.utc(2025, 3, 8),
             lastReview: DateTime.utc(2025, 3, 7), // 100 days ago
             difficulty: 8.0,
@@ -370,9 +354,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 100,
-            repetitions: 5,
             nextReview: DateTime.utc(2025, 9, 23),
             lastReview: now,
             difficulty: 5.0,
@@ -408,9 +390,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 5,
-            repetitions: 3,
             nextReview: DateTime.utc(2025, 6, 10),
             lastReview: DateTime.utc(2025, 6, 5), // 10 days ago
             difficulty: 5.0,
@@ -447,9 +427,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 1000,
-            repetitions: 10,
             nextReview: DateTime.utc(2028),
             lastReview: DateTime.utc(2025, 5, 1), // 45 days ago
             difficulty: 3.0,
@@ -486,9 +464,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 25,
-            repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: now,
             difficulty: 5.0,
@@ -522,9 +498,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 25,
-            repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: thirtyDaysAgo,
             difficulty: 5.0,
@@ -566,9 +540,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 1,
-            repetitions: 1,
             nextReview: DateTime.utc(2025, 4, 17),
             lastReview: sixtyDaysAgo,
             difficulty: 5.0,
@@ -608,9 +580,7 @@ void main() {
             conceptId: 'c1',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 0,
-            repetitions: 0,
             nextReview: DateTime.utc(2020),
             lastReview: null,
           ),
@@ -620,82 +590,6 @@ void main() {
       expect(freshnessOf('c1', graph), 1.0);
     });
 
-    test('decayMultiplier has no effect on FSRS freshness', () {
-      // decayMultiplier is retained for API compatibility but does NOT affect
-      // FSRS retrievability — storm decay is handled via desired_retention.
-      final now = DateTime.utc(2025, 6, 15);
-      final thirtyDaysAgo = DateTime.utc(2025, 5, 16);
-      final graph = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'C',
-            description: 'D',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        quizItems: [
-          QuizItem(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'Q?',
-            answer: 'A.',
-            easeFactor: 2.5,
-            interval: 25,
-            repetitions: 5,
-            nextReview: DateTime.utc(2099),
-            lastReview: thirtyDaysAgo,
-            difficulty: 5.0,
-            stability: 25.0,
-            fsrsState: 2,
-            lapses: 0,
-          ),
-        ],
-      );
-
-      final normal = freshnessOf('c1', graph, now: now);
-      final doubled = freshnessOf('c1', graph, now: now, decayMultiplier: 2.0);
-
-      // Both should be identical — decayMultiplier is a no-op for FSRS.
-      expect(normal, doubled);
-    });
-
-    test('decayMultiplier 1.0 is default behavior', () {
-      final now = DateTime.utc(2025, 6, 15);
-      final review = DateTime.utc(2025, 5, 16);
-      final graph = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'C',
-            description: 'D',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        quizItems: [
-          QuizItem(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'Q?',
-            answer: 'A.',
-            easeFactor: 2.5,
-            interval: 25,
-            repetitions: 5,
-            nextReview: DateTime.utc(2099),
-            lastReview: review,
-            difficulty: 5.0,
-            stability: 25.0,
-            fsrsState: 2,
-            lapses: 0,
-          ),
-        ],
-      );
-
-      final defaultVal = freshnessOf('c1', graph, now: now);
-      final explicit = freshnessOf('c1', graph, now: now, decayMultiplier: 1.0);
-
-      expect(defaultVal, explicit);
-    });
   });
 
   test('masteryColors has all five states', () {

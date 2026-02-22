@@ -13,9 +13,7 @@ class QuizItem {
     required this.conceptId,
     required this.question,
     required this.answer,
-    required this.easeFactor,
     required this.interval,
-    required this.repetitions,
     required this.nextReview,
     required this.lastReview,
     this.difficulty,
@@ -47,9 +45,7 @@ class QuizItem {
       conceptId: conceptId,
       question: question,
       answer: answer,
-      easeFactor: 2.5, // legacy
       interval: 0,
-      repetitions: 0,
       nextReview: currentTime,
       lastReview: null,
       difficulty: fsrs.difficulty,
@@ -80,9 +76,7 @@ class QuizItem {
         conceptId: json['conceptId'] as String,
         question: json['question'] as String,
         answer: json['answer'] as String,
-        easeFactor: (json['easeFactor'] as num).toDouble(),
-        interval: json['interval'] as int,
-        repetitions: json['repetitions'] as int,
+        interval: (json['interval'] as num?)?.toInt() ?? 0,
         nextReview: DateTime.parse(json['nextReview'] as String),
         lastReview:
             json['lastReview'] != null
@@ -100,9 +94,7 @@ class QuizItem {
       conceptId: json['conceptId'] as String,
       question: json['question'] as String,
       answer: json['answer'] as String,
-      easeFactor: (json['easeFactor'] as num).toDouble(),
-      interval: json['interval'] as int,
-      repetitions: json['repetitions'] as int,
+      interval: (json['interval'] as num?)?.toInt() ?? 0,
       nextReview: DateTime.parse(json['nextReview'] as String),
       lastReview:
           json['lastReview'] != null
@@ -119,9 +111,7 @@ class QuizItem {
   final String conceptId;
   final String question;
   final String answer;
-  final double easeFactor;
   final int interval;
-  final int repetitions;
   final DateTime nextReview;
   final DateTime? lastReview;
 
@@ -164,9 +154,7 @@ class QuizItem {
       conceptId: conceptId,
       question: question,
       answer: answer,
-      easeFactor: easeFactor,
       interval: interval,
-      repetitions: repetitions,
       nextReview: nextReview,
       lastReview: currentTime,
       difficulty: difficulty,
@@ -194,9 +182,7 @@ class QuizItem {
     'conceptId': conceptId,
     'question': question,
     'answer': answer,
-    'easeFactor': easeFactor,
     'interval': interval,
-    'repetitions': repetitions,
     'nextReview': nextReview.toIso8601String(),
     'lastReview': lastReview?.toIso8601String(),
     if (difficulty != null) 'difficulty': difficulty,

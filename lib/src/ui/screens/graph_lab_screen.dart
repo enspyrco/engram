@@ -106,56 +106,60 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
     return result;
   }
 
-  /// Create a quiz item whose SM-2 fields produce the desired mastery state.
+  /// Create a quiz item whose FSRS fields produce the desired mastery state.
   QuizItem _quizItemForMasteryIndex(QuizItem original, int index) {
     switch (index) {
-      case 0: // due
+      case 0: // due — no lastReview, no FSRS fields
         return QuizItem(
           id: original.id,
           conceptId: original.conceptId,
           question: original.question,
           answer: original.answer,
-          easeFactor: 2.5,
           interval: 0,
-          repetitions: 0,
           nextReview: _now,
           lastReview: null,
         );
-      case 1: // learning
+      case 1: // learning — FSRS state 1 (learning phase)
         return QuizItem(
           id: original.id,
           conceptId: original.conceptId,
           question: original.question,
           answer: original.answer,
-          easeFactor: 2.5,
           interval: 7,
-          repetitions: 2,
           nextReview: _now.add(const Duration(days: 7)),
           lastReview: _now.subtract(const Duration(days: 1)),
+          difficulty: 5.0,
+          stability: 5.0,
+          fsrsState: 1,
+          lapses: 0,
         );
-      case 2: // mastered
+      case 2: // mastered — FSRS state 2 (review), high stability
         return QuizItem(
           id: original.id,
           conceptId: original.conceptId,
           question: original.question,
           answer: original.answer,
-          easeFactor: 2.5,
           interval: 30,
-          repetitions: 5,
           nextReview: _now.add(const Duration(days: 30)),
           lastReview: _now.subtract(const Duration(days: 2)),
+          difficulty: 5.0,
+          stability: 100.0,
+          fsrsState: 2,
+          lapses: 0,
         );
-      case 3: // fading
+      case 3: // fading — FSRS state 2 but old lastReview (45 days ago)
         return QuizItem(
           id: original.id,
           conceptId: original.conceptId,
           question: original.question,
           answer: original.answer,
-          easeFactor: 2.5,
           interval: 30,
-          repetitions: 3,
           nextReview: _now,
           lastReview: _now.subtract(const Duration(days: 45)),
+          difficulty: 5.0,
+          stability: 1000.0,
+          fsrsState: 2,
+          lapses: 0,
         );
       default:
         return original;
@@ -164,7 +168,7 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
 
   /// Adjust a quiz item's lastReview to produce the desired freshness value.
   /// freshness = 1.0 - 0.7 * min(daysSince / 60, 1.0)
-  /// → daysSince = (1.0 - freshness) / 0.7 * 60
+  /// -> daysSince = (1.0 - freshness) / 0.7 * 60
   QuizItem _quizItemWithFreshness(QuizItem original, double freshness) {
     final daysSince = ((1.0 - freshness) / 0.7 * 60).round();
     final lastReview = _now.subtract(Duration(days: daysSince));
@@ -173,11 +177,13 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
       conceptId: original.conceptId,
       question: original.question,
       answer: original.answer,
-      easeFactor: original.easeFactor,
       interval: original.interval,
-      repetitions: original.repetitions,
       nextReview: original.nextReview,
       lastReview: lastReview,
+      difficulty: original.difficulty,
+      stability: original.stability,
+      fsrsState: original.fsrsState,
+      lapses: original.lapses,
     );
   }
 
@@ -543,11 +549,11 @@ final _now = DateTime.now().toUtc();
 // Initial graph: 6 concepts, 5 relationships, 6 quiz items.
 //
 // Topology:
-//   A (mastered)  <─depends on─  B (learning)
-//   A  ──relates to──>  C (due)
-//   C  <─depends on─  D (locked — C has reps=0 so D can't unlock)
-//   A  <─relates to─  E (fading)
-//   E  <─relates to─  F (mastered)
+//   A (mastered)  <-depends on-  B (learning)
+//   A  --relates to-->  C (due)
+//   C  <-depends on-  D (locked -- C is unreviewed so D can't unlock)
+//   A  <-relates to-  E (fading)
+//   E  <-relates to-  F (mastered)
 //
 // Start with 3 (A, B, C), add D/E/F one at a time via "Add Node".
 // ---------------------------------------------------------------------------
@@ -627,77 +633,81 @@ final _initialRelationships = [
 ];
 
 final _initialQuizItems = [
-  // A → mastered: interval ≥ 21, recent review
+  // A -> mastered: FSRS review state, high stability, recent review
   QuizItem(
     id: 'q1',
     conceptId: 'a',
     question: 'What is spaced repetition?',
     answer: 'Reviewing at increasing intervals to combat forgetting',
-    easeFactor: 2.5,
     interval: 30,
-    repetitions: 5,
     nextReview: _now.add(const Duration(days: 30)),
     lastReview: _now.subtract(const Duration(days: 2)),
+    difficulty: 5.0,
+    stability: 100.0,
+    fsrsState: 2,
+    lapses: 0,
   ),
-  // B → learning: repetitions ≥ 1 but interval < 21
+  // B -> learning: FSRS learning state, low stability
   QuizItem(
     id: 'q2',
     conceptId: 'b',
     question: 'What is the Leitner system?',
     answer: 'A card-box sorting system for spaced review',
-    easeFactor: 2.5,
     interval: 7,
-    repetitions: 2,
     nextReview: _now.add(const Duration(days: 7)),
     lastReview: _now.subtract(const Duration(days: 1)),
+    difficulty: 5.0,
+    stability: 5.0,
+    fsrsState: 1,
+    lapses: 0,
   ),
-  // C → due: never reviewed (repetitions = 0)
+  // C -> due: never reviewed
   QuizItem(
     id: 'q3',
     conceptId: 'c',
     question: 'What is active recall?',
     answer: 'Actively retrieving information from memory',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),
-  // D → locked: C is its prerequisite and C is not mastered
+  // D -> locked: C is its prerequisite and C is not graduated
   QuizItem(
     id: 'q4',
     conceptId: 'd',
     question: 'What is FSRS?',
     answer: 'Free Spaced Repetition Scheduler',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),
-  // E → fading: mastered (interval ≥ 21) but lastReview > 30 days ago
+  // E -> fading: FSRS review state but lastReview > 30 days ago
   QuizItem(
     id: 'q5',
     conceptId: 'e',
     question: 'What is the forgetting curve?',
     answer: 'Exponential memory decay over time (Ebbinghaus)',
-    easeFactor: 2.5,
     interval: 30,
-    repetitions: 3,
     nextReview: _now,
     lastReview: _now.subtract(const Duration(days: 45)),
+    difficulty: 5.0,
+    stability: 1000.0,
+    fsrsState: 2,
+    lapses: 0,
   ),
-  // F → mastered: interval ≥ 21, recent review
+  // F -> mastered: FSRS review state, high stability, recent review
   QuizItem(
     id: 'q6',
     conceptId: 'f',
     question: 'What is a memory palace?',
     answer: 'Method of loci — spatial memory technique',
-    easeFactor: 2.5,
     interval: 25,
-    repetitions: 4,
     nextReview: _now.add(const Duration(days: 25)),
     lastReview: _now.subtract(const Duration(days: 3)),
+    difficulty: 5.0,
+    stability: 80.0,
+    fsrsState: 2,
+    lapses: 0,
   ),
 ];
 
@@ -781,63 +791,57 @@ final _batch2Relationships = [
 ];
 
 final _batch2QuizItems = [
-  // G → learning
+  // G -> learning: FSRS learning state
   QuizItem(
     id: 'q7',
     conceptId: 'g',
     question: 'What is interleaving?',
     answer: 'Mixing different topics during study sessions',
-    easeFactor: 2.5,
     interval: 7,
-    repetitions: 2,
     nextReview: _now.add(const Duration(days: 7)),
     lastReview: _now.subtract(const Duration(days: 1)),
+    difficulty: 5.0,
+    stability: 5.0,
+    fsrsState: 1,
+    lapses: 0,
   ),
-  // H → due
+  // H -> due: never reviewed
   QuizItem(
     id: 'q8',
     conceptId: 'h',
     question: 'What is desirable difficulty?',
     answer: 'Making learning harder to improve retention',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),
-  // I → locked (depends on C which is due)
+  // I -> locked (depends on C which is due)
   QuizItem(
     id: 'q9',
     conceptId: 'i',
     question: 'What is the testing effect?',
     answer: 'Taking tests improves long-term retention',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),
-  // J → locked (depends on H which is due)
+  // J -> locked (depends on H which is due)
   QuizItem(
     id: 'q10',
     conceptId: 'j',
     question: 'What is elaborative interrogation?',
     answer: 'Asking why and how to deepen understanding',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),
-  // K → due
+  // K -> due: never reviewed
   QuizItem(
     id: 'q11',
     conceptId: 'k',
     question: 'What is dual coding?',
     answer: 'Combining verbal and visual information',
-    easeFactor: 2.5,
     interval: 0,
-    repetitions: 0,
     nextReview: _now,
     lastReview: null,
   ),

@@ -24,7 +24,7 @@ Relationship _dep(String from, String to) => Relationship(
   label: 'depends on',
 );
 
-/// FSRS quiz item. [fsrsState] >= 2 means mastered (unlocks dependents).
+/// FSRS quiz item. [fsrsState] >= 2 means graduated (unlocks dependents).
 QuizItem _quiz(
   String id,
   String conceptId, {
@@ -35,9 +35,7 @@ QuizItem _quiz(
   conceptId: conceptId,
   question: 'Q about $conceptId?',
   answer: 'A about $conceptId.',
-  easeFactor: 2.5,
   interval: 1,
-  repetitions: 0,
   nextReview: nextReview ?? DateTime.utc(2025, 6, 1),
   lastReview: null,
   difficulty: 5.0,

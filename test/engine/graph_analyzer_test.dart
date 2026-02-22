@@ -26,15 +26,13 @@ Relationship _rel(
   type: type,
 );
 
-/// FSRS quiz item. [fsrsState] >= 2 means mastered.
+/// FSRS quiz item. [fsrsState] >= 2 means graduated.
 QuizItem _quiz(String id, String conceptId, {int fsrsState = 1}) => QuizItem(
   id: id,
   conceptId: conceptId,
   question: 'Q?',
   answer: 'A.',
-  easeFactor: 2.5,
   interval: 1,
-  repetitions: 0,
   nextReview: DateTime.utc(2025, 6, 15),
   lastReview: null,
   difficulty: 5.0,
@@ -53,9 +51,7 @@ QuizItem _fsrsQuiz(
   conceptId: conceptId,
   question: 'Q?',
   answer: 'A.',
-  easeFactor: 2.5,
   interval: 1,
-  repetitions: 0,
   nextReview: DateTime.utc(2025, 6, 15),
   lastReview: null,
   difficulty: 5.0,
@@ -214,14 +210,14 @@ void main() {
     });
   });
 
-  group('isConceptMastered', () {
-    test('concept with no quiz items is mastered', () {
+  group('isConceptGraduated', () {
+    test('concept with no quiz items is graduated', () {
       final graph = KnowledgeGraph(concepts: [_concept('a')]);
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isTrue);
+      expect(analyzer.isConceptGraduated('a'), isTrue);
     });
 
-    test('concept with all fsrsState >= 2 is mastered', () {
+    test('concept with all fsrsState >= 2 is graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [
@@ -230,10 +226,10 @@ void main() {
         ],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isTrue);
+      expect(analyzer.isConceptGraduated('a'), isTrue);
     });
 
-    test('concept with any fsrsState < 2 is not mastered', () {
+    test('concept with any fsrsState < 2 is not graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [
@@ -242,43 +238,43 @@ void main() {
         ],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isFalse);
+      expect(analyzer.isConceptGraduated('a'), isFalse);
     });
 
-    test('unknown concept is mastered (no quiz items)', () {
+    test('unknown concept is graduated (no quiz items)', () {
       final graph = KnowledgeGraph(concepts: [_concept('a')]);
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('nonexistent'), isTrue);
+      expect(analyzer.isConceptGraduated('nonexistent'), isTrue);
     });
 
-    test('FSRS card in review state (2) is mastered', () {
+    test('FSRS card in review state (2) is graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 2)],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isTrue);
+      expect(analyzer.isConceptGraduated('a'), isTrue);
     });
 
-    test('FSRS card in learning state (1) is not mastered', () {
+    test('FSRS card in learning state (1) is not graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 1)],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isFalse);
+      expect(analyzer.isConceptGraduated('a'), isFalse);
     });
 
-    test('FSRS card in relearning state (3) is mastered', () {
+    test('FSRS card in relearning state (3) is graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 3)],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isTrue);
+      expect(analyzer.isConceptGraduated('a'), isTrue);
     });
 
-    test('FSRS card with null fsrsState is not mastered', () {
+    test('FSRS card with null fsrsState is not graduated', () {
       final graph = KnowledgeGraph(
         concepts: [_concept('a')],
         quizItems: [
@@ -287,9 +283,7 @@ void main() {
             conceptId: 'a',
             question: 'Q?',
             answer: 'A.',
-            easeFactor: 2.5,
             interval: 1,
-            repetitions: 1,
             nextReview: DateTime.utc(2025, 6, 15),
             lastReview: null,
             // No FSRS fields
@@ -297,7 +291,7 @@ void main() {
         ],
       );
       final analyzer = GraphAnalyzer(graph);
-      expect(analyzer.isConceptMastered('a'), isFalse);
+      expect(analyzer.isConceptGraduated('a'), isFalse);
     });
   });
 

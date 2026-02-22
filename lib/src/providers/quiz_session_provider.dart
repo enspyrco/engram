@@ -102,7 +102,7 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     final now = ref.read(clockProvider)();
 
     final retentionMap = ref.read(desiredRetentionProvider);
-    final desiredRetention = retentionMap[item.conceptId] ?? 0.9;
+    final desiredRetention = retentionMap[item.conceptId] ?? standardRetention;
     final result = reviewFsrs(
       rating: rating,
       difficulty: item.difficulty!,

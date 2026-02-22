@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../engine/graph_analyzer.dart';
 import 'catastrophe_provider.dart';
+import 'graph_analysis_provider.dart';
 import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
 
@@ -37,7 +37,8 @@ final desiredRetentionProvider = Provider<Map<String, double>>((ref) {
   final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
   if (graph == null || graph.concepts.isEmpty) return const {};
 
-  final analyzer = GraphAnalyzer(graph);
+  final analyzer = ref.watch(graphAnalysisProvider);
+  if (analyzer == null) return const {};
 
   // Collect guardian-protected concept IDs.
   final guardianState = ref.watch(guardianProvider);

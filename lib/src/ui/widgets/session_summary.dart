@@ -24,7 +24,7 @@ class SessionSummary extends ConsumerWidget {
       for (final conceptId in analyzer.lockedConcepts) {
         final prereqs = analyzer.prerequisitesOf(conceptId);
         final unmasteredPrereqs =
-            prereqs.where((p) => !analyzer.isConceptMastered(p)).toList();
+            prereqs.where((p) => !analyzer.isConceptGraduated(p)).toList();
         // If only 1-2 prerequisites remain unmastered, it's "close"
         if (unmasteredPrereqs.isNotEmpty && unmasteredPrereqs.length <= 2) {
           final concept =

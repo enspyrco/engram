@@ -50,21 +50,25 @@ class GraphAnalyzer {
   bool hasChildren(String conceptId) =>
       _children.containsKey(conceptId) && _children[conceptId]!.isNotEmpty;
 
-  /// A concept is mastered when all its quiz items are in FSRS review state
-  /// (fsrsState >= 2, i.e. review or relearning).
+  /// Whether a concept has graduated from the FSRS learning phase.
   ///
-  /// Concepts with no quiz items are considered mastered (informational nodes).
+  /// This is a *low bar* for graph progression: `fsrsState >= 2` means the
+  /// card has left the learning queue (state 2 = review, 3 = relearning).
+  /// It does **not** imply long-term mastery — contrast with
+  /// [QuizItem.isMasteredForUnlock] which requires stability >= 21 days and
+  /// is used for challenges, relays, and social features.
   ///
-  /// If the concept has children (was split), it's mastered only when ALL
-  /// children are mastered.
-  bool isConceptMastered(String conceptId, {Set<String>? visited}) {
+  /// Concepts with no quiz items are considered graduated (informational nodes).
+  /// If the concept has children (was split), it's graduated only when ALL
+  /// children are graduated.
+  bool isConceptGraduated(String conceptId, {Set<String>? visited}) {
     final seen = visited ?? <String>{};
     if (!seen.add(conceptId)) return true; // cycle guard
 
     if (hasChildren(conceptId)) {
       return childrenOf(
         conceptId,
-      ).every((childId) => isConceptMastered(childId, visited: seen));
+      ).every((childId) => isConceptGraduated(childId, visited: seen));
     }
 
     final items = _conceptItems[conceptId];
@@ -72,14 +76,14 @@ class GraphAnalyzer {
     return items.every((q) => q.fsrsState != null && q.fsrsState! >= 2);
   }
 
-  /// A concept is unlocked when all its prerequisites are mastered.
+  /// A concept is unlocked when all its prerequisites are graduated.
   /// Children inherit their parent's unlock status.
   bool isConceptUnlocked(String conceptId) {
     final concept = _conceptMap[conceptId];
     if (concept != null && concept.parentConceptId != null) {
       return isConceptUnlocked(concept.parentConceptId!);
     }
-    return prerequisitesOf(conceptId).every(isConceptMastered);
+    return prerequisitesOf(conceptId).every(isConceptGraduated);
   }
 
   /// Concepts with no prerequisites (entry points into the graph).

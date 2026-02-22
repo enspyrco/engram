@@ -84,15 +84,10 @@ MasteryState masteryStateOf(
 /// Uses FSRS retrievability directly as freshness (0.0–1.0), which is more
 /// principled than time-based linear decay. Returns 1.0 for concepts with
 /// no reviewed items.
-///
-/// The [decayMultiplier] parameter is retained for API compatibility with
-/// entropy storm mechanics but has no effect on FSRS retrievability — storm
-/// decay is handled via `desired_retention` adjustments.
 double freshnessOf(
   String conceptId,
   KnowledgeGraph graph, {
   DateTime? now,
-  double decayMultiplier = 1.0,
 }) {
   final items = graph.quizItems.where((q) => q.conceptId == conceptId);
 

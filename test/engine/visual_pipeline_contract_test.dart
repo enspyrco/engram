@@ -13,10 +13,9 @@ import 'package:test/test.dart';
 KnowledgeGraph graphWithQuizItems({
   String conceptId = 'c1',
   int interval = 0,
-  int repetitions = 0,
   DateTime? lastReview,
   String? prerequisiteId,
-  int prerequisiteRepetitions = 0,
+  int prerequisiteFsrsState = 1,
   double? difficulty,
   double? stability,
   int? fsrsState,
@@ -52,9 +51,7 @@ KnowledgeGraph graphWithQuizItems({
       conceptId: conceptId,
       question: 'Q?',
       answer: 'A.',
-      easeFactor: 2.5,
       interval: interval,
-      repetitions: repetitions,
       nextReview: DateTime.utc(2099),
       lastReview: lastReview,
       difficulty: difficulty,
@@ -68,11 +65,10 @@ KnowledgeGraph graphWithQuizItems({
         conceptId: prerequisiteId,
         question: 'PQ?',
         answer: 'PA.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: prerequisiteRepetitions,
         nextReview: DateTime.utc(2099),
         lastReview: null,
+        fsrsState: prerequisiteFsrsState,
       ),
   ];
 
@@ -116,20 +112,20 @@ void main() {
   });
 
   group('masteryStateOf state machine', () {
-    test('locked when prerequisites not mastered', () {
-      // prerequisiteRepetitions=0 means prereq is unmastered → dependent is locked
+    test('locked when prerequisites not graduated', () {
+      // prerequisiteFsrsState=1 means prereq is in learning → dependent is locked
       final graph = graphWithQuizItems(
         conceptId: 'dep',
         prerequisiteId: 'prereq',
-        prerequisiteRepetitions: 0,
+        prerequisiteFsrsState: 1,
       );
       final analyzer = GraphAnalyzer(graph);
 
       expect(masteryStateOf('dep', graph, analyzer), MasteryState.locked);
     });
 
-    test('due when unlocked with unreviewed items (repetitions==0)', () {
-      final graph = graphWithQuizItems(repetitions: 0);
+    test('due when unlocked with unreviewed items', () {
+      final graph = graphWithQuizItems();
       final analyzer = GraphAnalyzer(graph);
 
       expect(masteryStateOf('c1', graph, analyzer), MasteryState.due);
@@ -140,7 +136,6 @@ void main() {
       final now = DateTime.utc(2025, 6, 15);
       final review = now.subtract(const Duration(days: 30));
       final graph = graphWithQuizItems(
-        repetitions: 3,
         lastReview: review,
         difficulty: 5.0,
         stability: 5.0,
@@ -161,7 +156,6 @@ void main() {
       final recentReview = DateTime.utc(2025, 6, 14);
 
       final graph = graphWithQuizItems(
-        repetitions: 5,
         lastReview: recentReview,
         difficulty: 5.0,
         stability: 30.0,
@@ -185,7 +179,6 @@ void main() {
       final oldReview = DateTime.utc(2025, 5, 1);
 
       final graph = graphWithQuizItems(
-        repetitions: 5,
         lastReview: oldReview,
         difficulty: 5.0,
         stability: 500.0,
@@ -209,7 +202,6 @@ void main() {
     KnowledgeGraph graphReviewedDaysAgo(int days, {double stability = 20.0}) {
       final review = now.subtract(Duration(days: days));
       return graphWithQuizItems(
-        repetitions: 5,
         lastReview: review,
         difficulty: 5.0,
         stability: stability,
@@ -256,23 +248,8 @@ void main() {
     });
 
     test('1.0 when no lastReview (non-FSRS items)', () {
-      final graph = graphWithQuizItems(repetitions: 0, lastReview: null);
+      final graph = graphWithQuizItems(lastReview: null);
       expect(freshnessOf('c1', graph, now: now), 1.0);
-    });
-
-    test('decayMultiplier has no effect on FSRS retrievability', () {
-      final graph = graphReviewedDaysAgo(30);
-
-      final normal = freshnessOf('c1', graph, now: now);
-      final doubled = freshnessOf(
-        'c1',
-        graph,
-        now: now,
-        decayMultiplier: 2.0,
-      );
-
-      // decayMultiplier is retained for API compat but doesn't affect FSRS
-      expect(doubled, closeTo(normal, 0.001));
     });
   });
 }

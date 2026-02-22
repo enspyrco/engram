@@ -11,9 +11,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: now,
         lastReview: null,
         difficulty: 5.0,
@@ -30,9 +28,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: now,
         lastReview: null,
         difficulty: 5.0,
@@ -46,9 +42,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: now,
         lastReview: null,
       );
@@ -61,9 +55,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: now,
         lastReview: null,
         difficulty: 5.0,
@@ -80,9 +72,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 5,
-        repetitions: 3,
         nextReview: now,
         lastReview: null,
         difficulty: 5.0,
@@ -99,9 +89,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 25,
-        repetitions: 3,
         nextReview: now,
         lastReview: null,
         difficulty: 5.0,
@@ -118,9 +106,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 25,
-        repetitions: 5,
         nextReview: now,
         lastReview: null,
       );
@@ -144,9 +130,7 @@ void main() {
       expect(item.stability!, greaterThan(0));
       expect(item.fsrsState, 1); // learning
       expect(item.lapses, 0);
-      expect(item.easeFactor, 2.5); // legacy default
       expect(item.interval, 0);
-      expect(item.repetitions, 0);
     });
 
     test('with predictedDifficulty bootstraps full FSRS state', () {
@@ -197,16 +181,13 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.6,
         interval: 6,
-        repetitions: 2,
         nextReview: now,
         lastReview: now.subtract(const Duration(days: 6)),
       );
 
       final restored = QuizItem.fromJson(original.toJson());
       expect(restored.id, original.id);
-      expect(restored.easeFactor, original.easeFactor);
       expect(restored.interval, original.interval);
       // Auto-migrated to FSRS
       expect(restored.isFsrs, isTrue);
@@ -214,7 +195,7 @@ void main() {
       expect(restored.stability, isNotNull);
       expect(restored.fsrsState, isNotNull);
       expect(restored.lapses, isNotNull);
-      // Preserves SM-2 scheduling state
+      // Preserves scheduling state
       expect(restored.nextReview, original.nextReview);
       expect(restored.lastReview, original.lastReview);
     });
@@ -225,9 +206,7 @@ void main() {
         conceptId: 'c1',
         question: 'Q?',
         answer: 'A.',
-        easeFactor: 2.5,
         interval: 3,
-        repetitions: 1,
         nextReview: now,
         lastReview: now.subtract(const Duration(days: 3)),
         difficulty: 5.0,

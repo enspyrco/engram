@@ -89,9 +89,7 @@ KnowledgeGraph buildDependencyGraph({
         conceptId: 'docker',
         question: 'What is Docker?',
         answer: 'A container runtime.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: _pastReview,
         lastReview: dockerMastered ? _pastReview : null,
         difficulty: 5.0,
@@ -104,9 +102,7 @@ KnowledgeGraph buildDependencyGraph({
         conceptId: 'kubernetes',
         question: 'What is Kubernetes?',
         answer: 'Container orchestration platform.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: _pastReview,
         lastReview: kubernetesMastered ? _pastReview : null,
         difficulty: 5.0,
@@ -119,9 +115,7 @@ KnowledgeGraph buildDependencyGraph({
         conceptId: 'helm',
         question: 'What is Helm?',
         answer: 'Kubernetes package manager.',
-        easeFactor: 2.5,
         interval: 0,
-        repetitions: 0,
         nextReview: _pastReview,
         lastReview: null,
         difficulty: 5.0,
@@ -307,7 +301,7 @@ void main() {
 
       // Count unmastered prereqs for Helm
       final unmasteredPrereqs =
-          helmPrereqs.where((p) => !analyzer.isConceptMastered(p)).toList();
+          helmPrereqs.where((p) => !analyzer.isConceptGraduated(p)).toList();
       expect(unmasteredPrereqs, hasLength(1)); // Only Kubernetes
       // This means Helm would appear in "Almost unlocking" on the session summary
     });

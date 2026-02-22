@@ -89,7 +89,7 @@ void main() {
   });
 
   group('QuizItem', () {
-    test('newCard sets SM-2 defaults', () {
+    test('newCard sets defaults', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -97,9 +97,7 @@ void main() {
         answer: 'X is Y.',
       );
 
-      expect(item.easeFactor, 2.5);
       expect(item.interval, 0);
-      expect(item.repetitions, 0);
       expect(item.lastReview, isNull);
     });
 
@@ -118,9 +116,7 @@ void main() {
       expect(restored.conceptId, item.conceptId);
       expect(restored.question, item.question);
       expect(restored.answer, item.answer);
-      expect(restored.easeFactor, item.easeFactor);
       expect(restored.interval, item.interval);
-      expect(restored.repetitions, item.repetitions);
       expect(restored.nextReview, item.nextReview);
     });
 
@@ -163,9 +159,7 @@ void main() {
         conceptId: 'c1',
         question: 'What is X?',
         answer: 'X is Y.',
-        easeFactor: 2.5,
         interval: 6,
-        repetitions: 2,
         nextReview: DateTime.utc(2025, 1, 10),
         lastReview: DateTime.utc(2025, 1, 4),
         difficulty: 5.5,
@@ -240,7 +234,7 @@ void main() {
       expect(json.containsKey('lapses'), isTrue);
     });
 
-    test('withFsrsReview updates FSRS fields and preserves SM-2 fields', () {
+    test('withFsrsReview updates FSRS fields', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -266,10 +260,6 @@ void main() {
       expect(updated.interval, 10);
       expect(updated.nextReview, DateTime.utc(2025, 1, 11));
       expect(updated.lastReview, isNotNull);
-
-      // SM-2 fields preserved
-      expect(updated.easeFactor, 2.5);
-      expect(updated.repetitions, 0);
 
       // Original unchanged
       expect(item.difficulty, 5.0);
