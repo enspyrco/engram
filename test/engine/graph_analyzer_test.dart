@@ -38,6 +38,27 @@ QuizItem _quiz(String id, String conceptId, {int repetitions = 0}) => QuizItem(
   lastReview: null,
 );
 
+/// FSRS quiz item with configurable state.
+QuizItem _fsrsQuiz(
+  String id,
+  String conceptId, {
+  int fsrsState = 1,
+}) => QuizItem(
+  id: id,
+  conceptId: conceptId,
+  question: 'Q?',
+  answer: 'A.',
+  easeFactor: 2.5,
+  interval: 1,
+  repetitions: 0,
+  nextReview: DateTime.utc(2025, 6, 15),
+  lastReview: null,
+  difficulty: 5.0,
+  stability: 3.26,
+  fsrsState: fsrsState,
+  lapses: 0,
+);
+
 void main() {
   group('isDependencyEdge', () {
     test('recognises "depends on"', () {
@@ -223,6 +244,43 @@ void main() {
       final graph = KnowledgeGraph(concepts: [_concept('a')]);
       final analyzer = GraphAnalyzer(graph);
       expect(analyzer.isConceptMastered('nonexistent'), isTrue);
+    });
+
+    test('FSRS card in review state (2) is mastered', () {
+      final graph = KnowledgeGraph(
+        concepts: [_concept('a')],
+        quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 2)],
+      );
+      final analyzer = GraphAnalyzer(graph);
+      expect(analyzer.isConceptMastered('a'), isTrue);
+    });
+
+    test('FSRS card in learning state (1) is not mastered', () {
+      final graph = KnowledgeGraph(
+        concepts: [_concept('a')],
+        quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 1)],
+      );
+      final analyzer = GraphAnalyzer(graph);
+      expect(analyzer.isConceptMastered('a'), isFalse);
+    });
+
+    test('FSRS card in relearning state (3) is mastered', () {
+      final graph = KnowledgeGraph(
+        concepts: [_concept('a')],
+        quizItems: [_fsrsQuiz('q1', 'a', fsrsState: 3)],
+      );
+      final analyzer = GraphAnalyzer(graph);
+      expect(analyzer.isConceptMastered('a'), isTrue);
+    });
+
+    test('SM-2 mastery check unchanged with FSRS changes', () {
+      // SM-2 card with repetitions = 1 should still be mastered
+      final graph = KnowledgeGraph(
+        concepts: [_concept('a')],
+        quizItems: [_quiz('q1', 'a', repetitions: 1)],
+      );
+      final analyzer = GraphAnalyzer(graph);
+      expect(analyzer.isConceptMastered('a'), isTrue);
     });
   });
 

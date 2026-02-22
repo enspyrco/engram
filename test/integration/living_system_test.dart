@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:engram/src/engine/graph_analyzer.dart';
+import 'package:engram/src/engine/review_rating.dart';
 import 'package:engram/src/engine/scheduler.dart';
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/document_metadata.dart';
@@ -241,7 +242,7 @@ void main() {
 
       // Complete the review: reveal → rate 5 (perfect recall)
       notifier.revealAnswer();
-      await notifier.rateItem(5);
+      await notifier.rateItem(const Sm2Rating(5));
 
       session = container.read(quizSessionProvider);
       expect(session.phase, QuizPhase.summary);
@@ -268,7 +269,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(5);
+      await notifier.rateItem(const Sm2Rating(5));
 
       final statsAfter = container.read(dashboardStatsProvider);
       expect(statsAfter.newCount, 2); // Docker moved out of "new"
@@ -311,7 +312,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(5);
+      await notifier.rateItem(const Sm2Rating(5));
       notifier.reset();
 
       // Phase 2: Now Kubernetes should also be available
@@ -330,7 +331,7 @@ void main() {
       // Rate all items in this session
       for (var i = 0; i < session.items.length; i++) {
         notifier.revealAnswer();
-        await notifier.rateItem(5);
+        await notifier.rateItem(const Sm2Rating(5));
       }
       notifier.reset();
 
