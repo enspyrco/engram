@@ -77,8 +77,11 @@ MasteryState _sm2MasteryState(Iterable<QuizItem> items, {DateTime? now}) {
 MasteryState _fsrsMasteryState(Iterable<QuizItem> items, {DateTime? now}) {
   final currentTime = now ?? DateTime.now().toUtc();
 
-  // Check if any items have never been reviewed.
-  final anyUnreviewed = items.any((q) => q.lastReview == null);
+  // Check if any FSRS items have never been reviewed. Non-FSRS (SM-2) items
+  // in a mixed set are ignored here — during the transition, an unreviewed
+  // SM-2 sibling shouldn't penalize the FSRS signal. Pure SM-2 concepts
+  // never reach this path (they're routed to _sm2MasteryState).
+  final anyUnreviewed = items.where((q) => q.isFsrs).any((q) => q.lastReview == null);
   if (anyUnreviewed) return MasteryState.due;
 
   // Average retrievability across FSRS items (skip non-FSRS in mixed sets).

@@ -58,8 +58,10 @@ void main() {
     });
 
     test('Sm2Rating and FsrsReviewRating are not equal', () {
-      // ignore: unrelated_type_equality_checks
-      expect(const Sm2Rating(3) == const FsrsReviewRating(FsrsRating.good), isFalse);
+      expect(
+        const Sm2Rating(3),
+        isNot(equals(const FsrsReviewRating(FsrsRating.good))),
+      );
     });
   });
 }

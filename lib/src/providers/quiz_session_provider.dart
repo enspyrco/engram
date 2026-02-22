@@ -12,8 +12,8 @@ import '../models/quiz_session_state.dart';
 import '../models/session_mode.dart';
 import 'auth_provider.dart';
 import 'catastrophe_provider.dart';
-import 'desired_retention_provider.dart';
 import 'clock_provider.dart';
+import 'desired_retention_provider.dart';
 import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'relay_provider.dart';
@@ -153,8 +153,9 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
           nextReview: nextReview,
           now: now,
         );
-        // Map FSRS ratings to int for the ratings list:
-        // again→1, hard→3, good→4, easy→5
+        // Map FSRS ratings to int for the session ratings list, aligned with
+        // the SM-2 quality scale so correctCount (quality >= 3) works for both
+        // algorithms. Phase 3 can replace this with a dedicated accuracy metric.
         ratingValue = switch (rating) {
           FsrsRating.again => 1,
           FsrsRating.hard => 3,
