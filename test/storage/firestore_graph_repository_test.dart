@@ -131,18 +131,20 @@ void main() {
       final graph = sampleGraph();
       await repo.save(graph);
 
-      final updated = graph.quizItems.first.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = graph.quizItems.first.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
 
       await repo.updateQuizItem(graph.withUpdatedQuizItem(updated), updated);
 
       final loaded = await repo.load();
-      expect(loaded.quizItems.first.repetitions, 1);
-      expect(loaded.quizItems.first.easeFactor, 2.6);
+      expect(loaded.quizItems.first.fsrsState, 2);
+      expect(loaded.quizItems.first.stability, 10.0);
       // Other data unchanged
       expect(loaded.concepts, hasLength(2));
     });

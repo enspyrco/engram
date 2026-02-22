@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../engine/fsrs_engine.dart';
-import '../engine/review_rating.dart';
 import '../engine/scheduler.dart';
-import '../engine/sm2.dart';
 import '../engine/streak.dart';
 import '../models/quiz_item.dart';
 import '../models/quiz_session_state.dart';
@@ -87,82 +85,51 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     state = state.copyWith(phase: QuizPhase.revealed);
   }
 
-  /// Rate the current quiz item using either SM-2 or FSRS.
-  ///
-  /// Dispatches based on the [ReviewRating] subclass:
-  /// - [Sm2Rating] → classic SM-2 algorithm
-  /// - [FsrsReviewRating] → FSRS algorithm with desired retention
-  Future<void> rateItem(ReviewRating rating) async {
+  /// Rate the current quiz item using FSRS with desired retention.
+  Future<void> rateItem(FsrsRating rating) async {
     if (state.phase != QuizPhase.revealed) return;
 
     final item = state.currentItem;
     if (item == null) return;
 
-    // Check if this concept is in an active repair mission for 1.5x bonus
+    // Check if this concept is in an active repair mission (for tracking
+    // and glory points — scheduling uses desired_retention, not interval hacks).
     final activeMissions = ref.read(catastropheProvider).activeMissions;
     final inMission = activeMissions.any(
       (m) => m.conceptIds.contains(item.conceptId),
     );
 
     final now = ref.read(clockProvider)();
-    final QuizItem updated;
-    final int ratingValue;
 
-    switch (rating) {
-      case Sm2Rating(:final quality):
-        final result = sm2(
-          quality: quality,
-          easeFactor: item.easeFactor,
-          interval: item.interval,
-          repetitions: item.repetitions,
-        );
-        final effectiveInterval =
-            inMission ? (result.interval * 1.5).round() : result.interval;
-        final nextReview = now.add(Duration(days: effectiveInterval));
-        updated = item.withReview(
-          easeFactor: result.easeFactor,
-          interval: effectiveInterval,
-          repetitions: result.repetitions,
-          nextReview: nextReview,
-          now: now,
-        );
-        ratingValue = quality;
-
-      case FsrsReviewRating(:final rating):
-        final retentionMap = ref.read(desiredRetentionProvider);
-        final desiredRetention = retentionMap[item.conceptId] ?? 0.9;
-        final result = reviewFsrs(
-          rating: rating,
-          difficulty: item.difficulty!,
-          stability: item.stability!,
-          fsrsState: item.fsrsState!,
-          lapses: item.lapses ?? 0,
-          lastReview: item.lastReview ?? now,
-          now: now,
-          desiredRetention: desiredRetention,
-        );
-        final effectiveInterval =
-            inMission ? (result.intervalDays * 1.5).round() : result.intervalDays;
-        final nextReview = now.add(Duration(days: effectiveInterval));
-        updated = item.withFsrsReview(
-          difficulty: result.difficulty,
-          stability: result.stability,
-          fsrsState: result.fsrsState,
-          lapses: result.lapses,
-          interval: effectiveInterval,
-          nextReview: nextReview,
-          now: now,
-        );
-        // Map FSRS ratings to int for the session ratings list, aligned with
-        // the SM-2 quality scale so correctCount (quality >= 3) works for both
-        // algorithms. Phase 3 can replace this with a dedicated accuracy metric.
-        ratingValue = switch (rating) {
-          FsrsRating.again => 1,
-          FsrsRating.hard => 3,
-          FsrsRating.good => 4,
-          FsrsRating.easy => 5,
-        };
-    }
+    final retentionMap = ref.read(desiredRetentionProvider);
+    final desiredRetention = retentionMap[item.conceptId] ?? 0.9;
+    final result = reviewFsrs(
+      rating: rating,
+      difficulty: item.difficulty!,
+      stability: item.stability!,
+      fsrsState: item.fsrsState!,
+      lapses: item.lapses ?? 0,
+      lastReview: item.lastReview ?? now,
+      now: now,
+      desiredRetention: desiredRetention,
+    );
+    final updated = item.withFsrsReview(
+      difficulty: result.difficulty,
+      stability: result.stability,
+      fsrsState: result.fsrsState,
+      lapses: result.lapses,
+      interval: result.intervalDays,
+      nextReview: result.nextReview,
+      now: now,
+    );
+    // Map FSRS ratings to int for the session ratings list so
+    // correctCount (quality >= 3) works: again=1, hard=3, good=4, easy=5.
+    final ratingValue = switch (rating) {
+      FsrsRating.again => 1,
+      FsrsRating.hard => 3,
+      FsrsRating.good => 4,
+      FsrsRating.easy => 5,
+    };
 
     // Advance the session state first — the UI must never block on I/O.
     final newRatings = state.ratings.add(ratingValue);

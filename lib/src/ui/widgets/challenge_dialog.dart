@@ -13,13 +13,6 @@ import '../../providers/user_profile_provider.dart';
 
 const _uuid = Uuid();
 
-/// Minimum SM-2 repetitions to consider a concept "mastered".
-const int kMasteryMinRepetitions = 3;
-
-/// Minimum SM-2 ease factor to consider a concept "mastered".
-/// 2.5 is the initial ease factor — meaning the concept hasn't gotten harder.
-const double kMasteryMinEaseFactor = 2.5;
-
 /// Dialog to pick a mastered concept and send a challenge to a friend.
 class ChallengeDialog extends ConsumerStatefulWidget {
   const ChallengeDialog({super.key, required this.friend});
@@ -42,15 +35,10 @@ class _ChallengeDialogState extends ConsumerState<ChallengeDialog> {
       title: Text('Challenge ${widget.friend.displayName}'),
       content: graphAsync.when(
         data: (graph) {
-          // Find concepts the current user has mastered
-          // (quiz items with easeFactor >= 2.5 and repetitions >= 3)
+          // Find concepts the current user has mastered (FSRS stability check)
           final masteredConceptIds =
               graph.quizItems
-                  .where(
-                    (q) =>
-                        q.repetitions >= kMasteryMinRepetitions &&
-                        q.easeFactor >= kMasteryMinEaseFactor,
-                  )
+                  .where((q) => q.isMasteredForUnlock)
                   .map((q) => q.conceptId)
                   .toSet();
 

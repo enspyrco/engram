@@ -24,10 +24,11 @@ Relationship _dep(String from, String to) => Relationship(
   label: 'depends on',
 );
 
+/// FSRS quiz item. [fsrsState] >= 2 means mastered (unlocks dependents).
 QuizItem _quiz(
   String id,
   String conceptId, {
-  int repetitions = 0,
+  int fsrsState = 1,
   DateTime? nextReview,
 }) => QuizItem(
   id: id,
@@ -36,9 +37,13 @@ QuizItem _quiz(
   answer: 'A about $conceptId.',
   easeFactor: 2.5,
   interval: 1,
-  repetitions: repetitions,
+  repetitions: 0,
   nextReview: nextReview ?? DateTime.utc(2025, 6, 1),
   lastReview: null,
+  difficulty: 5.0,
+  stability: 3.26,
+  fsrsState: fsrsState,
+  lapses: 0,
 );
 
 void main() {
@@ -48,9 +53,9 @@ void main() {
     // Dependency chain: compose → containers → images
     // All items are due.
     KnowledgeGraph buildGraph({
-      int imagesReps = 0,
-      int containersReps = 0,
-      int composeReps = 0,
+      bool imagesMastered = false,
+      bool containersMastered = false,
+      bool composeMastered = false,
     }) {
       return KnowledgeGraph(
         concepts: [
@@ -63,9 +68,13 @@ void main() {
           _dep('containers', 'images'),
         ],
         quizItems: [
-          _quiz('q-images', 'images', repetitions: imagesReps),
-          _quiz('q-containers', 'containers', repetitions: containersReps),
-          _quiz('q-compose', 'compose', repetitions: composeReps),
+          _quiz('q-images', 'images', fsrsState: imagesMastered ? 2 : 1),
+          _quiz(
+            'q-containers',
+            'containers',
+            fsrsState: containersMastered ? 2 : 1,
+          ),
+          _quiz('q-compose', 'compose', fsrsState: composeMastered ? 2 : 1),
         ],
       );
     }
@@ -80,7 +89,7 @@ void main() {
     });
 
     test('mastering images unlocks containers', () {
-      final graph = buildGraph(imagesReps: 1);
+      final graph = buildGraph(imagesMastered: true);
       final due = scheduleDueItems(graph, now: now);
 
       expect(due.map((i) => i.id), containsAll(['q-images', 'q-containers']));
@@ -88,7 +97,7 @@ void main() {
     });
 
     test('mastering images + containers unlocks compose', () {
-      final graph = buildGraph(imagesReps: 1, containersReps: 1);
+      final graph = buildGraph(imagesMastered: true, containersMastered: true);
       final due = scheduleDueItems(graph, now: now);
 
       expect(due.length, 3);
@@ -101,7 +110,7 @@ void main() {
     test('foundational items sort before non-foundational', () {
       // images mastered, both containers and images are due
       // images is foundational → should come first
-      final graph = buildGraph(imagesReps: 1);
+      final graph = buildGraph(imagesMastered: true);
       final due = scheduleDueItems(graph, now: now);
 
       expect(due.first.id, 'q-images');
@@ -120,7 +129,7 @@ void main() {
       expect(analyzer.hasCycles(), isFalse);
 
       // After mastering images
-      final graph2 = buildGraph(imagesReps: 1);
+      final graph2 = buildGraph(imagesMastered: true);
       final analyzer2 = GraphAnalyzer(graph2);
       expect(
         analyzer2.unlockedConcepts,
@@ -129,7 +138,7 @@ void main() {
       expect(analyzer2.lockedConcepts, ['compose']);
 
       // After mastering images + containers
-      final graph3 = buildGraph(imagesReps: 1, containersReps: 1);
+      final graph3 = buildGraph(imagesMastered: true, containersMastered: true);
       final analyzer3 = GraphAnalyzer(graph3);
       expect(
         analyzer3.unlockedConcepts,

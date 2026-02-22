@@ -124,7 +124,7 @@ void main() {
       expect(restored.nextReview, item.nextReview);
     });
 
-    test('newCard without predictedDifficulty has null FSRS fields', () {
+    test('newCard without predictedDifficulty creates FSRS card with D=5.0', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -132,10 +132,12 @@ void main() {
         answer: 'X is Y.',
       );
 
-      expect(item.difficulty, isNull);
-      expect(item.stability, isNull);
-      expect(item.fsrsState, isNull);
-      expect(item.lapses, isNull);
+      expect(item.isFsrs, isTrue);
+      expect(item.difficulty, 5.0);
+      expect(item.stability, isNotNull);
+      expect(item.stability, greaterThan(0));
+      expect(item.fsrsState, 1);
+      expect(item.lapses, 0);
     });
 
     test('newCard with predictedDifficulty bootstraps full FSRS state', () {
@@ -181,7 +183,7 @@ void main() {
       expect(restored.lapses, 1);
     });
 
-    test('fromJson handles missing FSRS fields (backward compat)', () {
+    test('fromJson auto-migrates missing FSRS fields', () {
       final json = {
         'id': 'q1',
         'conceptId': 'c1',
@@ -196,13 +198,15 @@ void main() {
 
       final item = QuizItem.fromJson(json);
 
-      expect(item.difficulty, isNull);
-      expect(item.stability, isNull);
-      expect(item.fsrsState, isNull);
-      expect(item.lapses, isNull);
+      // Auto-migrated to FSRS
+      expect(item.isFsrs, isTrue);
+      expect(item.difficulty, 5.0);
+      expect(item.stability, isNotNull);
+      expect(item.fsrsState, isNotNull);
+      expect(item.lapses, isNotNull);
     });
 
-    test('toJson omits null FSRS fields', () {
+    test('toJson includes FSRS fields (always present after Phase 3)', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -212,10 +216,10 @@ void main() {
 
       final json = item.toJson();
 
-      expect(json.containsKey('difficulty'), isFalse);
-      expect(json.containsKey('stability'), isFalse);
-      expect(json.containsKey('fsrsState'), isFalse);
-      expect(json.containsKey('lapses'), isFalse);
+      expect(json.containsKey('difficulty'), isTrue);
+      expect(json.containsKey('stability'), isTrue);
+      expect(json.containsKey('fsrsState'), isTrue);
+      expect(json.containsKey('lapses'), isTrue);
     });
 
     test('toJson includes non-null FSRS fields', () {
@@ -272,38 +276,7 @@ void main() {
       expect(item.interval, 0);
     });
 
-    test('withReview preserves FSRS fields', () {
-      final item = QuizItem(
-        id: 'q1',
-        conceptId: 'c1',
-        question: 'What is X?',
-        answer: 'X is Y.',
-        easeFactor: 2.5,
-        interval: 0,
-        repetitions: 0,
-        nextReview: DateTime.utc(2025),
-        lastReview: null,
-        difficulty: 6.0,
-        stability: 3.26,
-        fsrsState: 1,
-        lapses: 0,
-      );
-
-      final updated = item.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
-      );
-
-      // FSRS fields preserved
-      expect(updated.difficulty, 6.0);
-      expect(updated.stability, 3.26);
-      expect(updated.fsrsState, 1);
-      expect(updated.lapses, 0);
-    });
-
-    test('withReview updates SM-2 state', () {
+    test('withFsrsReview updates FSRS state and sets lastReview', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -311,20 +284,23 @@ void main() {
         answer: 'X is Y.',
       );
 
-      final updated = item.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = item.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
 
-      expect(updated.easeFactor, 2.6);
-      expect(updated.interval, 1);
-      expect(updated.repetitions, 1);
-      expect(updated.nextReview, DateTime.utc(2025, 1, 2));
+      expect(updated.difficulty, 4.5);
+      expect(updated.stability, 10.0);
+      expect(updated.fsrsState, 2);
+      expect(updated.interval, 10);
+      expect(updated.nextReview, DateTime.utc(2025, 1, 11));
       expect(updated.lastReview, isNotNull);
       // Original unchanged
-      expect(item.easeFactor, 2.5);
+      expect(item.difficulty, 5.0);
     });
   });
 
@@ -657,18 +633,20 @@ void main() {
         ],
       );
 
-      final updated = graph.quizItems.first.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = graph.quizItems.first.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
 
       final newGraph = graph.withUpdatedQuizItem(updated);
 
       expect(newGraph.quizItems.length, 2);
-      expect(newGraph.quizItems.first.repetitions, 1);
-      expect(newGraph.quizItems.last.repetitions, 0);
+      expect(newGraph.quizItems.first.fsrsState, 2);
+      expect(newGraph.quizItems.last.fsrsState, 1);
     });
 
     test('withTopic adds a new topic', () {
@@ -781,11 +759,13 @@ void main() {
         ],
       );
 
-      final updated = graph.quizItems.first.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = graph.quizItems.first.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
 
       final newGraph = graph.withUpdatedQuizItem(updated);

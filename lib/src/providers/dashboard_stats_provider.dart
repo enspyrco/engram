@@ -17,7 +17,7 @@ final dashboardStatsProvider = Provider<DashboardStats>((ref) {
   var masteredCount = 0;
 
   for (final item in graph.quizItems) {
-    if (item.repetitions == 0) {
+    if (item.lastReview == null) {
       newCount++;
     } else if (item.interval < 21) {
       learningCount++;

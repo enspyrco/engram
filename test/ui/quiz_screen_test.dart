@@ -23,16 +23,12 @@ void main() {
         ),
       );
       items.add(
-        QuizItem(
+        QuizItem.newCard(
           id: 'q$i',
           conceptId: 'c$i',
           question: 'Question $i?',
           answer: 'Answer $i.',
-          easeFactor: 2.5,
-          interval: 0,
-          repetitions: 0,
-          nextReview: DateTime.utc(2020),
-          lastReview: null,
+          now: DateTime.utc(2020),
         ),
       );
     }
@@ -81,7 +77,7 @@ void main() {
       expect(find.text('Reveal Answer'), findsOneWidget);
     });
 
-    testWidgets('reveal shows answer and rating buttons', (tester) async {
+    testWidgets('reveal shows answer and FSRS rating buttons', (tester) async {
       await tester.pumpWidget(await buildApp(graphWithDueItems(1)));
       await tester.pumpAndSettle();
 
@@ -93,10 +89,11 @@ void main() {
 
       expect(find.text('Answer 0.'), findsOneWidget);
       expect(find.text('Rate your recall:'), findsOneWidget);
-      // 6 rating buttons (0-5)
-      for (var i = 0; i <= 5; i++) {
-        expect(find.text('$i'), findsOneWidget);
-      }
+      // 4-button FSRS rating bar
+      expect(find.text('Again'), findsOneWidget);
+      expect(find.text('Hard'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
+      expect(find.text('Easy'), findsOneWidget);
     });
 
     testWidgets('rating completes session with one item', (tester) async {
@@ -109,8 +106,8 @@ void main() {
       await tester.tap(find.text('Reveal Answer'));
       await tester.pumpAndSettle();
 
-      // Tap the "5" (Perfect) rating button
-      await tester.tap(find.text('5'));
+      // Tap the "Easy" FSRS rating button
+      await tester.tap(find.text('Easy'));
       await tester.pumpAndSettle();
 
       expect(find.text('Session Complete'), findsOneWidget);
@@ -125,7 +122,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Reveal Answer'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('5'));
+      await tester.tap(find.text('Easy'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
@@ -133,46 +130,8 @@ void main() {
       expect(find.text('Full Session'), findsOneWidget);
     });
 
-    testWidgets('SM-2 item shows 6-button rating bar', (tester) async {
+    testWidgets('always shows 4-button FSRS rating bar', (tester) async {
       await tester.pumpWidget(await buildApp(graphWithDueItems(1)));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Full Session'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Reveal Answer'));
-      await tester.pumpAndSettle();
-
-      // SM-2 shows 6 buttons (0-5)
-      for (var i = 0; i <= 5; i++) {
-        expect(find.text('$i'), findsOneWidget);
-      }
-      // FSRS buttons should NOT be present
-      expect(find.text('Again'), findsNothing);
-      expect(find.text('Easy'), findsNothing);
-    });
-
-    testWidgets('FSRS item shows 4-button rating bar', (tester) async {
-      final fsrsItem = QuizItem.newCard(
-        id: 'q0',
-        conceptId: 'c0',
-        question: 'FSRS Question?',
-        answer: 'FSRS Answer.',
-        predictedDifficulty: 5.0,
-        now: DateTime.utc(2020),
-      );
-      final graph = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c0',
-            name: 'C0',
-            description: 'D',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        quizItems: [fsrsItem],
-      );
-
-      await tester.pumpWidget(await buildApp(graph));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Full Session'));
@@ -185,7 +144,7 @@ void main() {
       expect(find.text('Hard'), findsOneWidget);
       expect(find.text('Good'), findsOneWidget);
       expect(find.text('Easy'), findsOneWidget);
-      // SM-2 buttons should NOT be present (0-5 numbers)
+      // SM-2 buttons should NOT be present
       expect(find.text('Blackout'), findsNothing);
       expect(find.text('Perfect'), findsNothing);
     });

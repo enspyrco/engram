@@ -81,22 +81,24 @@ void main() {
 
       await container.read(knowledgeGraphProvider.future);
 
-      final updated = item.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = item.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
       await container
           .read(knowledgeGraphProvider.notifier)
           .updateQuizItem(updated);
 
       final newGraph = await container.read(knowledgeGraphProvider.future);
-      expect(newGraph.quizItems.first.repetitions, 1);
+      expect(newGraph.quizItems.first.fsrsState, 2);
 
       // Verify persisted to disk
       final reloaded = await store.load();
-      expect(reloaded.quizItems.first.repetitions, 1);
+      expect(reloaded.quizItems.first.fsrsState, 2);
     });
 
     test('auto-migrates collections to topics on first load', () async {

@@ -232,6 +232,10 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: recentReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
           QuizItem(
             id: 'q2',
@@ -243,6 +247,10 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: recentReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
         ],
       );

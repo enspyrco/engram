@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:engram/src/engine/fsrs_engine.dart';
-import 'package:engram/src/engine/review_rating.dart';
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
@@ -44,16 +43,12 @@ void main() {
         ),
       );
       items.add(
-        QuizItem(
+        QuizItem.newCard(
           id: 'q$i',
           conceptId: 'c$i',
           question: 'Question $i?',
           answer: 'Answer $i.',
-          easeFactor: 2.5,
-          interval: 0,
-          repetitions: 0,
-          nextReview: DateTime.utc(2020),
-          lastReview: null,
+          now: DateTime.utc(2020),
         ),
       );
     }
@@ -128,6 +123,10 @@ void main() {
               repetitions: 2,
               nextReview: DateTime.utc(2099),
               lastReview: null,
+              difficulty: 5.0,
+              stability: 6.0,
+              fsrsState: 2,
+              lapses: 0,
             ),
           ],
         ),
@@ -158,7 +157,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const Sm2Rating(5));
+      await notifier.rateItem(FsrsRating.easy);
 
       final state = container.read(quizSessionProvider);
       expect(state.phase, QuizPhase.question);
@@ -173,7 +172,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const Sm2Rating(4));
+      await notifier.rateItem(FsrsRating.good);
 
       final state = container.read(quizSessionProvider);
       expect(state.phase, QuizPhase.summary);
@@ -181,17 +180,19 @@ void main() {
       expect(state.correctCount, 1);
     });
 
-    test('rateItem persists SM-2 updates', () async {
+    test('rateItem persists FSRS updates', () async {
       final container = await createContainer(graphWithDueItems(1));
       await container.read(knowledgeGraphProvider.future);
 
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const Sm2Rating(5));
+      await notifier.rateItem(FsrsRating.easy);
 
       final graph = await container.read(knowledgeGraphProvider.future);
-      expect(graph.quizItems.first.repetitions, 1);
+      final item = graph.quizItems.first;
+      expect(item.lastReview, isNotNull);
+      expect(item.stability, isNotNull);
     });
 
     test('reset returns to idle', () async {
@@ -212,7 +213,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const Sm2Rating(4));
+      await notifier.rateItem(FsrsRating.good);
 
       final repo = container.read(settingsRepositoryProvider);
       expect(repo.getCurrentStreak(), 1);
@@ -273,7 +274,7 @@ void main() {
       expect(state.sessionMode, SessionMode.allDue);
     });
 
-    test('rateItem with FsrsReviewRating persists FSRS updates', () async {
+    test('rateItem with FsrsRating.good persists FSRS updates', () async {
       // Create a graph with an FSRS-bootstrapped card
       final fsrsItem = QuizItem.newCard(
         id: 'q0',
@@ -301,7 +302,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const FsrsReviewRating(FsrsRating.good));
+      await notifier.rateItem(FsrsRating.good);
 
       final updated = await container.read(knowledgeGraphProvider.future);
       final item = updated.quizItems.first;
@@ -339,7 +340,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(const FsrsReviewRating(FsrsRating.again));
+      await notifier.rateItem(FsrsRating.again);
 
       final state = container.read(quizSessionProvider);
       // again maps to 1, which is < 3 → incorrect
@@ -379,11 +380,11 @@ void main() {
 
       // Rate first item good (4 → correct)
       notifier.revealAnswer();
-      await notifier.rateItem(const FsrsReviewRating(FsrsRating.good));
+      await notifier.rateItem(FsrsRating.good);
 
       // Rate second item easy (5 → correct)
       notifier.revealAnswer();
-      await notifier.rateItem(const FsrsReviewRating(FsrsRating.easy));
+      await notifier.rateItem(FsrsRating.easy);
 
       final state = container.read(quizSessionProvider);
       expect(state.ratings, [4, 5]);

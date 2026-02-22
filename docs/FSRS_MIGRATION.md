@@ -67,9 +67,9 @@ Combined with our dependency-aware knowledge graph, we can set desired retention
 | **Standard concepts** | 0.90 | Default FSRS target |
 | **Leaf concepts** (no dependents) | 0.85 | Lower stakes — nothing downstream is blocked |
 | **Guardian-protected concepts** | 0.97 | Game mechanic: guardians ensure their cluster stays strong |
-| **Repair mission targets** | Temporarily elevated | Currently 1.5x interval hack; `desired_retention` is more principled |
+| **Repair mission targets** | 0.95 | Elevated retention ensures tighter review scheduling for damaged concepts |
 
-This replaces the crude `1.5x interval` multiplier for repair missions with a first-principles approach: instead of hacking the interval, tell the scheduler what retention level you actually want.
+Repair missions use elevated `desired_retention` (0.95) instead of interval multiplication — telling the scheduler what retention level you actually want rather than hacking the output interval.
 
 ## Mean Reversion: Solving Ease Hell
 
@@ -132,7 +132,7 @@ Alternative: [`fsrs-rs-dart`](https://github.com/open-spaced-repetition/fsrs-rs-
 
 ## Migration Plan
 
-### Phase 1: Add FSRS alongside SM-2 (non-breaking)
+### Phase 1: Add FSRS alongside SM-2 (non-breaking) ✓
 
 1. **Add `fsrs` package** to pubspec.yaml
 2. **Add `difficulty` field to `QuizItem`** (nullable, defaults to null for existing cards)
@@ -143,7 +143,7 @@ Alternative: [`fsrs-rs-dart`](https://github.com/open-spaced-repetition/fsrs-rs-
 
 > **Note:** The extraction skill's `references/sm2-constraints.md` was already renamed to `references/scheduling-constraints.md` and updated with FSRS content in PR #52.
 
-### Phase 2: Dual-mode scheduling
+### Phase 2: Dual-mode scheduling ✓
 
 1. **Scheduler selects engine** based on card state:
    - Cards with `difficulty != null` → FSRS engine
@@ -152,12 +152,13 @@ Alternative: [`fsrs-rs-dart`](https://github.com/open-spaced-repetition/fsrs-rs-
 3. **Desired retention provider** — computes per-concept retention based on graph position
 4. **Update mastery visualization** — FSRS retrievability (0-1) maps more naturally to mastery colors than SM-2's binary "mastered/not" heuristic
 
-### Phase 3: Full FSRS (deprecate SM-2)
+### Phase 3: Full FSRS (remove SM-2) ✓
 
-1. **Migrate all legacy cards** — set `difficulty = 5.0` (neutral midpoint), convert SM-2 state to FSRS state
-2. **Remove SM-2 engine** and related code
-3. **Update cooperative game mechanics** — replace `1.5x interval` hack with `desired_retention` adjustments
-4. **Update challenge quiz item snapshots** — strip FSRS scheduling fields (same security concern as #30)
+1. **Auto-migrate legacy cards** — `fromJson()` bootstraps FSRS state (D=5.0 default) for any card missing `stability`/`fsrsState`
+2. **Remove SM-2 engine** — deleted `sm2.dart`, `review_rating.dart`, `quality_rating_bar.dart` and their tests
+3. **Replace 1.5x interval hack** — mission concepts use elevated `desired_retention` (0.95) instead of interval multiplication
+4. **Simplify mastery/analysis** — `masteryStateOf` uses FSRS retrievability only, `isConceptMastered` uses `fsrsState >= 2`, challenge dialog uses `isMasteredForUnlock`
+5. **Test migration** — shared `testQuizItem()` helper, all 18 test files updated to FSRS-only assertions
 
 ### Phase 4: Extraction-informed scheduling (the closed loop)
 
@@ -172,10 +173,10 @@ Alternative: [`fsrs-rs-dart`](https://github.com/open-spaced-repetition/fsrs-rs-
 |---|---|
 | **#38 Typed relationships** | Relationship types inform difficulty prediction — "depends on" chains increase predicted difficulty |
 | **#39 Concept embeddings** | Embedding similarity could predict confusion-based difficulty (similar concepts = harder to distinguish) |
-| **#40 Local-first Drift/SQLite** | FSRS state is more complex than SM-2 — schema design should account for D, S, R fields |
+| **#40 Local-first Drift/SQLite** | Schema should account for FSRS D, S, R fields |
 | **#41 CRDT sync** | FSRS card state (D, S, R) needs CRDT treatment — LWW-Register per field with `lastReview` as timestamp |
 | **Guardian system** | `desired_retention` per cluster replaces crude interval multipliers |
-| **Network health** | Retrievability (R) is a better input to `NetworkHealthScorer` than SM-2's binary mastery |
+| **Network health** | Retrievability (R) feeds `NetworkHealthScorer` directly as freshness |
 
 ## Decision
 

@@ -56,7 +56,7 @@ This is the centerpiece event — the moment the game creates genuine shared dra
 - A dramatic **"NETWORK FRACTURE"** overlay appears — recording the moment with a timestamp. This goes into the team's event history. *"February 10, 2026 — The Infrastructure-DevOps bridge fractured."*
 
 **Consequences (the good kind):**
-- Fractured concepts give **1.5x mastery credit** when reviewed. The game is saying: *"We know this is hard. Your effort counts more right now."*
+- Fractured concepts receive **elevated retention scheduling** (0.95 `desired_retention`) when reviewed. The game is saying: *"We know this is hard. Your effort counts more right now."*
 - A **Repair Mission** auto-generates. It identifies the specific concepts that need to be reviewed to reconnect the islands, assigns them priority ordering, and creates a shared progress bar visible on everyone's dashboard.
 - **The reconnection animation** is the payoff: as each fractured concept is reviewed, its edges re-form with an **electrical arc animation** — a bright, crackling line that snaps into place between the islands. With each reconnection, the islands drift slightly closer. When enough edges are restored, the force-directed simulation re-engages its attractive forces and the islands sweep back together in a satisfying convergence. The team just performed emergency surgery on their knowledge graph.
 
@@ -143,7 +143,7 @@ Auto-generated after Network Fractures (Tier 3):
 
 - The mission identifies the **specific concepts** that need review to reconnect the fractured islands
 - Concepts are ordered by impact — reviewing the "bridge" concepts that connect the most disconnected nodes comes first
-- **1.5x mastery scoring** applies to all mission concepts — the game rewards emergency response
+- **Elevated retention scheduling** (0.95 `desired_retention`) applies to all mission concepts — the game rewards emergency response with tighter review intervals
 - A **live progress bar** appears on everyone's dashboard: *"Repair Mission: 7/15 concepts reconnected"*
 - As each concept is reviewed, the corresponding edge re-forms on everyone's graph with the electrical arc animation. The team watches the islands reconnect in real time.
 - Mission completion triggers a "Network Restored" celebration — the graph snaps fully back together and a pulse of light radiates outward from the repair point
@@ -276,7 +276,7 @@ The cycle repeats. Each loop deepens the team's relationship with their knowledg
 
 ### Never Punitive, Always Dramatic
 
-Every catastrophe is designed to create **memorable shared moments**, not stress. The 1.5x scoring on fractured concepts, the Rekindling mechanic, the rally-not-shame framing — all of it says: "Something exciting happened. What will you do about it?"
+Every catastrophe is designed to create **memorable shared moments**, not stress. The elevated retention on fractured concepts, the Rekindling mechanic, the rally-not-shame framing — all of it says: "Something exciting happened. What will you do about it?"
 
 ### Visible to Everyone, Assigned to No One
 

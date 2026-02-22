@@ -4,8 +4,7 @@ import '../../engine/fsrs_engine.dart';
 
 /// 4-button rating bar for FSRS-mode quiz reviews.
 ///
-/// Mirrors the structure of [QualityRatingBar] but uses the 4-point FSRS scale
-/// (Again / Hard / Good / Easy) instead of SM-2's 0-5 scale.
+/// Uses the 4-point FSRS scale (Again / Hard / Good / Easy).
 class FsrsRatingBar extends StatelessWidget {
   const FsrsRatingBar({required this.onRate, super.key});
 

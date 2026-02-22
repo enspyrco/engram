@@ -37,6 +37,10 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: recentReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
           QuizItem(
             id: 'q2',
@@ -48,6 +52,10 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: recentReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
         ],
       );
@@ -111,7 +119,7 @@ void main() {
           Concept(id: 'd', name: 'D', description: '', sourceDocumentId: 'd'),
         ],
         quizItems: [
-          // a: mastered
+          // a: mastered (high stability, recent review → R >= 0.85)
           QuizItem(
             id: 'q1',
             conceptId: 'a',
@@ -122,8 +130,12 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: recentReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
-          // b: learning
+          // b: learning (stability 5, reviewed 3 days ago → R between 0.5-0.85)
           QuizItem(
             id: 'q2',
             conceptId: 'b',
@@ -133,9 +145,13 @@ void main() {
             interval: 6,
             repetitions: 2,
             nextReview: DateTime.utc(2099),
-            lastReview: recentReview,
+            lastReview: DateTime.utc(2025, 6, 12),
+            difficulty: 5.0,
+            stability: 5.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
-          // c: due
+          // c: due (no lastReview → unreviewed)
           QuizItem(
             id: 'q3',
             conceptId: 'c',
@@ -146,8 +162,12 @@ void main() {
             repetitions: 0,
             nextReview: DateTime.utc(2020),
             lastReview: null,
+            difficulty: 5.0,
+            stability: 3.26,
+            fsrsState: 1,
+            lapses: 0,
           ),
-          // d: fading
+          // d: fading (mastered but old review > 30 days)
           QuizItem(
             id: 'q4',
             conceptId: 'd',
@@ -158,6 +178,10 @@ void main() {
             repetitions: 5,
             nextReview: DateTime.utc(2099),
             lastReview: oldReview,
+            difficulty: 5.0,
+            stability: 30.0,
+            fsrsState: 2,
+            lapses: 0,
           ),
         ],
       );

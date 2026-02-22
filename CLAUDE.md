@@ -1,10 +1,10 @@
 # Engram
 
-Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via spaced repetition (migrating from SM-2 to FSRS — see `docs/FSRS_MIGRATION.md`). Visual knowledge graph that "lights up" as you learn.
+Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge graph (concepts + relationships + quiz items), and teaches it back via FSRS spaced repetition (see `docs/FSRS_MIGRATION.md`). Visual knowledge graph that "lights up" as you learn.
 
 ## Architecture
 - **Models**: Immutable data classes with `fromJson`/`toJson` and `withXxx()` update methods
-- **Scheduling Engine**: Currently SM-2 (pure function, no class state), migrating to FSRS (`fsrs` pub package). FSRS closes the extraction↔scheduling loop: Claude predicts quiz item difficulty at extraction time, FSRS uses it as initial D₀. See `docs/FSRS_MIGRATION.md`. Scheduling state lives on `QuizItem`. `scheduleDueItems` supports optional `collectionId` filter — unlocking remains graph-wide, only item selection is scoped
+- **Scheduling Engine**: FSRS (`fsrs` pub package, pure function, no class state). FSRS closes the extraction↔scheduling loop: Claude predicts quiz item difficulty at extraction time, FSRS uses it as initial D₀. See `docs/FSRS_MIGRATION.md`. Mastery uses FSRS retrievability; `masteryStateOf` and `freshnessOf` compute from stability/state. `isMasteredForUnlock` checks `stability >= 21 days`. Scheduling state lives on `QuizItem`. `scheduleDueItems` supports optional `collectionId` filter — unlocking remains graph-wide, only item selection is scoped. `desiredRetentionProvider` computes per-concept retention based on graph position (hub=0.95, leaf=0.85, guardian=0.97, mission=0.95)
 - **Graph Analyzer**: Dependency-aware concept unlocking, topological sort, cycle detection
 - **Storage**: `GraphStore` — Firestore primary (`users/{uid}/data/graph/`), local JSON fallback (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`). Firestore save uses upsert + orphan cleanup (not destructive delete-all), batched in 500-op chunks. `SettingsRepository` — API keys + social settings via `shared_preferences`; `UserProfileRepository` — Firestore user profiles; `SocialRepository` — wiki groups, friends, challenges, nudges; `TeamRepository` — network health, clusters, guardians, goals, glory board
 - **Auth**: Firebase Auth with Google Sign-In + Apple Sign-In; `firestoreProvider` for injectable Firestore instance
@@ -13,12 +13,12 @@ Flutter app that reads an Outline wiki, uses Claude API to extract a knowledge g
 - **Network Health**: `NetworkHealthScorer` computes composite health from mastery + freshness + critical paths; `ClusterDetector` finds concept communities via label propagation
 - **Services**: `OutlineClient` (HTTP), `ExtractionService` (Claude API via `anthropic_sdk_dart`)
 - **Social**: Wiki-URL-based friend discovery (SHA-256 hash of normalized URL), challenge (test friend on mastered cards) + nudge (remind about overdue) mechanics
-- **Cooperative Game**: Guardian system (volunteer to protect concept clusters), team goals (cooperative targets with contribution tracking), glory board (leaderboard with guardian/mission/goal points), repair mission bonus scoring (1.5x interval for mission concepts)
+- **Cooperative Game**: Guardian system (volunteer to protect concept clusters), team goals (cooperative targets with contribution tracking), glory board (leaderboard with guardian/mission/goal points), repair mission elevated retention (0.95 `desired_retention` for mission concepts)
 
 ## Screens
 - **Sign In**: Apple + Google branded sign-in buttons (auth gate before main app)
 - **Dashboard**: Stats cards, mastery bar, knowledge graph visualization
-- **Quiz**: Collection filter dropdown → session mode → Question → Reveal → Rate (0-5) → Session summary
+- **Quiz**: Collection filter dropdown → session mode → Question → Reveal → Rate (Again/Hard/Good/Easy) → Session summary
 - **Ingest**: Collection picker → per-document extraction progress with live animated knowledge graph (new concepts settle into place via pinned force-directed layout)
 - **Social** (was Friends): 3-tab layout — Friends (friend list + challenges + nudges) | Team (guardians + goals + missions) | Glory (ranked leaderboard)
 - **Settings**: API key configuration (Outline URL/key, Anthropic key)
@@ -56,7 +56,7 @@ When starting a new session, remind the user about these architectural decisions
 - `docs/GRAPH_STATE_MANAGEMENT.md` — Analysis of graph-based state management options. Decision: stay with Riverpod, normalize incrementally. Split `graphStructureProvider` from quiz item state to avoid wasted recomputation.
 - `docs/LOCAL_FIRST.md` — Local-first architecture plan. Decision: migrate to Drift/SQLite as primary storage, Firestore as sync peer. Device is source of truth; server handles compute, sync, and social coordination.
 - `docs/CRDT_SYNC_ARCHITECTURE.md` — CRDT sync design for local-first. Knowledge graph operations map naturally to G-Set, LWW-Register, and G-Counter CRDTs. Cooperative game features are accidentally CRDT-native.
-- `docs/FSRS_MIGRATION.md` — Migration from SM-2 to FSRS. Key insight: FSRS has a Difficulty parameter that is a property of the card (not the learner), so Claude can predict it at extraction time — closing the loop between extraction and scheduling that SM-2 forced open. Also enables per-concept `desired_retention` based on graph position, solves SM-2 ease hell via mean reversion, and gives cooperative game mechanics (guardians, repair missions) a principled scheduling foundation.
+- `docs/FSRS_MIGRATION.md` — Migration from SM-2 to FSRS (Phases 1-3 complete). Key insight: FSRS has a Difficulty parameter that is a property of the card (not the learner), so Claude can predict it at extraction time — closing the loop between extraction and scheduling. Also enables per-concept `desired_retention` based on graph position, solves ease hell via mean reversion, and gives cooperative game mechanics (guardians, repair missions) a principled scheduling foundation. Phase 4 (extraction-informed D₀) is next.
 
 ## Open Issues
 
@@ -80,7 +80,9 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Extraction knowledge graph skill — `.claude/skills/extracting-knowledge-graph/` encodes the full extraction workflow (prompts, tool schemas, relationship taxonomy, scheduling constraints) as a portable agent skill with progressive disclosure
 - ✓ Outline wiki updated — `kb.xdeca.com` (was `wiki.xdeca.com`), `.env` updated with new URL and API key. `OutlineClient` still read-only; collection/document creation done via direct API calls
 - ✓ Agent Skills course ingested — 11-video Anthropic course on agent skills ingested into Outline collection "Agent Skills with Anthropic". Catalyst for extraction skill and FSRS migration insight
-- ✓ FSRS Phase 1 — `fsrs` package added, `difficulty` field on `QuizItem`, FSRS engine alongside SM-2 (#59)
+- ✓ FSRS Phase 1 — `fsrs` package added, `difficulty` field on `QuizItem`, FSRS engine alongside SM-2
+- ✓ FSRS Phase 2 — Dual-mode scheduling (SM-2 or FSRS based on card state), 4-button FSRS rating UI, `desiredRetentionProvider` for per-concept retention (#59)
+- ✓ FSRS Phase 3 — Full SM-2 removal: `fromJson` auto-migrates legacy cards, deleted `sm2.dart`/`review_rating.dart`/`quality_rating_bar.dart`, mastery/freshness use FSRS retrievability, 1.5x interval hack replaced with `desired_retention`, shared `testQuizItem()` helper across 18 test files
 - ✓ Full-screen static knowledge graph with collection filtering (#58)
 - ✓ Incremental graph layout — preserve settled node positions across rebuilds, temperature scaling (#60)
 - ✓ Pinned animate-in — existing nodes are immovable anchors, new nodes settle via force simulation. Ingest screen uses animated `ForceDirectedGraphWidget`
@@ -98,7 +100,7 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 - ✓ Tech debt sweep PR 3 — #18 closed (all deps active), #14 GraphMigrator doc, #15 non-destructive Firestore save, #25 DateTime timestamps across 12 models, #28 friend discovery opt-in
 
 ### Next up
-1. **FSRS Phases 2-4** — Dual-mode scheduling, full migration, extraction-informed scheduling closed loop
+1. **FSRS Phase 4** — Extraction-informed scheduling: Claude predicts D₀ at extraction time, difficulty prediction evaluation, feedback loop, auto sub-concept suggestion
 
 ### Longer-term
 2. **#40** — Local-first Drift/SQLite migration (schema should account for FSRS D/S/R fields)
@@ -108,6 +110,6 @@ Current state: App running on macOS. FSRS Phase 1 merged. Knowledge graph animat
 ### Learning Science Features (Issues #74–#78)
 8. **#74** — Video-synchronized knowledge graph highlighting — nodes light up in sync with video playback, connected nodes glow with relationship explanations. Based on Mayer's signaling principle (g=0.38–0.53) and temporal contiguity (d=1.22)
 9. **#75** — Cross-source semantic linking + expanded ingestion (podcasts, books) — embedding-based discovery of connections across sources, both at ingestion time and offline. Analogical encoding makes far transfer 3x more likely (Gentner et al., 2003). #38 done, depends on #39
-10. **#76** — Elaborative interrogation (how/why deepening, d=0.56) + Ebbinghaus forgetting curve visualization — AI-guided Socratic follow-ups during quiz, plus visual sawtooth decay curves from FSRS retrievability. Depends on FSRS Phases 2-4
+10. **#76** — Elaborative interrogation (how/why deepening, d=0.56) + Ebbinghaus forgetting curve visualization — AI-guided Socratic follow-ups during quiz, plus visual sawtooth decay curves from FSRS retrievability
 11. **#77** — Dual coding — combine verbal quiz items with visual representations (diagrams, graph snippets, icons). Mayer's multimedia principle: d=1.35–1.67. Knowledge graph already provides spatial/visual encoding; extend to per-concept visuals
 12. **#78** — Interleaving — mix topics within quiz sessions instead of blocking by collection. Rohrer et al. (2020) classroom RCT: d=0.83, n=787. Random interleaving is a strong baseline. Metacognitive illusion: users prefer blocking, so default to interleaved

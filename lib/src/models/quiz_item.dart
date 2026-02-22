@@ -2,8 +2,8 @@ import 'package:meta/meta.dart';
 
 import '../engine/fsrs_engine.dart';
 
-/// Days of stability (FSRS) or interval (SM-2) required to consider a card
-/// mastered enough to unlock dependent concepts.
+/// Days of FSRS stability required to consider a card mastered enough to
+/// unlock dependent concepts.
 const masteryUnlockDays = 21;
 
 @immutable
@@ -24,11 +24,10 @@ class QuizItem {
     this.lapses,
   });
 
-  /// Creates a new card with SM-2 defaults.
+  /// Creates a new card with FSRS state bootstrapped.
   ///
-  /// When [predictedDifficulty] is provided, FSRS state is bootstrapped
-  /// via [initializeFsrsCard] so the card is immediately ready for
-  /// [reviewFsrs] on first review.
+  /// [predictedDifficulty] seeds the FSRS difficulty parameter (1.0-10.0).
+  /// Defaults to 5.0 (neutral midpoint) when null.
   factory QuizItem.newCard({
     required String id,
     required String conceptId,
@@ -39,22 +38,56 @@ class QuizItem {
   }) {
     final currentTime = now ?? DateTime.now().toUtc();
 
-    // Bootstrap FSRS state when Claude predicts difficulty at extraction time.
-    if (predictedDifficulty != null) {
+    final fsrs = initializeFsrsCard(
+      predictedDifficulty: predictedDifficulty ?? 5.0,
+      now: currentTime,
+    );
+    return QuizItem(
+      id: id,
+      conceptId: conceptId,
+      question: question,
+      answer: answer,
+      easeFactor: 2.5, // legacy
+      interval: 0,
+      repetitions: 0,
+      nextReview: currentTime,
+      lastReview: null,
+      difficulty: fsrs.difficulty,
+      stability: fsrs.stability,
+      fsrsState: fsrs.fsrsState,
+      lapses: fsrs.lapses,
+    );
+  }
+
+  /// Deserializes a card from JSON, auto-migrating legacy SM-2 cards to FSRS.
+  ///
+  /// Cards missing `stability` or `fsrsState` are bootstrapped via
+  /// [initializeFsrsCard] using the existing `difficulty` (or 5.0 default).
+  /// Existing `nextReview`/`interval`/`lastReview` from SM-2 are preserved.
+  factory QuizItem.fromJson(Map<String, dynamic> json) {
+    final difficulty = (json['difficulty'] as num?)?.toDouble();
+    final stability = (json['stability'] as num?)?.toDouble();
+    final fsrsState = json['fsrsState'] as int?;
+    final lapses = json['lapses'] as int?;
+
+    // Auto-migrate: bootstrap FSRS state for legacy cards.
+    if (stability == null || fsrsState == null) {
       final fsrs = initializeFsrsCard(
-        predictedDifficulty: predictedDifficulty,
-        now: currentTime,
+        predictedDifficulty: difficulty ?? 5.0,
       );
       return QuizItem(
-        id: id,
-        conceptId: conceptId,
-        question: question,
-        answer: answer,
-        easeFactor: 2.5,
-        interval: 0,
-        repetitions: 0,
-        nextReview: currentTime,
-        lastReview: null,
+        id: json['id'] as String,
+        conceptId: json['conceptId'] as String,
+        question: json['question'] as String,
+        answer: json['answer'] as String,
+        easeFactor: (json['easeFactor'] as num).toDouble(),
+        interval: json['interval'] as int,
+        repetitions: json['repetitions'] as int,
+        nextReview: DateTime.parse(json['nextReview'] as String),
+        lastReview:
+            json['lastReview'] != null
+                ? DateTime.parse(json['lastReview'] as String)
+                : null,
         difficulty: fsrs.difficulty,
         stability: fsrs.stability,
         fsrsState: fsrs.fsrsState,
@@ -62,20 +95,6 @@ class QuizItem {
       );
     }
 
-    return QuizItem(
-      id: id,
-      conceptId: conceptId,
-      question: question,
-      answer: answer,
-      easeFactor: 2.5,
-      interval: 0,
-      repetitions: 0,
-      nextReview: currentTime,
-      lastReview: null,
-    );
-  }
-
-  factory QuizItem.fromJson(Map<String, dynamic> json) {
     return QuizItem(
       id: json['id'] as String,
       conceptId: json['conceptId'] as String,
@@ -89,10 +108,10 @@ class QuizItem {
           json['lastReview'] != null
               ? DateTime.parse(json['lastReview'] as String)
               : null,
-      difficulty: (json['difficulty'] as num?)?.toDouble(),
-      stability: (json['stability'] as num?)?.toDouble(),
-      fsrsState: json['fsrsState'] as int?,
-      lapses: json['lapses'] as int?,
+      difficulty: difficulty,
+      stability: stability,
+      fsrsState: fsrsState,
+      lapses: lapses,
     );
   }
 
@@ -106,58 +125,29 @@ class QuizItem {
   final DateTime nextReview;
   final DateTime? lastReview;
 
-  /// FSRS difficulty (1.0-10.0). Null for legacy SM-2-only cards.
-  /// Seeded by Claude's predicted difficulty at extraction time.
+  /// FSRS difficulty (1.0-10.0). Seeded by Claude's predicted difficulty at
+  /// extraction time; auto-migrated to 5.0 for legacy cards.
   final double? difficulty;
 
-  /// FSRS stability (days). Null for legacy SM-2-only cards.
+  /// FSRS stability in days — the interval at which recall = 90%.
   final double? stability;
 
-  /// FSRS state: 1=learning, 2=review, 3=relearning. Null for legacy cards.
+  /// FSRS state: 1=learning, 2=review, 3=relearning.
   final int? fsrsState;
 
-  /// Number of times the card lapsed (review → relearning). Null for legacy cards.
+  /// Number of times the card lapsed (review → relearning).
   final int? lapses;
 
-  /// Whether this card has full FSRS state and should use `reviewFsrs()`.
+  /// Whether this card has full FSRS state.
   ///
-  /// Cards with only `difficulty` (Phase 1 legacy) but no `stability`/`fsrsState`
-  /// return false and continue using SM-2 until re-extracted.
+  /// After Phase 3 migration, all cards are FSRS. This getter is retained
+  /// for defensive checks during the transition.
   bool get isFsrs => difficulty != null && stability != null && fsrsState != null;
 
   /// Whether this card is mastered enough to unlock dependent concepts.
   ///
-  /// FSRS cards use stability >= [masteryUnlockDays] (memory strength).
-  /// SM-2 cards use interval >= [masteryUnlockDays] (scheduled gap).
-  /// Centralizes the check used in relay completion, filtered stats, and
-  /// graph analysis.
-  bool get isMasteredForUnlock =>
-      isFsrs ? stability! >= masteryUnlockDays : interval >= masteryUnlockDays;
-
-  QuizItem withReview({
-    required double easeFactor,
-    required int interval,
-    required int repetitions,
-    required DateTime nextReview,
-    DateTime? now,
-  }) {
-    final currentTime = now ?? DateTime.now().toUtc();
-    return QuizItem(
-      id: id,
-      conceptId: conceptId,
-      question: question,
-      answer: answer,
-      easeFactor: easeFactor,
-      interval: interval,
-      repetitions: repetitions,
-      nextReview: nextReview,
-      lastReview: currentTime,
-      difficulty: difficulty,
-      stability: stability,
-      fsrsState: fsrsState,
-      lapses: lapses,
-    );
-  }
+  /// Uses FSRS stability >= [masteryUnlockDays] (memory strength).
+  bool get isMasteredForUnlock => stability != null && stability! >= masteryUnlockDays;
 
   QuizItem withFsrsReview({
     required double difficulty,
@@ -189,7 +179,8 @@ class QuizItem {
   /// Returns only content fields, omitting scheduling state.
   ///
   /// Used for challenge snapshots where the recipient shouldn't see
-  /// the sender's SM-2/FSRS scheduling data.
+  /// the sender's FSRS scheduling data. Keeps `difficulty` since it's
+  /// Claude's content prediction, not learner state.
   Map<String, dynamic> toContentSnapshot() => {
     'id': id,
     'conceptId': conceptId,

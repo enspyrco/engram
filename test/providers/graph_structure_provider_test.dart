@@ -111,11 +111,13 @@ void main() {
       // Simulate a quiz item update via setGraph + withUpdatedQuizItem
       // (same path as updateQuizItem but without needing repository I/O)
       final fullBefore = container.read(knowledgeGraphProvider).valueOrNull!;
-      final updated = fullBefore.quizItems.first.withReview(
-        easeFactor: 2.6,
-        interval: 1,
-        repetitions: 1,
-        nextReview: DateTime.utc(2025, 1, 2),
+      final updated = fullBefore.quizItems.first.withFsrsReview(
+        difficulty: 4.5,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: DateTime.utc(2025, 1, 11),
       );
       final newGraph = fullBefore.withUpdatedQuizItem(updated);
       container.read(knowledgeGraphProvider.notifier).setGraph(newGraph);
@@ -123,7 +125,7 @@ void main() {
       // Verify the full graph changed (quiz items updated)
       final fullGraph = container.read(knowledgeGraphProvider).valueOrNull;
       expect(fullGraph, isNotNull);
-      expect(fullGraph!.quizItems.first.repetitions, 1);
+      expect(fullGraph!.quizItems.first.fsrsState, 2);
 
       // Verify structural provider still returns data with same concepts
       final after = container.read(graphStructureProvider);

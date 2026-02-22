@@ -17,6 +17,10 @@ KnowledgeGraph graphWithQuizItems({
   DateTime? lastReview,
   String? prerequisiteId,
   int prerequisiteRepetitions = 0,
+  double? difficulty,
+  double? stability,
+  int? fsrsState,
+  int? lapses,
 }) {
   final concepts = [
     Concept(
@@ -53,6 +57,10 @@ KnowledgeGraph graphWithQuizItems({
       repetitions: repetitions,
       nextReview: DateTime.utc(2099),
       lastReview: lastReview,
+      difficulty: difficulty,
+      stability: stability,
+      fsrsState: fsrsState,
+      lapses: lapses,
     ),
     if (prerequisiteId != null)
       QuizItem(
@@ -127,21 +135,38 @@ void main() {
       expect(masteryStateOf('c1', graph, analyzer), MasteryState.due);
     });
 
-    test('learning when all reviewed but interval < 21', () {
-      final graph = graphWithQuizItems(interval: 10, repetitions: 3);
+    test('learning when FSRS retrievability between 0.5 and 0.85', () {
+      // stability=5.0, reviewed 30 days ago → R ≈ 0.72 (between due and mastered)
+      final now = DateTime.utc(2025, 6, 15);
+      final review = now.subtract(const Duration(days: 30));
+      final graph = graphWithQuizItems(
+        repetitions: 3,
+        lastReview: review,
+        difficulty: 5.0,
+        stability: 5.0,
+        fsrsState: 2,
+        lapses: 0,
+      );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(masteryStateOf('c1', graph, analyzer), MasteryState.learning);
+      expect(
+        masteryStateOf('c1', graph, analyzer, now: now),
+        MasteryState.learning,
+      );
     });
 
-    test('mastered when all items interval >= 21 and recent review', () {
+    test('mastered when FSRS retrievability >= 0.85', () {
       final now = DateTime.utc(2025, 6, 15);
-      final recentReview = DateTime.utc(2025, 6, 10);
+      // stability=30.0, reviewed 1 day ago → R ≈ 0.996 (well above 0.85)
+      final recentReview = DateTime.utc(2025, 6, 14);
 
       final graph = graphWithQuizItems(
-        interval: 25,
         repetitions: 5,
         lastReview: recentReview,
+        difficulty: 5.0,
+        stability: 30.0,
+        fsrsState: 2,
+        lapses: 0,
       );
       final analyzer = GraphAnalyzer(graph);
 
@@ -151,15 +176,21 @@ void main() {
       );
     });
 
-    test('fading when mastered but lastReview > 30 days ago', () {
+    test('fading when FSRS retrievability >= 0.85 but lastReview > 30 days ago',
+        () {
       final now = DateTime.utc(2025, 6, 15);
-      // 45 days ago
+      // 45 days ago — need very high stability so R stays >= 0.85 despite age
+      // stability=500.0, reviewed 45 days ago → R ≈ 0.99 (still mastered)
+      // but lastReview > 30 days triggers fading
       final oldReview = DateTime.utc(2025, 5, 1);
 
       final graph = graphWithQuizItems(
-        interval: 25,
         repetitions: 5,
         lastReview: oldReview,
+        difficulty: 5.0,
+        stability: 500.0,
+        fsrsState: 2,
+        lapses: 0,
       );
       final analyzer = GraphAnalyzer(graph);
 
@@ -170,15 +201,20 @@ void main() {
     });
   });
 
-  group('freshnessOf decay curve', () {
+  group('freshnessOf FSRS retrievability', () {
     final now = DateTime.utc(2025, 6, 15);
 
-    KnowledgeGraph graphReviewedDaysAgo(int days) {
+    /// Build a graph with FSRS items reviewed [days] ago.
+    /// Uses stability=20.0 for predictable retrievability values.
+    KnowledgeGraph graphReviewedDaysAgo(int days, {double stability = 20.0}) {
       final review = now.subtract(Duration(days: days));
       return graphWithQuizItems(
-        interval: 25,
         repetitions: 5,
         lastReview: review,
+        difficulty: 5.0,
+        stability: stability,
+        fsrsState: 2,
+        lapses: 0,
       );
     }
 
@@ -187,54 +223,56 @@ void main() {
       expect(freshnessOf('c1', graph, now: now), closeTo(1.0, 0.001));
     });
 
-    test(
-      'linear decay: 0.825 at 15d, 0.65 at 30d, 0.475 at 45d, 0.3 at 60d',
-      () {
-        expect(
-          freshnessOf('c1', graphReviewedDaysAgo(15), now: now),
-          closeTo(0.825, 0.01),
-        );
-        expect(
-          freshnessOf('c1', graphReviewedDaysAgo(30), now: now),
-          closeTo(0.65, 0.01),
-        );
-        expect(
-          freshnessOf('c1', graphReviewedDaysAgo(45), now: now),
-          closeTo(0.475, 0.01),
-        );
-        expect(
-          freshnessOf('c1', graphReviewedDaysAgo(60), now: now),
-          closeTo(0.3, 0.01),
-        );
-      },
-    );
+    test('FSRS power-law decay: decreases with elapsed time', () {
+      // With stability=20.0, retrievability decreases as time elapses.
+      // Verify the monotonic decrease at increasing intervals.
+      final r5 = freshnessOf('c1', graphReviewedDaysAgo(5), now: now);
+      final r15 = freshnessOf('c1', graphReviewedDaysAgo(15), now: now);
+      final r30 = freshnessOf('c1', graphReviewedDaysAgo(30), now: now);
+      final r60 = freshnessOf('c1', graphReviewedDaysAgo(60), now: now);
 
-    test('floors at 0.3 beyond 60 days', () {
-      expect(
-        freshnessOf('c1', graphReviewedDaysAgo(90), now: now),
-        closeTo(0.3, 0.001),
-      );
-      expect(
-        freshnessOf('c1', graphReviewedDaysAgo(365), now: now),
-        closeTo(0.3, 0.001),
-      );
+      // All should be between 0 and 1
+      for (final r in [r5, r15, r30, r60]) {
+        expect(r, greaterThan(0.0));
+        expect(r, lessThanOrEqualTo(1.0));
+      }
+
+      // Strictly decreasing
+      expect(r5, greaterThan(r15));
+      expect(r15, greaterThan(r30));
+      expect(r30, greaterThan(r60));
     });
 
-    test('1.0 when no lastReview', () {
+    test('low freshness for very old reviews with low stability', () {
+      // FSRS power-law decay is slow; even S=1.0, 365d → R ≈ 0.33.
+      // Verify it drops well below 0.5 for old, low-stability items.
+      final r365 = freshnessOf(
+        'c1',
+        graphReviewedDaysAgo(365, stability: 1.0),
+        now: now,
+      );
+      expect(r365, lessThan(0.5));
+      expect(r365, greaterThan(0.0));
+    });
+
+    test('1.0 when no lastReview (non-FSRS items)', () {
       final graph = graphWithQuizItems(repetitions: 0, lastReview: null);
       expect(freshnessOf('c1', graph, now: now), 1.0);
     });
 
-    test('decayMultiplier accelerates decay (2.0x at 30d = 0.3)', () {
+    test('decayMultiplier has no effect on FSRS retrievability', () {
       final graph = graphReviewedDaysAgo(30);
 
       final normal = freshnessOf('c1', graph, now: now);
-      final doubled = freshnessOf('c1', graph, now: now, decayMultiplier: 2.0);
+      final doubled = freshnessOf(
+        'c1',
+        graph,
+        now: now,
+        decayMultiplier: 2.0,
+      );
 
-      expect(normal, closeTo(0.65, 0.01));
-      // 30 days * 2.0 = 60 effective days → hits the 0.3 floor
-      expect(doubled, closeTo(0.3, 0.01));
-      expect(doubled, lessThan(normal));
+      // decayMultiplier is retained for API compat but doesn't affect FSRS
+      expect(doubled, closeTo(normal, 0.001));
     });
   });
 }

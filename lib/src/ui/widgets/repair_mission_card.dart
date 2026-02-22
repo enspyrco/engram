@@ -4,8 +4,9 @@ import '../../models/repair_mission.dart';
 
 /// Card displaying an active repair mission with progress tracking.
 ///
-/// Shows a progress bar, remaining concept count, and the 1.5x bonus badge.
-/// Used on the dashboard and in catastrophe-related screens.
+/// Shows a progress bar, remaining concept count, and a priority badge.
+/// Mission concepts receive elevated `desired_retention` (0.95) from
+/// [desiredRetentionProvider], replacing the previous 1.5x interval hack.
 class RepairMissionCard extends StatelessWidget {
   const RepairMissionCard({required this.mission, this.onTap, super.key});
 
@@ -106,13 +107,20 @@ class _BonusBadge extends StatelessWidget {
         color: Colors.amber.shade700,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
-        '1.5x',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.shield, size: 12, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Priority',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
