@@ -1,5 +1,11 @@
 import 'package:meta/meta.dart';
 
+import '../engine/fsrs_engine.dart';
+
+/// Days of stability (FSRS) or interval (SM-2) required to consider a card
+/// mastered enough to unlock dependent concepts.
+const masteryUnlockDays = 21;
+
 @immutable
 class QuizItem {
   const QuizItem({
@@ -19,6 +25,10 @@ class QuizItem {
   });
 
   /// Creates a new card with SM-2 defaults.
+  ///
+  /// When [predictedDifficulty] is provided, FSRS state is bootstrapped
+  /// via [initializeFsrsCard] so the card is immediately ready for
+  /// [reviewFsrs] on first review.
   factory QuizItem.newCard({
     required String id,
     required String conceptId,
@@ -28,6 +38,30 @@ class QuizItem {
     DateTime? now,
   }) {
     final currentTime = now ?? DateTime.now().toUtc();
+
+    // Bootstrap FSRS state when Claude predicts difficulty at extraction time.
+    if (predictedDifficulty != null) {
+      final fsrs = initializeFsrsCard(
+        predictedDifficulty: predictedDifficulty,
+        now: currentTime,
+      );
+      return QuizItem(
+        id: id,
+        conceptId: conceptId,
+        question: question,
+        answer: answer,
+        easeFactor: 2.5,
+        interval: 0,
+        repetitions: 0,
+        nextReview: currentTime,
+        lastReview: null,
+        difficulty: fsrs.difficulty,
+        stability: fsrs.stability,
+        fsrsState: fsrs.fsrsState,
+        lapses: fsrs.lapses,
+      );
+    }
+
     return QuizItem(
       id: id,
       conceptId: conceptId,
@@ -38,7 +72,6 @@ class QuizItem {
       repetitions: 0,
       nextReview: currentTime,
       lastReview: null,
-      difficulty: predictedDifficulty?.clamp(1.0, 10.0),
     );
   }
 
@@ -85,6 +118,21 @@ class QuizItem {
 
   /// Number of times the card lapsed (review → relearning). Null for legacy cards.
   final int? lapses;
+
+  /// Whether this card has full FSRS state and should use `reviewFsrs()`.
+  ///
+  /// Cards with only `difficulty` (Phase 1 legacy) but no `stability`/`fsrsState`
+  /// return false and continue using SM-2 until re-extracted.
+  bool get isFsrs => difficulty != null && stability != null && fsrsState != null;
+
+  /// Whether this card is mastered enough to unlock dependent concepts.
+  ///
+  /// FSRS cards use stability >= [masteryUnlockDays] (memory strength).
+  /// SM-2 cards use interval >= [masteryUnlockDays] (scheduled gap).
+  /// Centralizes the check used in relay completion, filtered stats, and
+  /// graph analysis.
+  bool get isMasteredForUnlock =>
+      isFsrs ? stability! >= masteryUnlockDays : interval >= masteryUnlockDays;
 
   QuizItem withReview({
     required double easeFactor,

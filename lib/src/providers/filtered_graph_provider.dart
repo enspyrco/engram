@@ -69,7 +69,7 @@ final filteredStatsProvider = Provider<({int concepts, int mastered, int due})>(
 
     return (
       concepts: graph.concepts.length,
-      mastered: graph.quizItems.where((q) => q.interval >= 21).length,
+      mastered: graph.quizItems.where((q) => q.isMasteredForUnlock).length,
       due: scheduleDueItems(graph, maxItems: null).length,
     );
   },

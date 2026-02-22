@@ -2,6 +2,7 @@ import 'package:graphs/graphs.dart' as graphs;
 
 import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
+import '../models/quiz_item.dart';
 import '../models/relationship.dart';
 
 /// Analyzes a [KnowledgeGraph] to compute dependency structure, mastery,
@@ -18,9 +19,9 @@ class GraphAnalyzer {
   /// Adjacency list: conceptId → set of dependent concept IDs.
   late final Map<String, Set<String>> _dependents = _buildDependents();
 
-  /// Concept IDs that have quiz items, grouped for mastery lookups.
-  late final Map<String, List<int>> _conceptRepetitions =
-      _buildConceptRepetitions();
+  /// Concept IDs mapped to their quiz items, for mastery lookups.
+  late final Map<String, List<QuizItem>> _conceptItems =
+      _buildConceptItems();
 
   /// Parent → children adjacency map for sub-concept relationships.
   late final Map<String, Set<String>> _children = _buildChildren();
@@ -49,7 +50,10 @@ class GraphAnalyzer {
   bool hasChildren(String conceptId) =>
       _children.containsKey(conceptId) && _children[conceptId]!.isNotEmpty;
 
-  /// A concept is mastered when all its quiz items have repetitions >= 1.
+  /// A concept is mastered when all its quiz items meet mastery criteria.
+  ///
+  /// FSRS cards are mastered when in review state (fsrsState >= 2).
+  /// SM-2 cards are mastered when repetitions >= 1.
   /// Concepts with no quiz items are considered mastered (informational nodes).
   ///
   /// If the concept has children (was split), it's mastered only when ALL
@@ -64,9 +68,14 @@ class GraphAnalyzer {
       ).every((childId) => isConceptMastered(childId, visited: seen));
     }
 
-    final reps = _conceptRepetitions[conceptId];
-    if (reps == null || reps.isEmpty) return true;
-    return reps.every((r) => r >= 1);
+    final items = _conceptItems[conceptId];
+    if (items == null || items.isEmpty) return true;
+    return items.every((q) {
+      // FSRS cards: mastered when in review state (state 2) or relearning
+      if (q.isFsrs) return q.fsrsState! >= 2;
+      // SM-2 cards: mastered when reviewed at least once
+      return q.repetitions >= 1;
+    });
   }
 
   /// A concept is unlocked when all its prerequisites are mastered.
@@ -138,10 +147,10 @@ class GraphAnalyzer {
     return map;
   }
 
-  Map<String, List<int>> _buildConceptRepetitions() {
-    final map = <String, List<int>>{};
+  Map<String, List<QuizItem>> _buildConceptItems() {
+    final map = <String, List<QuizItem>>{};
     for (final q in _graph.quizItems) {
-      map.putIfAbsent(q.conceptId, () => []).add(q.repetitions);
+      map.putIfAbsent(q.conceptId, () => []).add(q);
     }
     return map;
   }

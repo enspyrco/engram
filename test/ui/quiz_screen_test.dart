@@ -132,6 +132,63 @@ void main() {
 
       expect(find.text('Full Session'), findsOneWidget);
     });
+
+    testWidgets('SM-2 item shows 6-button rating bar', (tester) async {
+      await tester.pumpWidget(await buildApp(graphWithDueItems(1)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Full Session'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reveal Answer'));
+      await tester.pumpAndSettle();
+
+      // SM-2 shows 6 buttons (0-5)
+      for (var i = 0; i <= 5; i++) {
+        expect(find.text('$i'), findsOneWidget);
+      }
+      // FSRS buttons should NOT be present
+      expect(find.text('Again'), findsNothing);
+      expect(find.text('Easy'), findsNothing);
+    });
+
+    testWidgets('FSRS item shows 4-button rating bar', (tester) async {
+      final fsrsItem = QuizItem.newCard(
+        id: 'q0',
+        conceptId: 'c0',
+        question: 'FSRS Question?',
+        answer: 'FSRS Answer.',
+        predictedDifficulty: 5.0,
+        now: DateTime.utc(2020),
+      );
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c0',
+            name: 'C0',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
+        ],
+        quizItems: [fsrsItem],
+      );
+
+      await tester.pumpWidget(await buildApp(graph));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Full Session'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reveal Answer'));
+      await tester.pumpAndSettle();
+
+      // FSRS shows 4 buttons
+      expect(find.text('Again'), findsOneWidget);
+      expect(find.text('Hard'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
+      expect(find.text('Easy'), findsOneWidget);
+      // SM-2 buttons should NOT be present (0-5 numbers)
+      expect(find.text('Blackout'), findsNothing);
+      expect(find.text('Perfect'), findsNothing);
+    });
   });
 }
 

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../engine/fsrs_engine.dart';
+import '../engine/review_rating.dart';
 import '../engine/scheduler.dart';
 import '../engine/sm2.dart';
 import '../engine/streak.dart';
@@ -11,6 +13,7 @@ import '../models/session_mode.dart';
 import 'auth_provider.dart';
 import 'catastrophe_provider.dart';
 import 'clock_provider.dart';
+import 'desired_retention_provider.dart';
 import 'guardian_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'relay_provider.dart';
@@ -84,40 +87,85 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
     state = state.copyWith(phase: QuizPhase.revealed);
   }
 
-  Future<void> rateItem(int quality) async {
+  /// Rate the current quiz item using either SM-2 or FSRS.
+  ///
+  /// Dispatches based on the [ReviewRating] subclass:
+  /// - [Sm2Rating] → classic SM-2 algorithm
+  /// - [FsrsReviewRating] → FSRS algorithm with desired retention
+  Future<void> rateItem(ReviewRating rating) async {
     if (state.phase != QuizPhase.revealed) return;
 
     final item = state.currentItem;
     if (item == null) return;
-
-    final result = sm2(
-      quality: quality,
-      easeFactor: item.easeFactor,
-      interval: item.interval,
-      repetitions: item.repetitions,
-    );
 
     // Check if this concept is in an active repair mission for 1.5x bonus
     final activeMissions = ref.read(catastropheProvider).activeMissions;
     final inMission = activeMissions.any(
       (m) => m.conceptIds.contains(item.conceptId),
     );
-    final effectiveInterval =
-        inMission ? (result.interval * 1.5).round() : result.interval;
 
     final now = ref.read(clockProvider)();
-    final nextReview = now.add(Duration(days: effectiveInterval));
+    final QuizItem updated;
+    final int ratingValue;
 
-    final updated = item.withReview(
-      easeFactor: result.easeFactor,
-      interval: effectiveInterval,
-      repetitions: result.repetitions,
-      nextReview: nextReview,
-      now: now,
-    );
+    switch (rating) {
+      case Sm2Rating(:final quality):
+        final result = sm2(
+          quality: quality,
+          easeFactor: item.easeFactor,
+          interval: item.interval,
+          repetitions: item.repetitions,
+        );
+        final effectiveInterval =
+            inMission ? (result.interval * 1.5).round() : result.interval;
+        final nextReview = now.add(Duration(days: effectiveInterval));
+        updated = item.withReview(
+          easeFactor: result.easeFactor,
+          interval: effectiveInterval,
+          repetitions: result.repetitions,
+          nextReview: nextReview,
+          now: now,
+        );
+        ratingValue = quality;
+
+      case FsrsReviewRating(:final rating):
+        final retentionMap = ref.read(desiredRetentionProvider);
+        final desiredRetention = retentionMap[item.conceptId] ?? 0.9;
+        final result = reviewFsrs(
+          rating: rating,
+          difficulty: item.difficulty!,
+          stability: item.stability!,
+          fsrsState: item.fsrsState!,
+          lapses: item.lapses ?? 0,
+          lastReview: item.lastReview ?? now,
+          now: now,
+          desiredRetention: desiredRetention,
+        );
+        final effectiveInterval =
+            inMission ? (result.intervalDays * 1.5).round() : result.intervalDays;
+        final nextReview = now.add(Duration(days: effectiveInterval));
+        updated = item.withFsrsReview(
+          difficulty: result.difficulty,
+          stability: result.stability,
+          fsrsState: result.fsrsState,
+          lapses: result.lapses,
+          interval: effectiveInterval,
+          nextReview: nextReview,
+          now: now,
+        );
+        // Map FSRS ratings to int for the session ratings list, aligned with
+        // the SM-2 quality scale so correctCount (quality >= 3) works for both
+        // algorithms. Phase 3 can replace this with a dedicated accuracy metric.
+        ratingValue = switch (rating) {
+          FsrsRating.again => 1,
+          FsrsRating.hard => 3,
+          FsrsRating.good => 4,
+          FsrsRating.easy => 5,
+        };
+    }
 
     // Advance the session state first — the UI must never block on I/O.
-    final newRatings = state.ratings.add(quality);
+    final newRatings = state.ratings.add(ratingValue);
     final nextIndex = state.currentIndex + 1;
 
     if (nextIndex >= state.items.length) {
@@ -205,10 +253,9 @@ class QuizSessionNotifier extends Notifier<QuizSessionState> {
           (q) => q.conceptId == conceptId,
         );
         final allMastered = conceptItems.every((q) {
-          // Use the updated item's interval if this is the one we just reviewed
-          final interval =
-              q.id == updatedItem.id ? updatedItem.interval : q.interval;
-          return interval >= 21;
+          // Use the updated item if this is the one we just reviewed
+          final item = q.id == updatedItem.id ? updatedItem : q;
+          return item.isMasteredForUnlock;
         });
 
         if (allMastered) {

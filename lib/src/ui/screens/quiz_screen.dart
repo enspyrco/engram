@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz_item.dart';
 import '../../models/quiz_session_state.dart';
 import '../../models/session_mode.dart';
+import '../../engine/review_rating.dart';
 import '../../providers/collection_filter_provider.dart';
 import '../../providers/knowledge_graph_provider.dart';
 import '../../providers/quiz_session_provider.dart';
 import '../../providers/split_concept_provider.dart';
 import '../../providers/topic_provider.dart';
+import '../widgets/fsrs_rating_bar.dart';
 import '../widgets/quality_rating_bar.dart';
 import '../widgets/quiz_card.dart';
 import '../widgets/session_summary.dart';
@@ -268,11 +270,20 @@ class _RevealedView extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          QualityRatingBar(
-            onRate:
-                (quality) =>
-                    ref.read(quizSessionProvider.notifier).rateItem(quality),
-          ),
+          if (item.isFsrs)
+            FsrsRatingBar(
+              onRate:
+                  (rating) => ref
+                      .read(quizSessionProvider.notifier)
+                      .rateItem(FsrsReviewRating(rating)),
+            )
+          else
+            QualityRatingBar(
+              onRate:
+                  (quality) => ref
+                      .read(quizSessionProvider.notifier)
+                      .rateItem(Sm2Rating(quality)),
+            ),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: () => _showSplitSheet(context, ref, item),

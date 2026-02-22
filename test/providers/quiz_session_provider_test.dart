@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:engram/src/engine/fsrs_engine.dart';
+import 'package:engram/src/engine/review_rating.dart';
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
@@ -156,7 +158,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(5);
+      await notifier.rateItem(const Sm2Rating(5));
 
       final state = container.read(quizSessionProvider);
       expect(state.phase, QuizPhase.question);
@@ -171,7 +173,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(4);
+      await notifier.rateItem(const Sm2Rating(4));
 
       final state = container.read(quizSessionProvider);
       expect(state.phase, QuizPhase.summary);
@@ -186,7 +188,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(5);
+      await notifier.rateItem(const Sm2Rating(5));
 
       final graph = await container.read(knowledgeGraphProvider.future);
       expect(graph.quizItems.first.repetitions, 1);
@@ -210,7 +212,7 @@ void main() {
       final notifier = container.read(quizSessionProvider.notifier);
       notifier.startSession();
       notifier.revealAnswer();
-      await notifier.rateItem(4);
+      await notifier.rateItem(const Sm2Rating(4));
 
       final repo = container.read(settingsRepositoryProvider);
       expect(repo.getCurrentStreak(), 1);
@@ -269,6 +271,123 @@ void main() {
 
       expect(state.items.length, 25);
       expect(state.sessionMode, SessionMode.allDue);
+    });
+
+    test('rateItem with FsrsReviewRating persists FSRS updates', () async {
+      // Create a graph with an FSRS-bootstrapped card
+      final fsrsItem = QuizItem.newCard(
+        id: 'q0',
+        conceptId: 'c0',
+        question: 'Question 0?',
+        answer: 'Answer 0.',
+        predictedDifficulty: 5.0,
+        now: DateTime.utc(2020),
+      );
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c0',
+            name: 'Concept 0',
+            description: 'Desc 0',
+            sourceDocumentId: 'doc1',
+          ),
+        ],
+        quizItems: [fsrsItem],
+      );
+
+      final container = await createContainer(graph);
+      await container.read(knowledgeGraphProvider.future);
+
+      final notifier = container.read(quizSessionProvider.notifier);
+      notifier.startSession();
+      notifier.revealAnswer();
+      await notifier.rateItem(const FsrsReviewRating(FsrsRating.good));
+
+      final updated = await container.read(knowledgeGraphProvider.future);
+      final item = updated.quizItems.first;
+      // FSRS review should update stability and difficulty
+      expect(item.stability, isNotNull);
+      expect(item.stability, isNot(equals(fsrsItem.stability)));
+      expect(item.fsrsState, isNotNull);
+      expect(item.difficulty, isNotNull);
+    });
+
+    test('FSRS rating maps to correct integer for stats', () async {
+      final fsrsItem = QuizItem.newCard(
+        id: 'q0',
+        conceptId: 'c0',
+        question: 'Q?',
+        answer: 'A.',
+        predictedDifficulty: 5.0,
+        now: DateTime.utc(2020),
+      );
+      final graph = KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: 'c0',
+            name: 'C',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
+        ],
+        quizItems: [fsrsItem],
+      );
+
+      final container = await createContainer(graph);
+      await container.read(knowledgeGraphProvider.future);
+
+      final notifier = container.read(quizSessionProvider.notifier);
+      notifier.startSession();
+      notifier.revealAnswer();
+      await notifier.rateItem(const FsrsReviewRating(FsrsRating.again));
+
+      final state = container.read(quizSessionProvider);
+      // again maps to 1, which is < 3 → incorrect
+      expect(state.ratings, [1]);
+      expect(state.correctCount, 0);
+    });
+
+    test('FSRS good/easy count as correct in session stats', () async {
+      final items = <QuizItem>[];
+      final concepts = <Concept>[];
+      for (var i = 0; i < 2; i++) {
+        concepts.add(
+          Concept(
+            id: 'c$i',
+            name: 'C$i',
+            description: 'D',
+            sourceDocumentId: 'doc1',
+          ),
+        );
+        items.add(
+          QuizItem.newCard(
+            id: 'q$i',
+            conceptId: 'c$i',
+            question: 'Q$i?',
+            answer: 'A$i.',
+            predictedDifficulty: 5.0,
+            now: DateTime.utc(2020),
+          ),
+        );
+      }
+      final graph = KnowledgeGraph(concepts: concepts, quizItems: items);
+      final container = await createContainer(graph);
+      await container.read(knowledgeGraphProvider.future);
+
+      final notifier = container.read(quizSessionProvider.notifier);
+      notifier.startSession();
+
+      // Rate first item good (4 → correct)
+      notifier.revealAnswer();
+      await notifier.rateItem(const FsrsReviewRating(FsrsRating.good));
+
+      // Rate second item easy (5 → correct)
+      notifier.revealAnswer();
+      await notifier.rateItem(const FsrsReviewRating(FsrsRating.easy));
+
+      final state = container.read(quizSessionProvider);
+      expect(state.ratings, [4, 5]);
+      expect(state.correctCount, 2);
     });
   });
 }

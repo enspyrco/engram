@@ -138,7 +138,7 @@ void main() {
       expect(item.lapses, isNull);
     });
 
-    test('newCard with predictedDifficulty sets difficulty', () {
+    test('newCard with predictedDifficulty bootstraps full FSRS state', () {
       final item = QuizItem.newCard(
         id: 'q1',
         conceptId: 'c1',
@@ -147,10 +147,12 @@ void main() {
         predictedDifficulty: 6.0,
       );
 
-      expect(item.difficulty, 6.0);
-      expect(item.stability, isNull);
-      expect(item.fsrsState, isNull);
-      expect(item.lapses, isNull);
+      expect(item.difficulty, closeTo(6.0, 0.01));
+      expect(item.stability, isNotNull);
+      expect(item.stability, greaterThan(0));
+      expect(item.fsrsState, 1); // learning
+      expect(item.lapses, 0);
+      expect(item.isFsrs, isTrue);
     });
 
     test('fromJson/toJson round-trips with FSRS fields', () {
@@ -227,8 +229,11 @@ void main() {
 
       final json = item.toJson();
 
-      expect(json['difficulty'], 6.0);
-      expect(json.containsKey('stability'), isFalse);
+      expect(json['difficulty'], closeTo(6.0, 0.01));
+      // Now bootstraps full FSRS state
+      expect(json.containsKey('stability'), isTrue);
+      expect(json.containsKey('fsrsState'), isTrue);
+      expect(json.containsKey('lapses'), isTrue);
     });
 
     test('withFsrsReview updates FSRS fields and preserves SM-2 fields', () {
