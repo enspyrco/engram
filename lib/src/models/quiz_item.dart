@@ -2,6 +2,10 @@ import 'package:meta/meta.dart';
 
 import '../engine/fsrs_engine.dart';
 
+/// Days of stability (FSRS) or interval (SM-2) required to consider a card
+/// mastered enough to unlock dependent concepts.
+const masteryUnlockDays = 21;
+
 @immutable
 class QuizItem {
   const QuizItem({
@@ -123,11 +127,12 @@ class QuizItem {
 
   /// Whether this card is mastered enough to unlock dependent concepts.
   ///
-  /// FSRS cards use stability >= 21 days (memory strength). SM-2 cards use
-  /// interval >= 21 days (scheduled gap). Centralizes the check used in
-  /// relay completion, filtered stats, and graph analysis.
+  /// FSRS cards use stability >= [masteryUnlockDays] (memory strength).
+  /// SM-2 cards use interval >= [masteryUnlockDays] (scheduled gap).
+  /// Centralizes the check used in relay completion, filtered stats, and
+  /// graph analysis.
   bool get isMasteredForUnlock =>
-      isFsrs ? (stability ?? 0) >= 21 : interval >= 21;
+      isFsrs ? stability! >= masteryUnlockDays : interval >= masteryUnlockDays;
 
   QuizItem withReview({
     required double easeFactor,

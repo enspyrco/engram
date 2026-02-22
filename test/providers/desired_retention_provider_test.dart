@@ -80,7 +80,7 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      expect(retention['hub'], 0.95);
+      expect(retention['hub'], elevatedRetention);
     });
 
     test('leaf concept (0 dependents) gets 0.85', () async {
@@ -94,7 +94,7 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      expect(retention['leaf'], 0.85);
+      expect(retention['leaf'], leafRetention);
     });
 
     test('standard concept (1-2 dependents) gets 0.90', () async {
@@ -108,7 +108,7 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      expect(retention['mid'], 0.90);
+      expect(retention['mid'], standardRetention);
     });
 
     test('guardian-protected concept gets 0.97 (overrides hub/leaf)', () async {
@@ -133,7 +133,7 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      expect(retention['guarded'], 0.97);
+      expect(retention['guarded'], guardianRetention);
     });
 
     test('mission target gets 0.95 (elevated from standard/leaf)', () async {
@@ -156,8 +156,8 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      // 'target' has 0 dependents → would be leaf (0.85), but mission → 0.95
-      expect(retention['target'], 0.95);
+      // 'target' has 0 dependents → would be leaf, but mission elevates it
+      expect(retention['target'], elevatedRetention);
     });
 
     test('guardian takes precedence over mission', () async {
@@ -190,7 +190,7 @@ void main() {
       await container.read(knowledgeGraphProvider.future);
 
       final retention = container.read(desiredRetentionProvider);
-      expect(retention['both'], 0.97); // guardian wins
+      expect(retention['both'], guardianRetention); // guardian wins
     });
   });
 }

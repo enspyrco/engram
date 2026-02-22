@@ -16,6 +16,12 @@ const fadingThresholdDays = 30;
 /// Maximum days used for freshness linear decay (maps to 0.3 freshness).
 const maxDecayDays = 60;
 
+/// FSRS retrievability below which a concept is considered due for review.
+const fsrsDueThreshold = 0.5;
+
+/// FSRS retrievability at or above which a concept is considered mastered.
+const fsrsMasteredThreshold = 0.85;
+
 /// Color for each mastery state.
 const masteryColors = {
   MasteryState.locked: Colors.grey,
@@ -54,7 +60,7 @@ MasteryState _sm2MasteryState(Iterable<QuizItem> items, {DateTime? now}) {
   final allReviewed = items.every((q) => q.repetitions >= 1);
   if (!allReviewed) return MasteryState.due;
 
-  final allMastered = items.every((q) => q.interval >= 21);
+  final allMastered = items.every((q) => q.interval >= masteryUnlockDays);
   if (!allMastered) return MasteryState.learning;
 
   // Mastered — check for fading
@@ -71,9 +77,9 @@ MasteryState _sm2MasteryState(Iterable<QuizItem> items, {DateTime? now}) {
 /// FSRS mastery state: retrievability-based.
 ///
 /// Computes the average retrievability across all FSRS items for a concept.
-/// - R < 0.5  → due (recall probability too low)
-/// - R 0.5–0.85 → learning (making progress)
-/// - R >= 0.85 → mastered (with fading check on lastReview)
+/// - R < [fsrsDueThreshold]  → due (recall probability too low)
+/// - R [fsrsDueThreshold]–[fsrsMasteredThreshold] → learning (making progress)
+/// - R >= [fsrsMasteredThreshold] → mastered (with fading check on lastReview)
 MasteryState _fsrsMasteryState(Iterable<QuizItem> items, {DateTime? now}) {
   final currentTime = now ?? DateTime.now().toUtc();
 
@@ -99,8 +105,8 @@ MasteryState _fsrsMasteryState(Iterable<QuizItem> items, {DateTime? now}) {
   }
   final avgR = totalR / fsrsItems.length;
 
-  if (avgR < 0.5) return MasteryState.due;
-  if (avgR < 0.85) return MasteryState.learning;
+  if (avgR < fsrsDueThreshold) return MasteryState.due;
+  if (avgR < fsrsMasteredThreshold) return MasteryState.learning;
 
   // Mastered — check for fading
   final oldest = _oldestLastReview(items);
