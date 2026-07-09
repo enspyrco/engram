@@ -238,6 +238,31 @@ void main() {
       expect(result.nextReview, now);
       expect(result.lastReview, now.subtract(const Duration(days: 3)));
     });
+
+    test('round-trips rubric through the Drift column', () async {
+      final item = testQuizItem(
+        rubric: const ['names both terms', 'explains the mechanism'].lock,
+      );
+
+      await db.into(db.driftQuizItems).insert(item.toCompanion());
+      final row = await db.select(db.driftQuizItems).getSingle();
+      final result = row.toDomain();
+
+      expect(result.rubric?.unlock, [
+        'names both terms',
+        'explains the mechanism',
+      ]);
+    });
+
+    test('null rubric round-trips as null', () async {
+      final item = testQuizItem();
+
+      await db.into(db.driftQuizItems).insert(item.toCompanion());
+      final row = await db.select(db.driftQuizItems).getSingle();
+      final result = row.toDomain();
+
+      expect(result.rubric, isNull);
+    });
   });
 
   group('DocumentMetadata mapper', () {

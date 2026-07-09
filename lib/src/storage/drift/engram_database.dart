@@ -83,6 +83,8 @@ class DriftQuizItems extends Table {
   IntColumn get lapses => integer().nullable()();
   RealColumn get predictedDifficulty => real().nullable()();
   IntColumn get reviewCount => integer().withDefault(const Constant(0))();
+  TextColumn get rubric =>
+      text().map(const IListStringConverter()).nullable()();
   TextColumn get hlc => text().withDefault(const Constant(''))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
@@ -189,7 +191,7 @@ class EngramDatabase extends _$EngramDatabase {
   EngramDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -233,6 +235,15 @@ class EngramDatabase extends _$EngramDatabase {
           'last_synced_hlc TEXT NOT NULL, '
           'updated_at TEXT NOT NULL'
           ')',
+        );
+      }
+      if (from < 4) {
+        // v3 → v4: Add nullable rubric column to quiz items — grading
+        // criteria for the blind free-text assessor (#670). Stored as
+        // JSON TEXT via IListStringConverter; NULL for pre-rubric cards,
+        // which fall back to self-rating rather than assessor grading.
+        await m.database.customStatement(
+          'ALTER TABLE drift_quiz_items ADD COLUMN rubric TEXT',
         );
       }
     },

@@ -1263,6 +1263,15 @@ class $DriftQuizItemsTable extends DriftQuizItems
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  @override
+  late final GeneratedColumnWithTypeConverter<IList<String>?, String> rubric =
+      GeneratedColumn<String>(
+        'rubric',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<IList<String>?>($DriftQuizItemsTable.$converterrubricn);
   static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
   @override
   late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
@@ -1303,6 +1312,7 @@ class $DriftQuizItemsTable extends DriftQuizItems
     lapses,
     predictedDifficulty,
     reviewCount,
+    rubric,
     hlc,
     isDeleted,
   ];
@@ -1491,6 +1501,12 @@ class $DriftQuizItemsTable extends DriftQuizItems
             DriftSqlType.int,
             data['${effectivePrefix}review_count'],
           )!,
+      rubric: $DriftQuizItemsTable.$converterrubricn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}rubric'],
+        ),
+      ),
       hlc:
           attachedDatabase.typeMapping.read(
             DriftSqlType.string,
@@ -1508,6 +1524,11 @@ class $DriftQuizItemsTable extends DriftQuizItems
   $DriftQuizItemsTable createAlias(String alias) {
     return $DriftQuizItemsTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<IList<String>, String> $converterrubric =
+      const IListStringConverter();
+  static TypeConverter<IList<String>?, String?> $converterrubricn =
+      NullAwareTypeConverter.wrap($converterrubric);
 }
 
 class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
@@ -1524,6 +1545,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
   final int? lapses;
   final double? predictedDifficulty;
   final int reviewCount;
+  final IList<String>? rubric;
   final String hlc;
   final bool isDeleted;
   const DriftQuizItem({
@@ -1540,6 +1562,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
     this.lapses,
     this.predictedDifficulty,
     required this.reviewCount,
+    this.rubric,
     required this.hlc,
     required this.isDeleted,
   });
@@ -1571,6 +1594,11 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
       map['predicted_difficulty'] = Variable<double>(predictedDifficulty);
     }
     map['review_count'] = Variable<int>(reviewCount);
+    if (!nullToAbsent || rubric != null) {
+      map['rubric'] = Variable<String>(
+        $DriftQuizItemsTable.$converterrubricn.toSql(rubric),
+      );
+    }
     map['hlc'] = Variable<String>(hlc);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -1607,6 +1635,8 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
               ? const Value.absent()
               : Value(predictedDifficulty),
       reviewCount: Value(reviewCount),
+      rubric:
+          rubric == null && nullToAbsent ? const Value.absent() : Value(rubric),
       hlc: Value(hlc),
       isDeleted: Value(isDeleted),
     );
@@ -1633,6 +1663,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
         json['predictedDifficulty'],
       ),
       reviewCount: serializer.fromJson<int>(json['reviewCount']),
+      rubric: serializer.fromJson<IList<String>?>(json['rubric']),
       hlc: serializer.fromJson<String>(json['hlc']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -1654,6 +1685,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
       'lapses': serializer.toJson<int?>(lapses),
       'predictedDifficulty': serializer.toJson<double?>(predictedDifficulty),
       'reviewCount': serializer.toJson<int>(reviewCount),
+      'rubric': serializer.toJson<IList<String>?>(rubric),
       'hlc': serializer.toJson<String>(hlc),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -1673,6 +1705,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
     Value<int?> lapses = const Value.absent(),
     Value<double?> predictedDifficulty = const Value.absent(),
     int? reviewCount,
+    Value<IList<String>?> rubric = const Value.absent(),
     String? hlc,
     bool? isDeleted,
   }) => DriftQuizItem(
@@ -1692,6 +1725,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
             ? predictedDifficulty.value
             : this.predictedDifficulty,
     reviewCount: reviewCount ?? this.reviewCount,
+    rubric: rubric.present ? rubric.value : this.rubric,
     hlc: hlc ?? this.hlc,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -1717,6 +1751,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
               : this.predictedDifficulty,
       reviewCount:
           data.reviewCount.present ? data.reviewCount.value : this.reviewCount,
+      rubric: data.rubric.present ? data.rubric.value : this.rubric,
       hlc: data.hlc.present ? data.hlc.value : this.hlc,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -1738,6 +1773,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
           ..write('lapses: $lapses, ')
           ..write('predictedDifficulty: $predictedDifficulty, ')
           ..write('reviewCount: $reviewCount, ')
+          ..write('rubric: $rubric, ')
           ..write('hlc: $hlc, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -1759,6 +1795,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
     lapses,
     predictedDifficulty,
     reviewCount,
+    rubric,
     hlc,
     isDeleted,
   );
@@ -1779,6 +1816,7 @@ class DriftQuizItem extends DataClass implements Insertable<DriftQuizItem> {
           other.lapses == this.lapses &&
           other.predictedDifficulty == this.predictedDifficulty &&
           other.reviewCount == this.reviewCount &&
+          other.rubric == this.rubric &&
           other.hlc == this.hlc &&
           other.isDeleted == this.isDeleted);
 }
@@ -1797,6 +1835,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
   final Value<int?> lapses;
   final Value<double?> predictedDifficulty;
   final Value<int> reviewCount;
+  final Value<IList<String>?> rubric;
   final Value<String> hlc;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -1814,6 +1853,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
     this.lapses = const Value.absent(),
     this.predictedDifficulty = const Value.absent(),
     this.reviewCount = const Value.absent(),
+    this.rubric = const Value.absent(),
     this.hlc = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1832,6 +1872,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
     this.lapses = const Value.absent(),
     this.predictedDifficulty = const Value.absent(),
     this.reviewCount = const Value.absent(),
+    this.rubric = const Value.absent(),
     this.hlc = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1855,6 +1896,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
     Expression<int>? lapses,
     Expression<double>? predictedDifficulty,
     Expression<int>? reviewCount,
+    Expression<String>? rubric,
     Expression<String>? hlc,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -1874,6 +1916,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
       if (predictedDifficulty != null)
         'predicted_difficulty': predictedDifficulty,
       if (reviewCount != null) 'review_count': reviewCount,
+      if (rubric != null) 'rubric': rubric,
       if (hlc != null) 'hlc': hlc,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -1894,6 +1937,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
     Value<int?>? lapses,
     Value<double?>? predictedDifficulty,
     Value<int>? reviewCount,
+    Value<IList<String>?>? rubric,
     Value<String>? hlc,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -1912,6 +1956,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
       lapses: lapses ?? this.lapses,
       predictedDifficulty: predictedDifficulty ?? this.predictedDifficulty,
       reviewCount: reviewCount ?? this.reviewCount,
+      rubric: rubric ?? this.rubric,
       hlc: hlc ?? this.hlc,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -1960,6 +2005,11 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
     if (reviewCount.present) {
       map['review_count'] = Variable<int>(reviewCount.value);
     }
+    if (rubric.present) {
+      map['rubric'] = Variable<String>(
+        $DriftQuizItemsTable.$converterrubricn.toSql(rubric.value),
+      );
+    }
     if (hlc.present) {
       map['hlc'] = Variable<String>(hlc.value);
     }
@@ -1988,6 +2038,7 @@ class DriftQuizItemsCompanion extends UpdateCompanion<DriftQuizItem> {
           ..write('lapses: $lapses, ')
           ..write('predictedDifficulty: $predictedDifficulty, ')
           ..write('reviewCount: $reviewCount, ')
+          ..write('rubric: $rubric, ')
           ..write('hlc: $hlc, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -4359,6 +4410,7 @@ typedef $$DriftQuizItemsTableCreateCompanionBuilder =
       Value<int?> lapses,
       Value<double?> predictedDifficulty,
       Value<int> reviewCount,
+      Value<IList<String>?> rubric,
       Value<String> hlc,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -4378,6 +4430,7 @@ typedef $$DriftQuizItemsTableUpdateCompanionBuilder =
       Value<int?> lapses,
       Value<double?> predictedDifficulty,
       Value<int> reviewCount,
+      Value<IList<String>?> rubric,
       Value<String> hlc,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -4455,6 +4508,12 @@ class $$DriftQuizItemsTableFilterComposer
   ColumnFilters<int> get reviewCount => $composableBuilder(
     column: $table.reviewCount,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<IList<String>?, IList<String>, String>
+  get rubric => $composableBuilder(
+    column: $table.rubric,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<String> get hlc => $composableBuilder(
@@ -4542,6 +4601,11 @@ class $$DriftQuizItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get rubric => $composableBuilder(
+    column: $table.rubric,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get hlc => $composableBuilder(
     column: $table.hlc,
     builder: (column) => ColumnOrderings(column),
@@ -4611,6 +4675,9 @@ class $$DriftQuizItemsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumnWithTypeConverter<IList<String>?, String> get rubric =>
+      $composableBuilder(column: $table.rubric, builder: (column) => column);
+
   GeneratedColumn<String> get hlc =>
       $composableBuilder(column: $table.hlc, builder: (column) => column);
 
@@ -4672,6 +4739,7 @@ class $$DriftQuizItemsTableTableManager
                 Value<int?> lapses = const Value.absent(),
                 Value<double?> predictedDifficulty = const Value.absent(),
                 Value<int> reviewCount = const Value.absent(),
+                Value<IList<String>?> rubric = const Value.absent(),
                 Value<String> hlc = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4689,6 +4757,7 @@ class $$DriftQuizItemsTableTableManager
                 lapses: lapses,
                 predictedDifficulty: predictedDifficulty,
                 reviewCount: reviewCount,
+                rubric: rubric,
                 hlc: hlc,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -4708,6 +4777,7 @@ class $$DriftQuizItemsTableTableManager
                 Value<int?> lapses = const Value.absent(),
                 Value<double?> predictedDifficulty = const Value.absent(),
                 Value<int> reviewCount = const Value.absent(),
+                Value<IList<String>?> rubric = const Value.absent(),
                 Value<String> hlc = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4725,6 +4795,7 @@ class $$DriftQuizItemsTableTableManager
                 lapses: lapses,
                 predictedDifficulty: predictedDifficulty,
                 reviewCount: reviewCount,
+                rubric: rubric,
                 hlc: hlc,
                 isDeleted: isDeleted,
                 rowid: rowid,

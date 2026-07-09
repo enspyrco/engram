@@ -1,4 +1,5 @@
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 import '../engine/difficulty_evaluation.dart';
 import '../models/concept.dart';
@@ -29,6 +30,8 @@ Guidelines:
 - The `label` field should be a natural-language description (e.g. "depends on", "is a type of"), while `type` is the canonical enum value.
 - Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- The `question` is a free-recall PROBE: it must NOT contain or leak the answer, and must never be yes/no or multiple-choice.
+- For each quiz item, provide a `rubric`: 2-4 short, checkable grading criteria an independent grader uses to score a learner's free-text answer (e.g. "names both terms", "explains WHY normalization is needed"). Write them as an exam grader would — concrete enough to test mechanism, not vibes. Omit the rubric only when the item is pure single-token recall of an arbitrary fact.
 - For each quiz item, predict its difficulty on a 1-10 scale:
   1-3 = pure fact recall, single prerequisite or none
   4-6 = explain a mechanism or process, 2-3 prerequisites
@@ -139,6 +142,12 @@ const _extractionTool = Tool.custom(
               'description':
                   'Predicted difficulty (1-10). 1=single fact recall, 5=mechanism, 10=synthesis across concepts. Used as FSRS initial D₀.',
             },
+            'rubric': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  '2-4 short grading criteria an independent grader checks a free-text answer against (e.g. "names both terms", "explains why X is needed"). Omit only for pure single-token recall.',
+            },
           },
         },
       },
@@ -211,6 +220,12 @@ const _splitTool = Tool.custom(
                     'type': 'number',
                     'description':
                         'Predicted difficulty (1-10). Sub-concept items should target 4-6.',
+                  },
+                  'rubric': {
+                    'type': 'array',
+                    'items': {'type': 'string'},
+                    'description':
+                        '2-4 short grading criteria an independent grader checks a free-text answer against. Omit only for pure single-token recall.',
                   },
                 },
               },
@@ -426,6 +441,10 @@ class ExtractionService {
               answer: qMap['answer'] as String,
               predictedDifficulty:
                   (qMap['predictedDifficulty'] as num?)?.toDouble(),
+              rubric:
+                  (qMap['rubric'] as List<dynamic>?)
+                      ?.map((e) => e as String)
+                      .toIList(),
             );
           }).toList();
 
@@ -509,6 +528,10 @@ class ExtractionService {
           question: map['question'] as String,
           answer: map['answer'] as String,
           predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
+          rubric:
+              (map['rubric'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toIList(),
         ),
       );
     }
