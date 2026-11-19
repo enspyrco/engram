@@ -1,6 +1,6 @@
 import 'package:engram/src/providers/document_diff_provider.dart';
 import 'package:engram/src/ui/widgets/document_diff_sheet.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

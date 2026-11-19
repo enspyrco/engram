@@ -1,6 +1,6 @@
 import 'package:engram/src/engine/fsrs_engine.dart';
 import 'package:engram/src/ui/widgets/swipeable_quiz_card.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Helper to pump the swipeable card in a constrained layout.

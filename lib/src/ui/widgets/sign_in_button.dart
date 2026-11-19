@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Branded sign-in button following platform guidelines.
 class SignInButton extends StatelessWidget {

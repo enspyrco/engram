@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Pre-loads team member profile photos as [ui.Image] objects for direct
 /// canvas rendering via [Canvas.drawImageRect].

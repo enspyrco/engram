@@ -26,24 +26,24 @@ dependencies:
   fsrs: ^2.0.1
   graphs: ^2.3.2
   uuid: ^4.5.1
-  intl: ^0.19.0
+  intl: ^0.20.2
   just_audio: ^0.9.42
   pretty_diff_text: ^2.1.0
-  drift: ^2.24.0
-  drift_flutter: ^0.2.4
-  sqlite3_flutter_libs: ^0.5.28
+  drift: ^2.35.4
+  drift_flutter: ^0.3.1
   crdt: ^5.1.3
+  material_ui: ^1.11.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   mocktail: ^1.0.4
-  test: ^1.26.0
+  test: ^1.32.0
   fake_cloud_firestore: ^4.0.1
   firebase_auth_mocks: ^0.15.1
-  drift_dev: ^2.24.0
-  build_runner: ^2.4.14
+  drift_dev: ^2.35.3
+  build_runner: ^2.17.1
 
 flutter:
   uses-material-design: true

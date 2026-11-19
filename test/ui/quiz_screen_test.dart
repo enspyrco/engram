@@ -8,7 +8,7 @@ import 'package:engram/src/ui/graph/force_directed_graph_widget.dart';
 import 'package:engram/src/ui/screens/quiz_screen.dart';
 import 'package:engram/src/ui/widgets/neighborhood_graph.dart';
 import 'package:engram/src/ui/widgets/swipeable_quiz_card.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
