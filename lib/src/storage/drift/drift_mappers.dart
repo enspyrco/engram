@@ -53,20 +53,17 @@ extension DriftConceptToDomain on DriftConcept {
   /// `isDeleted`. Used by [mergeChangeset] to re-insert incoming rows
   /// with their original HLC timestamps (not re-stamped).
   DriftConceptsCompanion toInsertCompanion() => DriftConceptsCompanion.insert(
-        id: id,
-        name: name,
-        description: description,
-        sourceDocumentId: sourceDocumentId,
-        tags: tags,
-        parentConceptId:
-            parentConceptId != null
-                ? Value(parentConceptId)
-                : const Value.absent(),
-        embedding:
-            embedding != null ? Value(embedding) : const Value.absent(),
-        hlc: Value(hlc),
-        isDeleted: Value(isDeleted),
-      );
+    id: id,
+    name: name,
+    description: description,
+    sourceDocumentId: sourceDocumentId,
+    tags: tags,
+    parentConceptId:
+        parentConceptId != null ? Value(parentConceptId) : const Value.absent(),
+    embedding: embedding != null ? Value(embedding) : const Value.absent(),
+    hlc: Value(hlc),
+    isDeleted: Value(isDeleted),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -146,12 +143,9 @@ extension QuizItemToCompanion on QuizItem {
           lastReview != null
               ? Value(lastReview!.toIso8601String())
               : const Value.absent(),
-      difficulty:
-          difficulty != null ? Value(difficulty) : const Value.absent(),
-      stability:
-          stability != null ? Value(stability) : const Value.absent(),
-      fsrsState:
-          fsrsState != null ? Value(fsrsState) : const Value.absent(),
+      difficulty: difficulty != null ? Value(difficulty) : const Value.absent(),
+      stability: stability != null ? Value(stability) : const Value.absent(),
+      fsrsState: fsrsState != null ? Value(fsrsState) : const Value.absent(),
       lapses: lapses != null ? Value(lapses) : const Value.absent(),
       predictedDifficulty:
           predictedDifficulty != null
@@ -189,29 +183,25 @@ extension DriftQuizItemToDomain on DriftQuizItem {
   /// Produces a companion preserving all columns including `hlc` and
   /// `isDeleted` for CRDT merge.
   DriftQuizItemsCompanion toInsertCompanion() => DriftQuizItemsCompanion.insert(
-        id: id,
-        conceptId: conceptId,
-        question: question,
-        answer: answer,
-        interval: interval,
-        nextReview: nextReview,
-        lastReview:
-            lastReview != null ? Value(lastReview) : const Value.absent(),
-        difficulty:
-            difficulty != null ? Value(difficulty) : const Value.absent(),
-        stability:
-            stability != null ? Value(stability) : const Value.absent(),
-        fsrsState:
-            fsrsState != null ? Value(fsrsState) : const Value.absent(),
-        lapses: lapses != null ? Value(lapses) : const Value.absent(),
-        predictedDifficulty:
-            predictedDifficulty != null
-                ? Value(predictedDifficulty)
-                : const Value.absent(),
-        reviewCount: Value(reviewCount),
-        hlc: Value(hlc),
-        isDeleted: Value(isDeleted),
-      );
+    id: id,
+    conceptId: conceptId,
+    question: question,
+    answer: answer,
+    interval: interval,
+    nextReview: nextReview,
+    lastReview: lastReview != null ? Value(lastReview) : const Value.absent(),
+    difficulty: difficulty != null ? Value(difficulty) : const Value.absent(),
+    stability: stability != null ? Value(stability) : const Value.absent(),
+    fsrsState: fsrsState != null ? Value(fsrsState) : const Value.absent(),
+    lapses: lapses != null ? Value(lapses) : const Value.absent(),
+    predictedDifficulty:
+        predictedDifficulty != null
+            ? Value(predictedDifficulty)
+            : const Value.absent(),
+    reviewCount: Value(reviewCount),
+    hlc: Value(hlc),
+    isDeleted: Value(isDeleted),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -233,9 +223,7 @@ extension DocumentMetadataToCompanion on DocumentMetadata {
       collectionId:
           collectionId != null ? Value(collectionId) : const Value.absent(),
       collectionName:
-          collectionName != null
-              ? Value(collectionName)
-              : const Value.absent(),
+          collectionName != null ? Value(collectionName) : const Value.absent(),
       ingestedText:
           ingestedText != null ? Value(ingestedText) : const Value.absent(),
       hlc: Value(hlc),
@@ -260,21 +248,19 @@ extension DriftDocumentToDomain on DriftDocument {
   /// Produces a companion preserving all columns including `hlc` and
   /// `isDeleted` for CRDT merge.
   DriftDocumentsCompanion toInsertCompanion() => DriftDocumentsCompanion.insert(
-        documentId: documentId,
-        title: title,
-        updatedAt: updatedAt,
-        ingestedAt: ingestedAt,
-        collectionId:
-            collectionId != null ? Value(collectionId) : const Value.absent(),
-        collectionName:
-            collectionName != null
-                ? Value(collectionName)
-                : const Value.absent(),
-        ingestedText:
-            ingestedText != null ? Value(ingestedText) : const Value.absent(),
-        hlc: Value(hlc),
-        isDeleted: Value(isDeleted),
-      );
+    documentId: documentId,
+    title: title,
+    updatedAt: updatedAt,
+    ingestedAt: ingestedAt,
+    collectionId:
+        collectionId != null ? Value(collectionId) : const Value.absent(),
+    collectionName:
+        collectionName != null ? Value(collectionName) : const Value.absent(),
+    ingestedText:
+        ingestedText != null ? Value(ingestedText) : const Value.absent(),
+    hlc: Value(hlc),
+    isDeleted: Value(isDeleted),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -323,18 +309,16 @@ extension DriftTopicToDomain on DriftTopic {
   /// Produces a companion preserving all columns including `hlc` and
   /// `isDeleted` for CRDT merge.
   DriftTopicsCompanion toInsertCompanion() => DriftTopicsCompanion.insert(
-        id: id,
-        name: name,
-        description:
-            description != null ? Value(description) : const Value.absent(),
-        createdAt: createdAt,
-        lastIngestedAt:
-            lastIngestedAt != null
-                ? Value(lastIngestedAt)
-                : const Value.absent(),
-        hlc: Value(hlc),
-        isDeleted: Value(isDeleted),
-      );
+    id: id,
+    name: name,
+    description:
+        description != null ? Value(description) : const Value.absent(),
+    createdAt: createdAt,
+    lastIngestedAt:
+        lastIngestedAt != null ? Value(lastIngestedAt) : const Value.absent(),
+    hlc: Value(hlc),
+    isDeleted: Value(isDeleted),
+  );
 }
 
 /// Produces a companion preserving all columns including `hlc` and

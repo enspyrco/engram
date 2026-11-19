@@ -17,9 +17,7 @@ void main() {
 
     Widget buildApp() {
       return ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: const MaterialApp(home: SettingsScreen()),
       );
     }

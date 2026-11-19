@@ -53,11 +53,13 @@ MarkerParseResult parseConceptMarkers(String annotatedText) {
     buffer.write(cleanContent);
     final endChar = buffer.length;
 
-    markers.add(ConceptMarker(
-      conceptId: conceptId,
-      startChar: startChar,
-      endChar: endChar,
-    ));
+    markers.add(
+      ConceptMarker(
+        conceptId: conceptId,
+        startChar: startChar,
+        endChar: endChar,
+      ),
+    );
 
     lastEnd = match.end;
   }
@@ -66,10 +68,7 @@ MarkerParseResult parseConceptMarkers(String annotatedText) {
   final trailing = annotatedText.substring(lastEnd);
   buffer.write(_stripOrphanTags(trailing));
 
-  return MarkerParseResult(
-    strippedText: buffer.toString(),
-    markers: markers,
-  );
+  return MarkerParseResult(strippedText: buffer.toString(), markers: markers);
 }
 
 /// Remove orphan opening/closing tags that weren't part of a matched pair.

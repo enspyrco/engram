@@ -52,13 +52,14 @@ class _GlowLabTabState extends State<GlowLabTab> {
       children: [
         Expanded(
           child: LayoutBuilder(
-            builder: (context, constraints) => ForceDirectedGraphWidget(
-              graph: _graph,
-              layoutWidth: constraints.maxWidth,
-              layoutHeight: constraints.maxHeight,
-              glowNodeIds: _glowIds,
-              onGlowComplete: _onGlowComplete,
-            ),
+            builder:
+                (context, constraints) => ForceDirectedGraphWidget(
+                  graph: _graph,
+                  layoutWidth: constraints.maxWidth,
+                  layoutHeight: constraints.maxHeight,
+                  glowNodeIds: _glowIds,
+                  onGlowComplete: _onGlowComplete,
+                ),
           ),
         ),
         Container(
@@ -77,25 +78,26 @@ class _GlowLabTabState extends State<GlowLabTab> {
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: allConcepts.map((concept) {
-                  final selected = _selectedIds.contains(concept.id);
-                  return FilterChip(
-                    label: Text(
-                      concept.name,
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    selected: selected,
-                    onSelected: (v) {
-                      setState(() {
-                        if (v) {
-                          _selectedIds.add(concept.id);
-                        } else {
-                          _selectedIds.remove(concept.id);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                children:
+                    allConcepts.map((concept) {
+                      final selected = _selectedIds.contains(concept.id);
+                      return FilterChip(
+                        label: Text(
+                          concept.name,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        selected: selected,
+                        onSelected: (v) {
+                          setState(() {
+                            if (v) {
+                              _selectedIds.add(concept.id);
+                            } else {
+                              _selectedIds.remove(concept.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 8),
               // Action buttons
@@ -115,18 +117,17 @@ class _GlowLabTabState extends State<GlowLabTab> {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
-                    onPressed: _selectedIds.isNotEmpty
-                        ? () => setState(_selectedIds.clear)
-                        : null,
+                    onPressed:
+                        _selectedIds.isNotEmpty
+                            ? () => setState(_selectedIds.clear)
+                            : null,
                     child: const Text('Clear Selection'),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () {
                       setState(() {
-                        _selectedIds.addAll(
-                          allConcepts.map((c) => c.id),
-                        );
+                        _selectedIds.addAll(allConcepts.map((c) => c.id));
                       });
                     },
                     child: const Text('Select All'),

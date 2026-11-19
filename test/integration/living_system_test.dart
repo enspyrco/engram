@@ -169,9 +169,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          settingsProvider.overrideWith(
-            () => _FakeSettingsNotifier(),
-          ),
+          settingsProvider.overrideWith(() => _FakeSettingsNotifier()),
           graphRepositoryProvider.overrideWithValue(repo),
           sharedPreferencesProvider.overrideWithValue(prefs),
           settingsRepositoryProvider.overrideWithValue(settingsRepo),

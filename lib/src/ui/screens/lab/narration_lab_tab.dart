@@ -50,10 +50,8 @@ class _NarrationLabTabState extends State<NarrationLabTab>
 
     // Total animation covers all concepts.
     final totalDuration = _conceptDuration * _conceptIds.length;
-    _controller = AnimationController(
-      vsync: this,
-      duration: totalDuration,
-    )..addListener(() => setState(() {}));
+    _controller = AnimationController(vsync: this, duration: totalDuration)
+      ..addListener(() => setState(() {}));
   }
 
   @override
@@ -97,7 +95,9 @@ class _NarrationLabTabState extends State<NarrationLabTab>
 
     // Scale all intensities by the fade envelope.
     if (intensity >= 1.0) return raw;
-    return {for (final entry in raw.entries) entry.key: entry.value * intensity};
+    return {
+      for (final entry in raw.entries) entry.key: entry.value * intensity,
+    };
   }
 
   @override
@@ -109,12 +109,13 @@ class _NarrationLabTabState extends State<NarrationLabTab>
       children: [
         Expanded(
           child: LayoutBuilder(
-            builder: (context, constraints) => ForceDirectedGraphWidget(
-              graph: _graph,
-              layoutWidth: constraints.maxWidth,
-              layoutHeight: constraints.maxHeight,
-              sustainedGlowMap: glowMap,
-            ),
+            builder:
+                (context, constraints) => ForceDirectedGraphWidget(
+                  graph: _graph,
+                  layoutWidth: constraints.maxWidth,
+                  layoutHeight: constraints.maxHeight,
+                  sustainedGlowMap: glowMap,
+                ),
           ),
         ),
         Container(

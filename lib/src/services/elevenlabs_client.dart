@@ -44,9 +44,9 @@ class ElevenLabsClient {
     required String apiKey,
     String voiceId = _defaultVoiceId,
     http.Client? httpClient,
-  })  : _apiKey = apiKey,
-        _voiceId = voiceId,
-        _httpClient = httpClient ?? http.Client();
+  }) : _apiKey = apiKey,
+       _voiceId = voiceId,
+       _httpClient = httpClient ?? http.Client();
 
   final String _apiKey;
   final String _voiceId;
@@ -64,10 +64,7 @@ class ElevenLabsClient {
     return retryWithBackoff(() async {
       final response = await _httpClient.post(
         uri,
-        headers: {
-          'xi-api-key': _apiKey,
-          'Content-Type': 'application/json',
-        },
+        headers: {'xi-api-key': _apiKey, 'Content-Type': 'application/json'},
         body: jsonEncode({
           'text': text,
           'model_id': _defaultModelId,

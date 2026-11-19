@@ -98,9 +98,7 @@ class Recommendation {
       collectionName: json['collectionName'] as String?,
       predictedNewEdges:
           (json['predictedNewEdges'] as List<dynamic>?)
-              ?.map(
-                (e) => PredictedEdge.fromJson(e as Map<String, dynamic>),
-              )
+              ?.map((e) => PredictedEdge.fromJson(e as Map<String, dynamic>))
               .toIList() ??
           const IListConst([]),
     );

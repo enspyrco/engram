@@ -11,8 +11,7 @@ import 'package:crdt/crdt.dart';
 /// Use [now] to stamp local events and [receive] to reconcile with
 /// incoming remote timestamps during sync.
 class HlcManager {
-  HlcManager({required String nodeId})
-      : _canonicalTime = Hlc.zero(nodeId);
+  HlcManager({required String nodeId}) : _canonicalTime = Hlc.zero(nodeId);
 
   Hlc _canonicalTime;
 

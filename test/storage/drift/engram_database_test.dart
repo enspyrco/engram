@@ -18,15 +18,19 @@ void main() {
 
   group('DriftConcepts', () {
     test('insert and select round-trips all fields', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-            tags: IList(const ['devops', 'containers']),
-            parentConceptId: const Value('parent1'),
-            hlc: const Value('2026-01-01T00:00:00Z-0001-abc'),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+              tags: IList(const ['devops', 'containers']),
+              parentConceptId: const Value('parent1'),
+              hlc: const Value('2026-01-01T00:00:00Z-0001-abc'),
+            ),
+          );
 
       final rows = await db.select(db.driftConcepts).get();
       expect(rows, hasLength(1));
@@ -44,75 +48,97 @@ void main() {
 
     test('tags survive JSON round-trip through IListStringConverter', () async {
       final tags = IList(const ['has "quotes"', 'special\tchars', '']);
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Test',
-            description: 'Test concept',
-            sourceDocumentId: 'doc1',
-            tags: tags,
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Test',
+              description: 'Test concept',
+              sourceDocumentId: 'doc1',
+              tags: tags,
+            ),
+          );
 
       final row =
-          await (db.select(db.driftConcepts)..where((t) => t.id.equals('c1')))
-              .getSingle();
+          await (db.select(db.driftConcepts)
+            ..where((t) => t.id.equals('c1'))).getSingle();
       expect(row.tags, tags);
     });
 
     test('empty tags list round-trips', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Test',
-            description: 'Test concept',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Test',
+              description: 'Test concept',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       final row =
-          await (db.select(db.driftConcepts)..where((t) => t.id.equals('c1')))
-              .getSingle();
+          await (db.select(db.driftConcepts)
+            ..where((t) => t.id.equals('c1'))).getSingle();
       expect(row.tags, isEmpty);
     });
 
     test('parentConceptId defaults to null', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Root',
-            description: 'Root concept',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Root',
+              description: 'Root concept',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       final row =
-          await (db.select(db.driftConcepts)..where((t) => t.id.equals('c1')))
-              .getSingle();
+          await (db.select(db.driftConcepts)
+            ..where((t) => t.id.equals('c1'))).getSingle();
       expect(row.parentConceptId, isNull);
     });
 
     test('hlc defaults to empty string', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Test',
-            description: 'Test',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Test',
+              description: 'Test',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       final row =
-          await (db.select(db.driftConcepts)..where((t) => t.id.equals('c1')))
-              .getSingle();
+          await (db.select(db.driftConcepts)
+            ..where((t) => t.id.equals('c1'))).getSingle();
       expect(row.hlc, '');
     });
 
     test('upsert replaces existing row', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Docker',
-            description: 'v1',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Docker',
+              description: 'v1',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
-      await db.into(db.driftConcepts).insertOnConflictUpdate(
+      await db
+          .into(db.driftConcepts)
+          .insertOnConflictUpdate(
             DriftConceptsCompanion.insert(
               id: 'c1',
               name: 'Docker Updated',
@@ -131,7 +157,9 @@ void main() {
 
   group('DriftRelationships', () {
     test('insert and select round-trips all fields', () async {
-      await db.into(db.driftRelationships).insert(
+      await db
+          .into(db.driftRelationships)
+          .insert(
             DriftRelationshipsCompanion.insert(
               id: 'r1',
               fromConceptId: 'c1',
@@ -156,7 +184,9 @@ void main() {
 
     test('RelationshipType round-trips all values through the DB', () async {
       for (final type in RelationshipType.values) {
-        await db.into(db.driftRelationships).insert(
+        await db
+            .into(db.driftRelationships)
+            .insert(
               DriftRelationshipsCompanion.insert(
                 id: 'r_${type.name}',
                 fromConceptId: 'c1',
@@ -179,21 +209,25 @@ void main() {
 
   group('DriftQuizItems', () {
     test('insert and select round-trips all fields', () async {
-      await db.into(db.driftQuizItems).insert(DriftQuizItemsCompanion.insert(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'What is Docker?',
-            answer: 'A container runtime',
-            interval: 10,
-            nextReview: '2026-03-01T00:00:00.000Z',
-            lastReview: const Value('2026-02-20T00:00:00.000Z'),
-            difficulty: const Value(5.0),
-            stability: const Value(10.0),
-            fsrsState: const Value(2),
-            lapses: const Value(1),
-            predictedDifficulty: const Value(6.5),
-            reviewCount: const Value(3),
-          ));
+      await db
+          .into(db.driftQuizItems)
+          .insert(
+            DriftQuizItemsCompanion.insert(
+              id: 'q1',
+              conceptId: 'c1',
+              question: 'What is Docker?',
+              answer: 'A container runtime',
+              interval: 10,
+              nextReview: '2026-03-01T00:00:00.000Z',
+              lastReview: const Value('2026-02-20T00:00:00.000Z'),
+              difficulty: const Value(5.0),
+              stability: const Value(10.0),
+              fsrsState: const Value(2),
+              lapses: const Value(1),
+              predictedDifficulty: const Value(6.5),
+              reviewCount: const Value(3),
+            ),
+          );
 
       final rows = await db.select(db.driftQuizItems).get();
       expect(rows, hasLength(1));
@@ -215,18 +249,22 @@ void main() {
     });
 
     test('nullable FSRS fields default to null', () async {
-      await db.into(db.driftQuizItems).insert(DriftQuizItemsCompanion.insert(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'Q?',
-            answer: 'A',
-            interval: 0,
-            nextReview: '2026-03-01T00:00:00.000Z',
-          ));
+      await db
+          .into(db.driftQuizItems)
+          .insert(
+            DriftQuizItemsCompanion.insert(
+              id: 'q1',
+              conceptId: 'c1',
+              question: 'Q?',
+              answer: 'A',
+              interval: 0,
+              nextReview: '2026-03-01T00:00:00.000Z',
+            ),
+          );
 
       final row =
-          await (db.select(db.driftQuizItems)..where((t) => t.id.equals('q1')))
-              .getSingle();
+          await (db.select(db.driftQuizItems)
+            ..where((t) => t.id.equals('q1'))).getSingle();
       expect(row.lastReview, isNull);
       expect(row.difficulty, isNull);
       expect(row.stability, isNull);
@@ -239,15 +277,19 @@ void main() {
 
   group('DriftDocuments', () {
     test('insert and select round-trips all fields', () async {
-      await db.into(db.driftDocuments).insert(DriftDocumentsCompanion.insert(
-            documentId: 'doc1',
-            title: 'Container Guide',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-            ingestedAt: '2026-01-01T12:00:00.000Z',
-            collectionId: const Value('col1'),
-            collectionName: const Value('DevOps'),
-            ingestedText: const Value('# Container Guide\nDocker is...'),
-          ));
+      await db
+          .into(db.driftDocuments)
+          .insert(
+            DriftDocumentsCompanion.insert(
+              documentId: 'doc1',
+              title: 'Container Guide',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+              ingestedAt: '2026-01-01T12:00:00.000Z',
+              collectionId: const Value('col1'),
+              collectionName: const Value('DevOps'),
+              ingestedText: const Value('# Container Guide\nDocker is...'),
+            ),
+          );
 
       final rows = await db.select(db.driftDocuments).get();
       expect(rows, hasLength(1));
@@ -263,16 +305,20 @@ void main() {
     });
 
     test('nullable fields default to null', () async {
-      await db.into(db.driftDocuments).insert(DriftDocumentsCompanion.insert(
-            documentId: 'doc1',
-            title: 'Minimal',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-            ingestedAt: '2026-01-01T12:00:00.000Z',
-          ));
+      await db
+          .into(db.driftDocuments)
+          .insert(
+            DriftDocumentsCompanion.insert(
+              documentId: 'doc1',
+              title: 'Minimal',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+              ingestedAt: '2026-01-01T12:00:00.000Z',
+            ),
+          );
 
-      final row = await (db.select(db.driftDocuments)
-            ..where((t) => t.documentId.equals('doc1')))
-          .getSingle();
+      final row =
+          await (db.select(db.driftDocuments)
+            ..where((t) => t.documentId.equals('doc1'))).getSingle();
       expect(row.collectionId, isNull);
       expect(row.collectionName, isNull);
       expect(row.ingestedText, isNull);
@@ -281,13 +327,17 @@ void main() {
 
   group('DriftTopics', () {
     test('insert and select round-trips all fields', () async {
-      await db.into(db.driftTopics).insert(DriftTopicsCompanion.insert(
-            id: 't1',
-            name: 'Containers',
-            description: const Value('Everything about containers'),
-            createdAt: '2026-01-01T00:00:00.000Z',
-            lastIngestedAt: const Value('2026-02-01T00:00:00.000Z'),
-          ));
+      await db
+          .into(db.driftTopics)
+          .insert(
+            DriftTopicsCompanion.insert(
+              id: 't1',
+              name: 'Containers',
+              description: const Value('Everything about containers'),
+              createdAt: '2026-01-01T00:00:00.000Z',
+              lastIngestedAt: const Value('2026-02-01T00:00:00.000Z'),
+            ),
+          );
 
       final rows = await db.select(db.driftTopics).get();
       expect(rows, hasLength(1));
@@ -305,20 +355,24 @@ void main() {
     test('insert and select join table rows', () async {
       await db
           .into(db.driftTopicDocuments)
-          .insert(DriftTopicDocumentsCompanion.insert(
-            topicId: 't1',
-            documentId: 'doc1',
-          ));
+          .insert(
+            DriftTopicDocumentsCompanion.insert(
+              topicId: 't1',
+              documentId: 'doc1',
+            ),
+          );
       await db
           .into(db.driftTopicDocuments)
-          .insert(DriftTopicDocumentsCompanion.insert(
-            topicId: 't1',
-            documentId: 'doc2',
-          ));
+          .insert(
+            DriftTopicDocumentsCompanion.insert(
+              topicId: 't1',
+              documentId: 'doc2',
+            ),
+          );
 
-      final rows = await (db.select(db.driftTopicDocuments)
-            ..where((t) => t.topicId.equals('t1')))
-          .get();
+      final rows =
+          await (db.select(db.driftTopicDocuments)
+            ..where((t) => t.topicId.equals('t1'))).get();
       expect(rows, hasLength(2));
       expect(rows.map((r) => r.documentId).toSet(), {'doc1', 'doc2'});
     });
@@ -326,19 +380,23 @@ void main() {
     test('composite primary key prevents duplicates', () async {
       await db
           .into(db.driftTopicDocuments)
-          .insert(DriftTopicDocumentsCompanion.insert(
-            topicId: 't1',
-            documentId: 'doc1',
-          ));
+          .insert(
+            DriftTopicDocumentsCompanion.insert(
+              topicId: 't1',
+              documentId: 'doc1',
+            ),
+          );
 
       // Inserting the same (topicId, documentId) pair should fail.
       expect(
         () => db
             .into(db.driftTopicDocuments)
-            .insert(DriftTopicDocumentsCompanion.insert(
-              topicId: 't1',
-              documentId: 'doc1',
-            )),
+            .insert(
+              DriftTopicDocumentsCompanion.insert(
+                topicId: 't1',
+                documentId: 'doc1',
+              ),
+            ),
         throwsA(isA<SqliteException>()),
       );
     });
@@ -346,20 +404,24 @@ void main() {
     test('same document can belong to multiple topics', () async {
       await db
           .into(db.driftTopicDocuments)
-          .insert(DriftTopicDocumentsCompanion.insert(
-            topicId: 't1',
-            documentId: 'doc1',
-          ));
+          .insert(
+            DriftTopicDocumentsCompanion.insert(
+              topicId: 't1',
+              documentId: 'doc1',
+            ),
+          );
       await db
           .into(db.driftTopicDocuments)
-          .insert(DriftTopicDocumentsCompanion.insert(
-            topicId: 't2',
-            documentId: 'doc1',
-          ));
+          .insert(
+            DriftTopicDocumentsCompanion.insert(
+              topicId: 't2',
+              documentId: 'doc1',
+            ),
+          );
 
-      final rows = await (db.select(db.driftTopicDocuments)
-            ..where((t) => t.documentId.equals('doc1')))
-          .get();
+      final rows =
+          await (db.select(db.driftTopicDocuments)
+            ..where((t) => t.documentId.equals('doc1'))).get();
       expect(rows, hasLength(2));
       expect(rows.map((r) => r.topicId).toSet(), {'t1', 't2'});
     });
@@ -372,54 +434,60 @@ void main() {
       // (In-memory databases always get the latest schema via createAll(),
       // so the is_deleted column is created fresh. This test verifies the
       // column's default behavior which matches the migration's DEFAULT 0.)
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Test',
-            description: 'Test',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Test',
+              description: 'Test',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       final row = (await db.select(db.driftConcepts).get()).first;
-      expect(row.isDeleted, isFalse,
-          reason: 'is_deleted should default to false');
+      expect(
+        row.isDeleted,
+        isFalse,
+        reason: 'is_deleted should default to false',
+      );
     });
 
     test('is_deleted column exists on all tables', () async {
       // Verify we can query with isDeleted filter on every table.
       // If the column didn't exist, these would throw.
       await (db.select(db.driftConcepts)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
       await (db.select(db.driftRelationships)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
       await (db.select(db.driftQuizItems)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
       await (db.select(db.driftDocuments)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
       await (db.select(db.driftTopics)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
       await (db.select(db.driftTopicDocuments)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get();
+        ..where((t) => t.isDeleted.equals(false))).get();
     });
 
     test('is_deleted can be set to true (tombstone)', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Test',
-            description: 'Test',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Test',
+              description: 'Test',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       // Tombstone via update
-      await (db.update(db.driftConcepts)..where((t) => t.id.equals('c1')))
-          .write(const DriftConceptsCompanion(isDeleted: Value(true)));
+      await (db.update(db.driftConcepts)..where(
+        (t) => t.id.equals('c1'),
+      )).write(const DriftConceptsCompanion(isDeleted: Value(true)));
 
       final row = (await db.select(db.driftConcepts).get()).first;
       expect(row.isDeleted, isTrue);
@@ -429,55 +497,67 @@ void main() {
   group('Cross-table operations', () {
     test('delete cascade scenario — orphan cleanup pattern', () async {
       // Insert a concept and its quiz item
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
-      await db.into(db.driftQuizItems).insert(DriftQuizItemsCompanion.insert(
-            id: 'q1',
-            conceptId: 'c1',
-            question: 'What is Docker?',
-            answer: 'A container runtime',
-            interval: 0,
-            nextReview: '2026-03-01T00:00:00.000Z',
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
+      await db
+          .into(db.driftQuizItems)
+          .insert(
+            DriftQuizItemsCompanion.insert(
+              id: 'q1',
+              conceptId: 'c1',
+              question: 'What is Docker?',
+              answer: 'A container runtime',
+              interval: 0,
+              nextReview: '2026-03-01T00:00:00.000Z',
+            ),
+          );
 
       // Simulate orphan cleanup: delete concept, then quiz items
       // referencing it (manual — no FK cascade, matching Firestore semantics).
-      await (db.delete(db.driftConcepts)..where((t) => t.id.equals('c1')))
-          .go();
+      await (db.delete(db.driftConcepts)..where((t) => t.id.equals('c1'))).go();
       await (db.delete(db.driftQuizItems)
-            ..where((t) => t.conceptId.equals('c1')))
-          .go();
+        ..where((t) => t.conceptId.equals('c1'))).go();
 
       expect(await db.select(db.driftConcepts).get(), isEmpty);
       expect(await db.select(db.driftQuizItems).get(), isEmpty);
     });
 
     test('transaction rolls back on failure', () async {
-      await db.into(db.driftConcepts).insert(DriftConceptsCompanion.insert(
-            id: 'c1',
-            name: 'Existing',
-            description: 'Already here',
-            sourceDocumentId: 'doc1',
-            tags: IList(const []),
-          ));
+      await db
+          .into(db.driftConcepts)
+          .insert(
+            DriftConceptsCompanion.insert(
+              id: 'c1',
+              name: 'Existing',
+              description: 'Already here',
+              sourceDocumentId: 'doc1',
+              tags: IList(const []),
+            ),
+          );
 
       try {
         await db.transaction(() async {
           // This succeeds
           await db
               .into(db.driftConcepts)
-              .insertOnConflictUpdate(DriftConceptsCompanion.insert(
-                id: 'c1',
-                name: 'Modified',
-                description: 'Changed in transaction',
-                sourceDocumentId: 'doc1',
-                tags: IList(const []),
-              ));
+              .insertOnConflictUpdate(
+                DriftConceptsCompanion.insert(
+                  id: 'c1',
+                  name: 'Modified',
+                  description: 'Changed in transaction',
+                  sourceDocumentId: 'doc1',
+                  tags: IList(const []),
+                ),
+              );
 
           // Force a rollback
           throw Exception('Simulated failure');
@@ -488,8 +568,8 @@ void main() {
 
       // Original row should be unchanged after rollback
       final row =
-          await (db.select(db.driftConcepts)..where((t) => t.id.equals('c1')))
-              .getSingle();
+          await (db.select(db.driftConcepts)
+            ..where((t) => t.id.equals('c1'))).getSingle();
       expect(row.name, 'Existing');
     });
   });

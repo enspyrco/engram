@@ -22,7 +22,11 @@ void main() {
     });
 
     test('handles special characters in strings', () {
-      final original = IList(const ['has "quotes"', 'has\\backslash', 'has,comma']);
+      final original = IList(const [
+        'has "quotes"',
+        'has\\backslash',
+        'has,comma',
+      ]);
       final sql = converter.toSql(original);
       final restored = converter.fromSql(sql);
       expect(restored, original);

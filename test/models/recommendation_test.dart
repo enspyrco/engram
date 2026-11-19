@@ -91,10 +91,7 @@ void main() {
       expect(restored.collectionId, rec.collectionId);
       expect(restored.collectionName, rec.collectionName);
       expect(restored.predictedNewEdges, hasLength(1));
-      expect(
-        restored.predictedNewEdges.first.fromConceptName,
-        'ML',
-      );
+      expect(restored.predictedNewEdges.first.fromConceptName, 'ML');
     });
 
     test('fromJson handles missing optional fields', () {

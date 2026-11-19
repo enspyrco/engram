@@ -91,7 +91,8 @@ void main() {
       expect(session.timestampedConcepts, hasLength(2));
 
       // 5. Compute active concepts at different positions.
-      final midFirst = timestamped[0].startTime +
+      final midFirst =
+          timestamped[0].startTime +
           (timestamped[0].endTime - timestamped[0].startTime) / 2;
       final activeAtMid = computeActiveConcepts(
         session.timestampedConcepts.toList(),

@@ -41,15 +41,35 @@ void main() {
     test('all predicted edges match actual new edges', () {
       final graphBefore = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Alpha', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Beta', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Alpha',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Beta',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
       );
 
       final graphAfter = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Alpha', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Beta', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Alpha',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Beta',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
           const Relationship(
@@ -94,8 +114,18 @@ void main() {
     test('predicted edge that does not appear is counted as missed', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Alpha', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Beta', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Alpha',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Beta',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
       );
 
@@ -129,17 +159,47 @@ void main() {
     test('actual new edges not predicted are counted as unexpected', () {
       final graphBefore = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Alpha', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Beta', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'c', name: 'Gamma', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Alpha',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Beta',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'c',
+            name: 'Gamma',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
       );
 
       final graphAfter = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Alpha', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Beta', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'c', name: 'Gamma', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Alpha',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Beta',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'c',
+            name: 'Gamma',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
           const Relationship(
@@ -191,15 +251,35 @@ void main() {
     test('case-insensitive matching of concept names', () {
       final graphBefore = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Neural Networks', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Gradient Descent', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Neural Networks',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Gradient Descent',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
       );
 
       final graphAfter = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'Neural Networks', description: '', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'Gradient Descent', description: '', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'Neural Networks',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'Gradient Descent',
+            description: '',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
           const Relationship(

@@ -28,24 +28,22 @@ void main() {
         .doc('graph');
 
     for (final concept in graph.concepts) {
-      await graphDoc.collection('concepts').doc(concept.id).set(
-            concept.toJson(),
-          );
+      await graphDoc
+          .collection('concepts')
+          .doc(concept.id)
+          .set(concept.toJson());
     }
     for (final rel in graph.relationships) {
-      await graphDoc.collection('relationships').doc(rel.id).set(
-            rel.toJson(),
-          );
+      await graphDoc.collection('relationships').doc(rel.id).set(rel.toJson());
     }
     for (final item in graph.quizItems) {
-      await graphDoc.collection('quizItems').doc(item.id).set(
-            item.toJson(),
-          );
+      await graphDoc.collection('quizItems').doc(item.id).set(item.toJson());
     }
     for (final meta in graph.documentMetadata) {
-      await graphDoc.collection('documents').doc(meta.documentId).set(
-            meta.toJson(),
-          );
+      await graphDoc
+          .collection('documents')
+          .doc(meta.documentId)
+          .set(meta.toJson());
     }
   }
 

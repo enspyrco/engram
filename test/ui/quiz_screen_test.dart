@@ -194,20 +194,22 @@ void main() {
       },
     );
 
-    testWidgets('revealed phase shows neighborhood graph when concept has neighbors',
-        (tester) async {
-      final graph = _graphWithRelationships();
-      await tester.pumpWidget(await buildApp(graph));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'revealed phase shows neighborhood graph when concept has neighbors',
+      (tester) async {
+        final graph = _graphWithRelationships();
+        await tester.pumpWidget(await buildApp(graph));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Full Session'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Reveal Answer'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Full Session'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Reveal Answer'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(NeighborhoodGraph), findsOneWidget);
-      expect(find.byType(ForceDirectedGraphWidget), findsOneWidget);
-    });
+        expect(find.byType(NeighborhoodGraph), findsOneWidget);
+        expect(find.byType(ForceDirectedGraphWidget), findsOneWidget);
+      },
+    );
 
     testWidgets('no neighborhood graph for isolated concept', (tester) async {
       // graphWithDueItems creates concepts with no relationships.

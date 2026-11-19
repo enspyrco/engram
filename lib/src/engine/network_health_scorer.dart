@@ -56,11 +56,7 @@ class NetworkHealthScorer {
         case MasteryState.due:
           break;
       }
-      freshnessSum += freshnessOf(
-        concept.id,
-        _graph,
-        now: _now,
-      );
+      freshnessSum += freshnessOf(concept.id, _graph, now: _now);
     }
 
     final masteryRatio = masteredCount / total;
@@ -145,11 +141,7 @@ class NetworkHealthScorer {
           case MasteryState.due:
             break;
         }
-        freshness += freshnessOf(
-          concept.id,
-          _graph,
-          now: _now,
-        );
+        freshness += freshnessOf(concept.id, _graph, now: _now);
       }
 
       final clusterScore = (0.5 * mastered / total +

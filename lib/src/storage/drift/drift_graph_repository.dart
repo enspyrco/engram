@@ -38,9 +38,9 @@ class DriftGraphRepository extends GraphRepository {
     required EngramDatabase db,
     HlcManager? hlcManager,
     DateTime Function()? clock,
-  })  : _db = db,
-        _hlcManager = hlcManager,
-        _clock = clock ?? _defaultClock;
+  }) : _db = db,
+       _hlcManager = hlcManager,
+       _clock = clock ?? _defaultClock;
 
   static DateTime _defaultClock() => DateTime.now().toUtc();
 
@@ -61,23 +61,17 @@ class DriftGraphRepository extends GraphRepository {
     // Query all tables in parallel, filtering out tombstoned rows.
     final results = await Future.wait([
       (_db.select(_db.driftConcepts)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 0
+        ..where((t) => t.isDeleted.equals(false))).get(), // 0
       (_db.select(_db.driftRelationships)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 1
+        ..where((t) => t.isDeleted.equals(false))).get(), // 1
       (_db.select(_db.driftQuizItems)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 2
+        ..where((t) => t.isDeleted.equals(false))).get(), // 2
       (_db.select(_db.driftDocuments)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 3
+        ..where((t) => t.isDeleted.equals(false))).get(), // 3
       (_db.select(_db.driftTopics)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 4
+        ..where((t) => t.isDeleted.equals(false))).get(), // 4
       (_db.select(_db.driftTopicDocuments)
-            ..where((t) => t.isDeleted.equals(false)))
-          .get(), // 5
+        ..where((t) => t.isDeleted.equals(false))).get(), // 5
     ]);
 
     final conceptRows = results[0] as List<DriftConcept>;
@@ -185,66 +179,52 @@ class DriftGraphRepository extends GraphRepository {
   /// tombstones those not in the incoming set.
   Future<void> _tombstoneOrphans(KnowledgeGraph graph, String hlc) async {
     // -- Concepts --
-    await (_db.update(_db.driftConcepts)
-          ..where(
-            (t) =>
-                t.isDeleted.equals(false) &
-                t.id.isNotIn(graph.concepts.map((c) => c.id)),
-          ))
-        .write(DriftConceptsCompanion(
-          isDeleted: const Value(true),
-          hlc: Value(hlc),
-        ));
+    await (_db.update(_db.driftConcepts)..where(
+      (t) =>
+          t.isDeleted.equals(false) &
+          t.id.isNotIn(graph.concepts.map((c) => c.id)),
+    )).write(
+      DriftConceptsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+    );
 
     // -- Relationships --
-    await (_db.update(_db.driftRelationships)
-          ..where(
-            (t) =>
-                t.isDeleted.equals(false) &
-                t.id.isNotIn(graph.relationships.map((r) => r.id)),
-          ))
-        .write(DriftRelationshipsCompanion(
-          isDeleted: const Value(true),
-          hlc: Value(hlc),
-        ));
+    await (_db.update(_db.driftRelationships)..where(
+      (t) =>
+          t.isDeleted.equals(false) &
+          t.id.isNotIn(graph.relationships.map((r) => r.id)),
+    )).write(
+      DriftRelationshipsCompanion(
+        isDeleted: const Value(true),
+        hlc: Value(hlc),
+      ),
+    );
 
     // -- Quiz items --
-    await (_db.update(_db.driftQuizItems)
-          ..where(
-            (t) =>
-                t.isDeleted.equals(false) &
-                t.id.isNotIn(graph.quizItems.map((q) => q.id)),
-          ))
-        .write(DriftQuizItemsCompanion(
-          isDeleted: const Value(true),
-          hlc: Value(hlc),
-        ));
+    await (_db.update(_db.driftQuizItems)..where(
+      (t) =>
+          t.isDeleted.equals(false) &
+          t.id.isNotIn(graph.quizItems.map((q) => q.id)),
+    )).write(
+      DriftQuizItemsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+    );
 
     // -- Documents (PK is documentId, not id) --
-    await (_db.update(_db.driftDocuments)
-          ..where(
-            (t) =>
-                t.isDeleted.equals(false) &
-                t.documentId.isNotIn(
-                  graph.documentMetadata.map((d) => d.documentId),
-                ),
-          ))
-        .write(DriftDocumentsCompanion(
-          isDeleted: const Value(true),
-          hlc: Value(hlc),
-        ));
+    await (_db.update(_db.driftDocuments)..where(
+      (t) =>
+          t.isDeleted.equals(false) &
+          t.documentId.isNotIn(graph.documentMetadata.map((d) => d.documentId)),
+    )).write(
+      DriftDocumentsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+    );
 
     // -- Topics --
-    await (_db.update(_db.driftTopics)
-          ..where(
-            (t) =>
-                t.isDeleted.equals(false) &
-                t.id.isNotIn(graph.topics.map((t) => t.id)),
-          ))
-        .write(DriftTopicsCompanion(
-          isDeleted: const Value(true),
-          hlc: Value(hlc),
-        ));
+    await (_db.update(_db.driftTopics)..where(
+      (t) =>
+          t.isDeleted.equals(false) &
+          t.id.isNotIn(graph.topics.map((t) => t.id)),
+    )).write(
+      DriftTopicsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+    );
 
     // -- Topic documents (composite PK: topicId + documentId) --
     await _tombstoneOrphanTopicDocuments(graph, hlc);
@@ -272,11 +252,12 @@ class DriftGraphRepository extends GraphRepository {
     if (incomingKeys.isEmpty) {
       // No incoming pairs — tombstone all active rows.
       await (_db.update(_db.driftTopicDocuments)
-            ..where((t) => t.isDeleted.equals(false)))
-          .write(DriftTopicDocumentsCompanion(
-            isDeleted: const Value(true),
-            hlc: Value(hlc),
-          ));
+        ..where((t) => t.isDeleted.equals(false))).write(
+        DriftTopicDocumentsCompanion(
+          isDeleted: const Value(true),
+          hlc: Value(hlc),
+        ),
+      );
       return;
     }
 
@@ -310,48 +291,30 @@ class DriftGraphRepository extends GraphRepository {
   Future<int> purgeTombstones({required String before}) async {
     var count = 0;
     await _db.transaction(() async {
-      count += await (_db.delete(_db.driftTopicDocuments)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
-      count += await (_db.delete(_db.driftTopics)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
-      count += await (_db.delete(_db.driftDocuments)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
-      count += await (_db.delete(_db.driftQuizItems)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
-      count += await (_db.delete(_db.driftRelationships)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
-      count += await (_db.delete(_db.driftConcepts)
-            ..where(
-              (t) =>
-                  t.isDeleted.equals(true) &
-                  t.hlc.isSmallerThanValue(before),
-            ))
-          .go();
+      count +=
+          await (_db.delete(_db.driftTopicDocuments)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
+      count +=
+          await (_db.delete(_db.driftTopics)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
+      count +=
+          await (_db.delete(_db.driftDocuments)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
+      count +=
+          await (_db.delete(_db.driftQuizItems)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
+      count +=
+          await (_db.delete(_db.driftRelationships)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
+      count +=
+          await (_db.delete(_db.driftConcepts)..where(
+            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
+          )).go();
     });
     return count;
   }
@@ -446,23 +409,17 @@ class DriftGraphRepository extends GraphRepository {
   Future<GraphChangeset> getChangeset({required String modifiedAfter}) async {
     final results = await Future.wait([
       (_db.select(_db.driftConcepts)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
       (_db.select(_db.driftRelationships)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
       (_db.select(_db.driftQuizItems)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
       (_db.select(_db.driftDocuments)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
       (_db.select(_db.driftTopics)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
       (_db.select(_db.driftTopicDocuments)
-            ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter)))
-          .get(),
+        ..where((t) => t.hlc.isBiggerThanValue(modifiedAfter))).get(),
     ]);
 
     return GraphChangeset(
@@ -509,10 +466,10 @@ class DriftGraphRepository extends GraphRepository {
         keyOf: (c) => c.id,
         hlcOf: (c) => c.hlc,
         companionOf: (c) => c.toInsertCompanion(),
-        selectByKeys: (keys) =>
-            (_db.select(_db.driftConcepts)
-                  ..where((t) => t.id.isIn(keys)))
-                .get(),
+        selectByKeys:
+            (keys) =>
+                (_db.select(_db.driftConcepts)
+                  ..where((t) => t.id.isIn(keys))).get(),
         table: _db.driftConcepts,
         hlcManager: hlcManager,
       );
@@ -521,10 +478,10 @@ class DriftGraphRepository extends GraphRepository {
         keyOf: (r) => r.id,
         hlcOf: (r) => r.hlc,
         companionOf: (r) => r.toInsertCompanion(),
-        selectByKeys: (keys) =>
-            (_db.select(_db.driftRelationships)
-                  ..where((t) => t.id.isIn(keys)))
-                .get(),
+        selectByKeys:
+            (keys) =>
+                (_db.select(_db.driftRelationships)
+                  ..where((t) => t.id.isIn(keys))).get(),
         table: _db.driftRelationships,
         hlcManager: hlcManager,
       );
@@ -533,10 +490,10 @@ class DriftGraphRepository extends GraphRepository {
         keyOf: (q) => q.id,
         hlcOf: (q) => q.hlc,
         companionOf: (q) => q.toInsertCompanion(),
-        selectByKeys: (keys) =>
-            (_db.select(_db.driftQuizItems)
-                  ..where((t) => t.id.isIn(keys)))
-                .get(),
+        selectByKeys:
+            (keys) =>
+                (_db.select(_db.driftQuizItems)
+                  ..where((t) => t.id.isIn(keys))).get(),
         table: _db.driftQuizItems,
         hlcManager: hlcManager,
       );
@@ -545,10 +502,10 @@ class DriftGraphRepository extends GraphRepository {
         keyOf: (d) => d.documentId,
         hlcOf: (d) => d.hlc,
         companionOf: (d) => d.toInsertCompanion(),
-        selectByKeys: (keys) =>
-            (_db.select(_db.driftDocuments)
-                  ..where((t) => t.documentId.isIn(keys)))
-                .get(),
+        selectByKeys:
+            (keys) =>
+                (_db.select(_db.driftDocuments)
+                  ..where((t) => t.documentId.isIn(keys))).get(),
         table: _db.driftDocuments,
         hlcManager: hlcManager,
       );
@@ -557,10 +514,10 @@ class DriftGraphRepository extends GraphRepository {
         keyOf: (t) => t.id,
         hlcOf: (t) => t.hlc,
         companionOf: (t) => t.toInsertCompanion(),
-        selectByKeys: (keys) =>
-            (_db.select(_db.driftTopics)
-                  ..where((t) => t.id.isIn(keys)))
-                .get(),
+        selectByKeys:
+            (keys) =>
+                (_db.select(_db.driftTopics)
+                  ..where((t) => t.id.isIn(keys))).get(),
         table: _db.driftTopics,
         hlcManager: hlcManager,
       );
@@ -573,9 +530,9 @@ class DriftGraphRepository extends GraphRepository {
           // Composite PK — fetch by topicId set, then filter in Dart.
           final topicIds =
               changeset.topicDocuments.map((td) => td.topicId).toSet();
-          final rows = await (_db.select(_db.driftTopicDocuments)
-                ..where((t) => t.topicId.isIn(topicIds)))
-              .get();
+          final rows =
+              await (_db.select(_db.driftTopicDocuments)
+                ..where((t) => t.topicId.isIn(topicIds))).get();
           return rows
               .where((r) => keys.contains('${r.topicId}|${r.documentId}'))
               .toList();
@@ -635,8 +592,11 @@ class DriftGraphRepository extends GraphRepository {
     // 4. Batch INSERT winners.
     await _db.batch((batch) {
       for (final winner in winners) {
-        batch.insert(table, companionOf(winner),
-            mode: InsertMode.insertOrReplace);
+        batch.insert(
+          table,
+          companionOf(winner),
+          mode: InsertMode.insertOrReplace,
+        );
       }
     });
     return winners.length;
@@ -670,9 +630,9 @@ class DriftGraphRepository extends GraphRepository {
   /// Returns the last HLC we synced with [peerId], or `null` if we've never
   /// synced with this peer.
   Future<String?> getLastSyncedHlc(String peerId) async {
-    final row = await (_db.select(_db.driftSyncMetadata)
-          ..where((t) => t.peerId.equals(peerId)))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.driftSyncMetadata)
+          ..where((t) => t.peerId.equals(peerId))).getSingleOrNull();
     return row?.lastSyncedHlc;
   }
 
@@ -681,7 +641,9 @@ class DriftGraphRepository extends GraphRepository {
   /// Uses `insertOnConflictUpdate` so the first call creates the row and
   /// subsequent calls update it — no need for separate insert/update paths.
   Future<void> updateLastSyncedHlc(String peerId, String hlc) async {
-    await _db.into(_db.driftSyncMetadata).insertOnConflictUpdate(
+    await _db
+        .into(_db.driftSyncMetadata)
+        .insertOnConflictUpdate(
           DriftSyncMetadataCompanion.insert(
             peerId: peerId,
             lastSyncedHlc: hlc,
@@ -720,9 +682,10 @@ class DriftGraphRepository extends GraphRepository {
   /// is empty. Uses a raw query since Drift's `max()` aggregate isn't
   /// available on non-query builders.
   Future<String> _maxHlc(String tableName) async {
-    final result = await _db.customSelect(
-      'SELECT MAX(hlc) AS max_hlc FROM $tableName',
-    ).getSingle();
+    final result =
+        await _db
+            .customSelect('SELECT MAX(hlc) AS max_hlc FROM $tableName')
+            .getSingle();
     return (result.data['max_hlc'] as String?) ?? '';
   }
 }

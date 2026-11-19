@@ -53,8 +53,7 @@ class DriftRelationships extends Table {
   TextColumn get toConceptId => text()();
   TextColumn get label => text()();
   TextColumn get description => text().nullable()();
-  TextColumn get type =>
-      text().map(const RelationshipTypeConverter())();
+  TextColumn get type => text().map(const RelationshipTypeConverter())();
   TextColumn get hlc => text().withDefault(const Constant(''))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
@@ -172,18 +171,19 @@ class DriftSyncMetadata extends Table {
 ///
 /// Every table includes an `hlc` column for Hybrid Logical Clock timestamps,
 /// which will be used by the CRDT sync layer in Phase 3 (#41).
-@DriftDatabase(tables: [
-  DriftConcepts,
-  DriftRelationships,
-  DriftQuizItems,
-  DriftDocuments,
-  DriftTopics,
-  DriftTopicDocuments,
-  DriftSyncMetadata,
-])
+@DriftDatabase(
+  tables: [
+    DriftConcepts,
+    DriftRelationships,
+    DriftQuizItems,
+    DriftDocuments,
+    DriftTopics,
+    DriftTopicDocuments,
+    DriftSyncMetadata,
+  ],
+)
 class EngramDatabase extends _$EngramDatabase {
-  EngramDatabase([QueryExecutor? executor])
-      : super(executor ?? _openDefault());
+  EngramDatabase([QueryExecutor? executor]) : super(executor ?? _openDefault());
 
   /// Named constructor for tests — accepts an in-memory executor.
   EngramDatabase.forTesting(super.executor);
@@ -193,50 +193,50 @@ class EngramDatabase extends _$EngramDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            // v1 → v2: Add is_deleted column with default false to all 6 tables.
-            for (final table in [
-              'drift_concepts',
-              'drift_relationships',
-              'drift_quiz_items',
-              'drift_documents',
-              'drift_topics',
-              'drift_topic_documents',
-            ]) {
-              await m.database.customStatement(
-                'ALTER TABLE $table ADD COLUMN is_deleted INTEGER '
-                'NOT NULL DEFAULT 0',
-              );
-            }
-          }
-          if (from < 3) {
-            // v2 → v3: Add HLC indexes for efficient changeset queries
-            // (`WHERE hlc > ?`) and create sync metadata table.
-            for (final table in [
-              'drift_concepts',
-              'drift_relationships',
-              'drift_quiz_items',
-              'drift_documents',
-              'drift_topics',
-              'drift_topic_documents',
-            ]) {
-              await m.database.customStatement(
-                'CREATE INDEX IF NOT EXISTS idx_${table}_hlc '
-                'ON $table (hlc)',
-              );
-            }
-            await m.database.customStatement(
-              'CREATE TABLE IF NOT EXISTS drift_sync_metadata ('
-              'peer_id TEXT NOT NULL PRIMARY KEY, '
-              'last_synced_hlc TEXT NOT NULL, '
-              'updated_at TEXT NOT NULL'
-              ')',
-            );
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // v1 → v2: Add is_deleted column with default false to all 6 tables.
+        for (final table in [
+          'drift_concepts',
+          'drift_relationships',
+          'drift_quiz_items',
+          'drift_documents',
+          'drift_topics',
+          'drift_topic_documents',
+        ]) {
+          await m.database.customStatement(
+            'ALTER TABLE $table ADD COLUMN is_deleted INTEGER '
+            'NOT NULL DEFAULT 0',
+          );
+        }
+      }
+      if (from < 3) {
+        // v2 → v3: Add HLC indexes for efficient changeset queries
+        // (`WHERE hlc > ?`) and create sync metadata table.
+        for (final table in [
+          'drift_concepts',
+          'drift_relationships',
+          'drift_quiz_items',
+          'drift_documents',
+          'drift_topics',
+          'drift_topic_documents',
+        ]) {
+          await m.database.customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_${table}_hlc '
+            'ON $table (hlc)',
+          );
+        }
+        await m.database.customStatement(
+          'CREATE TABLE IF NOT EXISTS drift_sync_metadata ('
+          'peer_id TEXT NOT NULL PRIMARY KEY, '
+          'last_synced_hlc TEXT NOT NULL, '
+          'updated_at TEXT NOT NULL'
+          ')',
+        );
+      }
+    },
+  );
 
   /// Opens the default on-disk database using drift_flutter.
   ///

@@ -27,7 +27,12 @@ List<TimestampedConcept> mapMarkersToTimestamps({
 
   return [
     for (final marker in markers)
-      _mapSingleMarker(marker, characterStartTimes, characterEndTimes, maxIndex),
+      _mapSingleMarker(
+        marker,
+        characterStartTimes,
+        characterEndTimes,
+        maxIndex,
+      ),
   ];
 }
 
@@ -41,10 +46,12 @@ TimestampedConcept _mapSingleMarker(
 
   // endChar is exclusive in ConceptMarker, so the last included character
   // is at endChar - 1. For zero-width markers (start == end), use start.
-  final lastIncluded = marker.endChar > marker.startChar
-      ? marker.endChar - 1
-      : marker.startChar;
-  final int clampedEnd = lastIncluded.clamp(0, math.min(maxIndex, endTimes.length - 1));
+  final lastIncluded =
+      marker.endChar > marker.startChar ? marker.endChar - 1 : marker.startChar;
+  final int clampedEnd = lastIncluded.clamp(
+    0,
+    math.min(maxIndex, endTimes.length - 1),
+  );
 
   return TimestampedConcept(
     conceptId: marker.conceptId,

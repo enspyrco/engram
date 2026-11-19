@@ -52,9 +52,7 @@ class IngestScreen extends ConsumerWidget {
                 IngestPhase.loadingCollections => const Center(
                   child: CircularProgressIndicator(),
                 ),
-                IngestPhase.ready => _TopicSelectionView(
-                  state: ingest,
-                ),
+                IngestPhase.ready => _TopicSelectionView(state: ingest),
                 IngestPhase.topicSelection => _TopicSelectionView(
                   state: ingest,
                 ),
@@ -665,11 +663,7 @@ class _DoneView extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.check_circle,
-                color: Colors.green.shade600,
-                size: 28,
-              ),
+              Icon(Icons.check_circle, color: Colors.green.shade600, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -717,8 +711,7 @@ KnowledgeGraph _filterByConceptIds(
         fullGraph.relationships
             .where(
               (r) =>
-                  ids.contains(r.fromConceptId) &&
-                  ids.contains(r.toConceptId),
+                  ids.contains(r.fromConceptId) && ids.contains(r.toConceptId),
             )
             .toList(),
   );

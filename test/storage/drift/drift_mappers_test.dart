@@ -316,7 +316,9 @@ void main() {
 
       // Insert join rows (caller responsibility)
       for (final docId in topic.documentIds) {
-        await db.into(db.driftTopicDocuments).insert(
+        await db
+            .into(db.driftTopicDocuments)
+            .insert(
               DriftTopicDocumentsCompanion.insert(
                 topicId: topic.id,
                 documentId: docId,

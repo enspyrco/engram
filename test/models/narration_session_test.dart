@@ -90,16 +90,19 @@ void main() {
 
   group('NarrationPhase', () {
     test('has all expected values', () {
-      expect(NarrationPhase.values, containsAll([
-        NarrationPhase.idle,
-        NarrationPhase.generatingScript,
-        NarrationPhase.synthesizingAudio,
-        NarrationPhase.ready,
-        NarrationPhase.playing,
-        NarrationPhase.paused,
-        NarrationPhase.completed,
-        NarrationPhase.error,
-      ]));
+      expect(
+        NarrationPhase.values,
+        containsAll([
+          NarrationPhase.idle,
+          NarrationPhase.generatingScript,
+          NarrationPhase.synthesizingAudio,
+          NarrationPhase.ready,
+          NarrationPhase.playing,
+          NarrationPhase.paused,
+          NarrationPhase.completed,
+          NarrationPhase.error,
+        ]),
+      );
     });
   });
 

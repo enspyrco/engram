@@ -41,8 +41,7 @@ final driftGraphRepositoryProvider = Provider<DriftGraphRepository>((ref) {
 ///
 /// Returns `null` when unauthenticated — CRDT sync requires a user ID
 /// for the `users/{uid}/sync_log` path.
-final firestoreSyncTransportProvider =
-    Provider<FirestoreSyncTransport?>((ref) {
+final firestoreSyncTransportProvider = Provider<FirestoreSyncTransport?>((ref) {
   final user = ref.watch(authStateProvider).valueOrNull;
   if (user == null) return null;
 
@@ -54,8 +53,9 @@ final firestoreSyncTransportProvider =
 // CRDT sync notifier
 // ---------------------------------------------------------------------------
 
-final crdtSyncProvider =
-    NotifierProvider<CrdtSyncNotifier, CrdtSyncState>(CrdtSyncNotifier.new);
+final crdtSyncProvider = NotifierProvider<CrdtSyncNotifier, CrdtSyncState>(
+  CrdtSyncNotifier.new,
+);
 
 /// Orchestrates CRDT changeset sync between the local Drift database and
 /// the Firestore sync_log.
@@ -103,16 +103,13 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // -- Push --
       state = state.copyWith(phase: CrdtSyncPhase.pushing, errorMessage: '');
 
-      final lastPushHlc =
-          await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
-      final changeset =
-          await driftRepo.getChangeset(modifiedAfter: lastPushHlc);
+      final lastPushHlc = await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
+      final changeset = await driftRepo.getChangeset(
+        modifiedAfter: lastPushHlc,
+      );
 
       if (!changeset.isEmpty) {
-        await transport.pushChangeset(
-          changeset: changeset,
-          nodeId: nodeId,
-        );
+        await transport.pushChangeset(changeset: changeset, nodeId: nodeId);
         pushedCount = changeset.recordCount;
 
         // Update push bookmark to the max HLC we just pushed.
@@ -122,8 +119,7 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // -- Pull --
       state = state.copyWith(phase: CrdtSyncPhase.pulling);
 
-      final lastPullHlc =
-          await driftRepo.getLastSyncedHlc(_pullPeerId) ?? '';
+      final lastPullHlc = await driftRepo.getLastSyncedHlc(_pullPeerId) ?? '';
       final pulled = await transport.pullChangesets(
         sinceHlc: lastPullHlc,
         localNodeId: nodeId,
@@ -178,10 +174,7 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       debugPrint('[CrdtSync] sync failed: $e');
       _consecutiveErrors++;
       _skipTicks = min(1 << _consecutiveErrors, 6);
-      state = state.copyWith(
-        phase: CrdtSyncPhase.error,
-        errorMessage: '$e',
-      );
+      state = state.copyWith(phase: CrdtSyncPhase.error, errorMessage: '$e');
     }
   }
 
@@ -189,9 +182,7 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
   ///
   /// Triggers an immediate sync, then repeats every [interval]. Calling
   /// this when a timer is already running replaces the existing timer.
-  void startPeriodicSync({
-    Duration interval = const Duration(minutes: 5),
-  }) {
+  void startPeriodicSync({Duration interval = const Duration(minutes: 5)}) {
     _stopTimer();
     _periodicTimer = Timer.periodic(interval, (_) {
       if (_skipTicks > 0) {

@@ -47,7 +47,8 @@ Future<void> seedFromFirestoreIfNeeded(Ref ref) async {
   final driftRepo = ref.read(driftGraphRepositoryProvider);
   final localGraph = await driftRepo.load();
 
-  final isEmpty = localGraph.concepts.isEmpty &&
+  final isEmpty =
+      localGraph.concepts.isEmpty &&
       localGraph.relationships.isEmpty &&
       localGraph.quizItems.isEmpty &&
       localGraph.documentMetadata.isEmpty;
@@ -62,15 +63,18 @@ Future<void> seedFromFirestoreIfNeeded(Ref ref) async {
     );
     final remoteGraph = await firestoreLoader.load();
 
-    final remoteIsEmpty = remoteGraph.concepts.isEmpty &&
+    final remoteIsEmpty =
+        remoteGraph.concepts.isEmpty &&
         remoteGraph.relationships.isEmpty &&
         remoteGraph.quizItems.isEmpty &&
         remoteGraph.documentMetadata.isEmpty;
 
     if (!remoteIsEmpty) {
       await driftRepo.save(remoteGraph);
-      debugPrint('[GraphStore] Seeded Drift from Firestore '
-          '(${remoteGraph.concepts.length} concepts)');
+      debugPrint(
+        '[GraphStore] Seeded Drift from Firestore '
+        '(${remoteGraph.concepts.length} concepts)',
+      );
     }
   } on Exception catch (e) {
     debugPrint('[GraphStore] Firestore seed failed: $e');

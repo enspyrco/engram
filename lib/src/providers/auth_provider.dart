@@ -46,9 +46,10 @@ Future<User?> signInWithGoogle(
   required GoogleSignIn googleSignIn,
 }) async {
   if (kIsWeb) {
-    final provider = GoogleAuthProvider()
-      ..addScope('email')
-      ..addScope('profile');
+    final provider =
+        GoogleAuthProvider()
+          ..addScope('email')
+          ..addScope('profile');
     final UserCredential userCredential;
     try {
       userCredential = await auth.signInWithPopup(provider);

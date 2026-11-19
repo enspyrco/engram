@@ -191,20 +191,25 @@ class GraphPainter extends CustomPainter {
 
       // Glow underlay for edges touching a glowing node.
       // Use max intensity of endpoints — sustained map takes precedence.
-      final srcIntensity = glowIntensityMap[edge.source.id] ??
+      final srcIntensity =
+          glowIntensityMap[edge.source.id] ??
           (glowNodeIds.contains(edge.source.id) ? glowIntensity : 0.0);
-      final tgtIntensity = glowIntensityMap[edge.target.id] ??
+      final tgtIntensity =
+          glowIntensityMap[edge.target.id] ??
           (glowNodeIds.contains(edge.target.id) ? glowIntensity : 0.0);
       final edgeGlow =
           srcIntensity > tgtIntensity ? srcIntensity : tgtIntensity;
 
       if (edgeGlow > 0) {
-        final glowPaint = Paint()
-          ..color = Colors.cyan.withValues(alpha: 0.6 * edgeGlow)
-          ..strokeWidth = paint.strokeWidth + glowEdgeExtraWidth
-          ..style = PaintingStyle.stroke
-          ..maskFilter =
-              const MaskFilter.blur(BlurStyle.normal, glowEdgeBlurSigma);
+        final glowPaint =
+            Paint()
+              ..color = Colors.cyan.withValues(alpha: 0.6 * edgeGlow)
+              ..strokeWidth = paint.strokeWidth + glowEdgeExtraWidth
+              ..style = PaintingStyle.stroke
+              ..maskFilter = const MaskFilter.blur(
+                BlurStyle.normal,
+                glowEdgeBlurSigma,
+              );
         canvas.drawLine(src, tgt, glowPaint);
       }
 
@@ -331,17 +336,19 @@ class GraphPainter extends CustomPainter {
 
     // Resolve per-node glow intensity: sustained narration map takes
     // precedence, falling back to the one-shot ingest glow.
-    final nodeGlowIntensity = glowIntensityMap[node.id] ??
+    final nodeGlowIntensity =
+        glowIntensityMap[node.id] ??
         (glowNodeIds.contains(node.id) ? glowIntensity : 0.0);
 
     // Cyan glow halo for glowing nodes (narration or ingest)
     if (nodeGlowIntensity > 0) {
       final glowRadius = effectiveRadius * glowHaloRadiusMultiplier;
-      final haloPaint = Paint()
-        ..shader = ui.Gradient.radial(node.position, glowRadius, [
-          Colors.cyan.withValues(alpha: 0.5 * nodeGlowIntensity),
-          Colors.cyan.withValues(alpha: 0.0),
-        ]);
+      final haloPaint =
+          Paint()
+            ..shader = ui.Gradient.radial(node.position, glowRadius, [
+              Colors.cyan.withValues(alpha: 0.5 * nodeGlowIntensity),
+              Colors.cyan.withValues(alpha: 0.0),
+            ]);
       canvas.drawCircle(node.position, glowRadius, haloPaint);
 
       // Bright cyan ring

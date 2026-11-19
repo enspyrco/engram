@@ -18,9 +18,11 @@ void main() {
       // UUID v4 format: 8-4-4-4-12 hex characters
       expect(
         nodeId,
-        matches(RegExp(
-          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-        )),
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ),
+        ),
       );
     });
 
@@ -68,13 +70,16 @@ void main() {
         expect(repo.nodeId, equals(first));
       });
 
-      test('nodeId getter returns same value after ensureInitialized', () async {
-        await repo.ensureInitialized();
-        final fromGetter = repo.nodeId;
-        expect(fromGetter, isNotEmpty);
-        // Call again to verify cache consistency
-        expect(repo.nodeId, equals(fromGetter));
-      });
+      test(
+        'nodeId getter returns same value after ensureInitialized',
+        () async {
+          await repo.ensureInitialized();
+          final fromGetter = repo.nodeId;
+          expect(fromGetter, isNotEmpty);
+          // Call again to verify cache consistency
+          expect(repo.nodeId, equals(fromGetter));
+        },
+      );
     });
   });
 }

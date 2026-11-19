@@ -170,28 +170,30 @@ void main() {
       );
     });
 
-    test('fading when FSRS retrievability >= 0.85 but lastReview > 30 days ago',
-        () {
-      final now = DateTime.utc(2025, 6, 15);
-      // 45 days ago — need very high stability so R stays >= 0.85 despite age
-      // stability=500.0, reviewed 45 days ago → R ≈ 0.99 (still mastered)
-      // but lastReview > 30 days triggers fading
-      final oldReview = DateTime.utc(2025, 5, 1);
+    test(
+      'fading when FSRS retrievability >= 0.85 but lastReview > 30 days ago',
+      () {
+        final now = DateTime.utc(2025, 6, 15);
+        // 45 days ago — need very high stability so R stays >= 0.85 despite age
+        // stability=500.0, reviewed 45 days ago → R ≈ 0.99 (still mastered)
+        // but lastReview > 30 days triggers fading
+        final oldReview = DateTime.utc(2025, 5, 1);
 
-      final graph = graphWithQuizItems(
-        lastReview: oldReview,
-        difficulty: 5.0,
-        stability: 500.0,
-        fsrsState: 2,
-        lapses: 0,
-      );
-      final analyzer = GraphAnalyzer(graph);
+        final graph = graphWithQuizItems(
+          lastReview: oldReview,
+          difficulty: 5.0,
+          stability: 500.0,
+          fsrsState: 2,
+          lapses: 0,
+        );
+        final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer, now: now),
-        MasteryState.fading,
-      );
-    });
+        expect(
+          masteryStateOf('c1', graph, analyzer, now: now),
+          MasteryState.fading,
+        );
+      },
+    );
   });
 
   group('freshnessOf FSRS retrievability', () {

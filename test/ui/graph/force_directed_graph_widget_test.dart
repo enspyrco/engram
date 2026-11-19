@@ -189,9 +189,7 @@ void main() {
       // Simulate double-tap: two taps in quick succession at the same point.
       // Uses real wall-clock time, so a 50ms gap is well within the 300ms
       // threshold in _onTapUp's manual double-tap detection.
-      final center = tester.getCenter(
-        find.byType(ForceDirectedGraphWidget),
-      );
+      final center = tester.getCenter(find.byType(ForceDirectedGraphWidget));
       await tester.tapAt(center);
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tapAt(center);

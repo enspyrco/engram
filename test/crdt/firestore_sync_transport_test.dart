@@ -16,10 +16,7 @@ void main() {
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
-    transport = FirestoreSyncTransport(
-      firestore: firestore,
-      userId: userId,
-    );
+    transport = FirestoreSyncTransport(firestore: firestore, userId: userId);
   });
 
   /// Creates a minimal changeset with a single concept and the given HLC.
@@ -41,18 +38,18 @@ void main() {
 
   group('pushChangeset', () {
     test('writes changeset doc to sync_log', () async {
-      final changeset = changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-A');
-
-      await transport.pushChangeset(
-        changeset: changeset,
-        nodeId: localNodeId,
+      final changeset = changesetWithHlc(
+        '2026-01-01T00:00:00.000Z-0000-device-A',
       );
 
-      final docs = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sync_log')
-          .get();
+      await transport.pushChangeset(changeset: changeset, nodeId: localNodeId);
+
+      final docs =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('sync_log')
+              .get();
       expect(docs.docs.length, 1);
 
       final data = docs.docs.first.data();
@@ -67,11 +64,12 @@ void main() {
         nodeId: localNodeId,
       );
 
-      final docs = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sync_log')
-          .get();
+      final docs =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('sync_log')
+              .get();
       expect(docs.docs, isEmpty);
     });
   });
@@ -170,14 +168,17 @@ void main() {
       expect(deleted, 1);
 
       // Only the newer entry should remain
-      final remaining = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sync_log')
-          .get();
+      final remaining =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('sync_log')
+              .get();
       expect(remaining.docs.length, 1);
-      expect(remaining.docs.first.data()['maxHlc'],
-          '2026-03-01T00:00:00.000Z-0000-device-B');
+      expect(
+        remaining.docs.first.data()['maxHlc'],
+        '2026-03-01T00:00:00.000Z-0000-device-B',
+      );
     });
 
     test('returns 0 when nothing to clean up', () async {
@@ -215,10 +216,7 @@ void main() {
         ],
       );
 
-      await transport.pushChangeset(
-        changeset: original,
-        nodeId: remoteNodeId,
-      );
+      await transport.pushChangeset(changeset: original, nodeId: remoteNodeId);
 
       final pulled = await transport.pullChangesets(
         sinceHlc: '',

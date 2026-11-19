@@ -38,10 +38,7 @@ void main() {
     hlcManager = HlcManager(nodeId: localNodeId);
     firestore = FakeFirebaseFirestore();
     driftRepo = DriftGraphRepository(db: db, hlcManager: hlcManager);
-    transport = FirestoreSyncTransport(
-      firestore: firestore,
-      userId: userId,
-    );
+    transport = FirestoreSyncTransport(firestore: firestore, userId: userId);
     mockNodeIdRepo = MockNodeIdRepository();
     when(() => mockNodeIdRepo.nodeId).thenReturn(localNodeId);
 
@@ -73,16 +70,18 @@ void main() {
       hlcManager: remoteHlcManager,
     );
 
-    await remoteRepo.save(KnowledgeGraph(
-      concepts: [
-        Concept(
-          id: conceptId,
-          name: 'Remote concept $conceptId',
-          description: 'From device B',
-          sourceDocumentId: 'doc1',
-        ),
-      ],
-    ));
+    await remoteRepo.save(
+      KnowledgeGraph(
+        concepts: [
+          Concept(
+            id: conceptId,
+            name: 'Remote concept $conceptId',
+            description: 'From device B',
+            sourceDocumentId: 'doc1',
+          ),
+        ],
+      ),
+    );
 
     final changeset = await remoteRepo.getChangeset(modifiedAfter: '');
     await remoteTransport.pushChangeset(
@@ -103,16 +102,18 @@ void main() {
 
     test('sync pushes local changeset to Firestore', () async {
       // Save local data
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await driftRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       await container.read(crdtSyncProvider.notifier).sync();
 
@@ -122,18 +123,22 @@ void main() {
       expect(state.lastSyncedAt, fixedClock);
 
       // Verify the sync_log has a document
-      final docs = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sync_log')
-          .get();
+      final docs =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('sync_log')
+              .get();
       expect(docs.docs.length, 1);
       expect(docs.docs.first.data()['nodeId'], localNodeId);
     });
 
     test('sync pulls and merges remote changesets', () async {
       // Push a changeset from a "remote" device
-      await pushFromRemote('c-remote', '2026-01-01T00:00:00.000Z-0000-device-B');
+      await pushFromRemote(
+        'c-remote',
+        '2026-01-01T00:00:00.000Z-0000-device-B',
+      );
 
       await container.read(crdtSyncProvider.notifier).sync();
 
@@ -149,55 +154,69 @@ void main() {
 
     test('sync updates push and pull bookmarks', () async {
       // Save local data and push from remote
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c-local',
-            name: 'Local',
-            description: 'Local concept',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
-      await pushFromRemote('c-remote', '2026-01-01T00:00:00.000Z-0000-device-B');
+      await driftRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c-local',
+              name: 'Local',
+              description: 'Local concept',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
+      await pushFromRemote(
+        'c-remote',
+        '2026-01-01T00:00:00.000Z-0000-device-B',
+      );
 
       await container.read(crdtSyncProvider.notifier).sync();
 
       // Push bookmark should be updated
-      final pushHlc = await driftRepo.getLastSyncedHlc('firestore-sync-log:push');
+      final pushHlc = await driftRepo.getLastSyncedHlc(
+        'firestore-sync-log:push',
+      );
       expect(pushHlc, isNotNull);
       expect(pushHlc, isNotEmpty);
 
       // Pull bookmark should be updated
-      final pullHlc = await driftRepo.getLastSyncedHlc('firestore-sync-log:pull');
+      final pullHlc = await driftRepo.getLastSyncedHlc(
+        'firestore-sync-log:pull',
+      );
       expect(pullHlc, isNotNull);
       expect(pullHlc, isNotEmpty);
     });
 
-    test('sync is idempotent — second sync with no changes is a no-op', () async {
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
+    test(
+      'sync is idempotent — second sync with no changes is a no-op',
+      () async {
+        await driftRepo.save(
+          KnowledgeGraph(
+            concepts: [
+              Concept(
+                id: 'c1',
+                name: 'Docker',
+                description: 'Container runtime',
+                sourceDocumentId: 'doc1',
+              ),
+            ],
           ),
-        ],
-      ));
+        );
 
-      // First sync
-      await container.read(crdtSyncProvider.notifier).sync();
-      final firstState = container.read(crdtSyncProvider);
-      expect(firstState.pushedCount, greaterThan(0));
+        // First sync
+        await container.read(crdtSyncProvider.notifier).sync();
+        final firstState = container.read(crdtSyncProvider);
+        expect(firstState.pushedCount, greaterThan(0));
 
-      // Second sync — no new local changes, no new remote changes
-      await container.read(crdtSyncProvider.notifier).sync();
-      final secondState = container.read(crdtSyncProvider);
-      expect(secondState.pushedCount, 0);
-      expect(secondState.pulledCount, 0);
-      expect(secondState.mergedCount, 0);
-    });
+        // Second sync — no new local changes, no new remote changes
+        await container.read(crdtSyncProvider.notifier).sync();
+        final secondState = container.read(crdtSyncProvider);
+        expect(secondState.pushedCount, 0);
+        expect(secondState.pulledCount, 0);
+        expect(secondState.mergedCount, 0);
+      },
+    );
 
     test('sync with no transport (unauthenticated) is a no-op', () async {
       final noAuthContainer = ProviderContainer(
@@ -219,16 +238,18 @@ void main() {
     });
 
     test('overlapping syncs are guarded', () async {
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await driftRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       // Start two syncs concurrently
       final notifier = container.read(crdtSyncProvider.notifier);
@@ -238,11 +259,12 @@ void main() {
       await Future.wait([future1, future2]);
 
       // Only one sync_log entry should exist (not two)
-      final docs = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('sync_log')
-          .get();
+      final docs =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('sync_log')
+              .get();
       expect(docs.docs.length, 1);
     });
 
@@ -291,16 +313,18 @@ void main() {
 
     test('sync purges tombstones after successful pull and merge', () async {
       // Create local data, tombstone it, then sync to get the pull bookmark
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c-old',
-            name: 'Old',
-            description: 'Will be tombstoned',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await driftRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c-old',
+              name: 'Old',
+              description: 'Will be tombstoned',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
       // Save an empty graph to tombstone c-old
       await driftRepo.save(KnowledgeGraph());
 
@@ -319,20 +343,19 @@ void main() {
       // Tombstoned rows with HLCs older than the pull bookmark should be
       // physically deleted. Verify that purgeTombstones ran by checking
       // the changeset (which includes tombstoned rows).
-      final allRows =
-          await driftRepo.getChangeset(modifiedAfter: '');
+      final allRows = await driftRepo.getChangeset(modifiedAfter: '');
       // The old concept should have been purged (its HLC < pull bookmark)
       // while the merged remote concept persists
-      final conceptIds =
-          allRows.concepts.map((c) => c.id).toSet();
+      final conceptIds = allRows.concepts.map((c) => c.id).toSet();
       expect(conceptIds, contains('c-remote'));
     });
 
     test('sync errors use exponential backoff on periodic ticks', () async {
-      final throwingDb =
-          EngramDatabase.forTesting(NativeDatabase.memory());
-      final throwingRepo =
-          _ThrowingDriftRepo(db: throwingDb, hlcManager: hlcManager);
+      final throwingDb = EngramDatabase.forTesting(NativeDatabase.memory());
+      final throwingRepo = _ThrowingDriftRepo(
+        db: throwingDb,
+        hlcManager: hlcManager,
+      );
       final errorContainer = ProviderContainer(
         overrides: [
           driftGraphRepositoryProvider.overrideWithValue(throwingRepo),
@@ -346,19 +369,13 @@ void main() {
 
       // First error — should set skipTicks = min(2^1, 6) = 2
       await notifier.sync();
-      expect(
-        errorContainer.read(crdtSyncProvider).phase,
-        CrdtSyncPhase.error,
-      );
+      expect(errorContainer.read(crdtSyncProvider).phase, CrdtSyncPhase.error);
 
       // Second consecutive error — skipTicks = min(2^2, 6) = 4
       await notifier.sync();
 
       // Verify the error state persists
-      expect(
-        errorContainer.read(crdtSyncProvider).phase,
-        CrdtSyncPhase.error,
-      );
+      expect(errorContainer.read(crdtSyncProvider).phase, CrdtSyncPhase.error);
 
       errorContainer.dispose();
       await throwingDb.close();

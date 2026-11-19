@@ -34,17 +34,13 @@ class ConceptMarker {
   int get hashCode => Object.hash(conceptId, startChar, endChar);
 
   @override
-  String toString() =>
-      'ConceptMarker($conceptId, chars $startChar–$endChar)';
+  String toString() => 'ConceptMarker($conceptId, chars $startChar–$endChar)';
 }
 
 /// Result of parsing concept markers from an annotated script.
 @immutable
 class MarkerParseResult {
-  const MarkerParseResult({
-    required this.strippedText,
-    required this.markers,
-  });
+  const MarkerParseResult({required this.strippedText, required this.markers});
 
   /// The narration text with all `[CONCEPT:...]...[/CONCEPT]` tags removed.
   final String strippedText;

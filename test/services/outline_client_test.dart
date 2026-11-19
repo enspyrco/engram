@@ -195,17 +195,11 @@ void main() {
           jsonEncode({
             'data': [
               {
-                'document': {
-                  'id': 'doc-1',
-                  'title': 'Neural Network Basics',
-                },
+                'document': {'id': 'doc-1', 'title': 'Neural Network Basics'},
                 'context': 'Neural networks are computational models...',
               },
               {
-                'document': {
-                  'id': 'doc-2',
-                  'title': 'Deep Learning',
-                },
+                'document': {'id': 'doc-2', 'title': 'Deep Learning'},
                 'context': 'Deep learning uses neural network layers...',
               },
             ],
@@ -223,10 +217,7 @@ void main() {
       final results = await client.search('neural networks', limit: 5);
 
       expect(results, hasLength(2));
-      expect(
-        (results[0]['document'] as Map)['title'],
-        'Neural Network Basics',
-      );
+      expect((results[0]['document'] as Map)['title'], 'Neural Network Basics');
       expect(results[0]['context'], contains('computational models'));
     });
 
@@ -243,10 +234,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      final results = await client.search(
-        'test',
-        collectionId: 'col-42',
-      );
+      final results = await client.search('test', collectionId: 'col-42');
       expect(results, isEmpty);
     });
   });

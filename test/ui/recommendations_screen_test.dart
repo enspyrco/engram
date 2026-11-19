@@ -45,16 +45,18 @@ void main() {
       );
     }
 
-    testWidgets('shows no-gaps message when graph is well-connected',
-        (tester) async {
+    testWidgets('shows no-gaps message when graph is well-connected', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
       expect(find.text('No knowledge gaps detected'), findsOneWidget);
     });
 
-    testWidgets('shows gap count and gap chips when gaps exist',
-        (tester) async {
+    testWidgets('shows gap count and gap chips when gaps exist', (
+      tester,
+    ) async {
       final gaps = [
         KnowledgeGap(
           type: GapType.clusterIsolation,
@@ -170,8 +172,9 @@ void main() {
       expect(find.text('Error: Network timeout'), findsOneWidget);
     });
 
-    testWidgets('shows empty recommendations message when done with none',
-        (tester) async {
+    testWidgets('shows empty recommendations message when done with none', (
+      tester,
+    ) async {
       final gaps = [
         KnowledgeGap(
           type: GapType.clusterIsolation,
@@ -217,8 +220,7 @@ void main() {
         ],
       );
 
-      testWidgets('shows ingest button on recommendation card',
-          (tester) async {
+      testWidgets('shows ingest button on recommendation card', (tester) async {
         final recState = RecommendationState(
           phase: RecommendationPhase.done,
           gaps: [testGap],

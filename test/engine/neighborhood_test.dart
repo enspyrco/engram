@@ -119,10 +119,7 @@ void main() {
     });
 
     test('returns empty graph for unknown concept', () {
-      final graph = KnowledgeGraph(
-        concepts: [cA, cB],
-        relationships: [rAB],
-      );
+      final graph = KnowledgeGraph(concepts: [cA, cB], relationships: [rAB]);
 
       final hood = neighborhoodOf('unknown', graph);
 

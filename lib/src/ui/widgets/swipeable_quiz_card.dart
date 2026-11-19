@@ -241,7 +241,11 @@ class _SwipeableQuizCardState extends State<SwipeableQuizCard>
                           child: IgnorePointer(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: _overlayColor(offset, normalizedDrag, _cardWidth),
+                                color: _overlayColor(
+                                  offset,
+                                  normalizedDrag,
+                                  _cardWidth,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),

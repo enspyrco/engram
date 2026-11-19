@@ -156,8 +156,7 @@ class _ActiveConceptsLabel extends ConsumerWidget {
       if (graph != null)
         for (final c in graph.concepts) c.id: c.name,
     };
-    final names =
-        conceptIds.map((id) => nameMap[id] ?? id).join(', ');
+    final names = conceptIds.map((id) => nameMap[id] ?? id).join(', ');
 
     return Text(
       names,

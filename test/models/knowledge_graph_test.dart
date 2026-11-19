@@ -120,21 +120,24 @@ void main() {
       expect(restored.nextReview, item.nextReview);
     });
 
-    test('newCard without predictedDifficulty creates FSRS card with D=5.0', () {
-      final item = QuizItem.newCard(
-        id: 'q1',
-        conceptId: 'c1',
-        question: 'What is X?',
-        answer: 'X is Y.',
-      );
+    test(
+      'newCard without predictedDifficulty creates FSRS card with D=5.0',
+      () {
+        final item = QuizItem.newCard(
+          id: 'q1',
+          conceptId: 'c1',
+          question: 'What is X?',
+          answer: 'X is Y.',
+        );
 
-      expect(item.isFsrs, isTrue);
-      expect(item.difficulty, 5.0);
-      expect(item.stability, isNotNull);
-      expect(item.stability, greaterThan(0));
-      expect(item.fsrsState, 1);
-      expect(item.lapses, 0);
-    });
+        expect(item.isFsrs, isTrue);
+        expect(item.difficulty, 5.0);
+        expect(item.stability, isNotNull);
+        expect(item.stability, greaterThan(0));
+        expect(item.fsrsState, 1);
+        expect(item.lapses, 0);
+      },
+    );
 
     test('newCard with predictedDifficulty bootstraps full FSRS state', () {
       final item = QuizItem.newCard(

@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('parseConceptMarkers', () {
     test('extracts a single concept marker', () {
-      const input = 'Learn about [CONCEPT:spaced-rep]spaced repetition[/CONCEPT] today.';
+      const input =
+          'Learn about [CONCEPT:spaced-rep]spaced repetition[/CONCEPT] today.';
       final result = parseConceptMarkers(input);
 
       expect(result.strippedText, 'Learn about spaced repetition today.');
@@ -72,14 +73,19 @@ void main() {
     });
 
     test('handles adjacent markers with no gap', () {
-      const input =
-          '[CONCEPT:a]Alpha[/CONCEPT][CONCEPT:b]Beta[/CONCEPT]';
+      const input = '[CONCEPT:a]Alpha[/CONCEPT][CONCEPT:b]Beta[/CONCEPT]';
       final result = parseConceptMarkers(input);
 
       expect(result.strippedText, 'AlphaBeta');
       expect(result.markers, hasLength(2));
-      expect(result.markers[0], const ConceptMarker(conceptId: 'a', startChar: 0, endChar: 5));
-      expect(result.markers[1], const ConceptMarker(conceptId: 'b', startChar: 5, endChar: 9));
+      expect(
+        result.markers[0],
+        const ConceptMarker(conceptId: 'a', startChar: 0, endChar: 5),
+      );
+      expect(
+        result.markers[1],
+        const ConceptMarker(conceptId: 'b', startChar: 5, endChar: 9),
+      );
     });
 
     test('handles empty concept content', () {
@@ -94,8 +100,7 @@ void main() {
     test('strips inner tags when markers are nested', () {
       // Nesting is not supported — the outer marker captures to the first
       // [/CONCEPT], and the inner [CONCEPT:B] tag is stripped as an orphan.
-      const input =
-          '[CONCEPT:A]Outer [CONCEPT:B]Inner[/CONCEPT] End[/CONCEPT]';
+      const input = '[CONCEPT:A]Outer [CONCEPT:B]Inner[/CONCEPT] End[/CONCEPT]';
       final result = parseConceptMarkers(input);
 
       // The inner [CONCEPT:B] tag should be stripped from the content.

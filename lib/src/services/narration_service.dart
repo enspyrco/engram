@@ -75,8 +75,8 @@ class NarrationService {
     required String apiKey,
     AnthropicClient? client,
     String model = defaultNarrationModel,
-  })  : _client = client ?? AnthropicClient(apiKey: apiKey),
-        _model = model;
+  }) : _client = client ?? AnthropicClient(apiKey: apiKey),
+       _model = model;
 
   final AnthropicClient _client;
   final String _model;
@@ -93,11 +93,12 @@ class NarrationService {
         .map((c) => '- ${c.name} (id: ${c.id})')
         .join('\n');
 
-    final relationshipList = relationships.isEmpty
-        ? 'None'
-        : relationships
-              .map((r) => '- ${r.fromName} --${r.label}--> ${r.toName}')
-              .join('\n');
+    final relationshipList =
+        relationships.isEmpty
+            ? 'None'
+            : relationships
+                .map((r) => '- ${r.fromName} --${r.label}--> ${r.toName}')
+                .join('\n');
 
     final response = await retryWithBackoff(
       () => _client.createMessage(

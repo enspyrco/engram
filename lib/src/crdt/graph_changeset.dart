@@ -30,13 +30,17 @@ class GraphChangeset {
   factory GraphChangeset.fromJson(Map<String, dynamic> json) {
     return GraphChangeset(
       concepts: _parseList(json['drift_concepts'], _conceptFromJson),
-      relationships:
-          _parseList(json['drift_relationships'], _relationshipFromJson),
+      relationships: _parseList(
+        json['drift_relationships'],
+        _relationshipFromJson,
+      ),
       quizItems: _parseList(json['drift_quiz_items'], _quizItemFromJson),
       documents: _parseList(json['drift_documents'], _documentFromJson),
       topics: _parseList(json['drift_topics'], _topicFromJson),
-      topicDocuments:
-          _parseList(json['drift_topic_documents'], _topicDocumentFromJson),
+      topicDocuments: _parseList(
+        json['drift_topic_documents'],
+        _topicDocumentFromJson,
+      ),
     );
   }
 
@@ -105,14 +109,12 @@ class GraphChangeset {
       if (concepts.isNotEmpty)
         'drift_concepts': concepts.map(_conceptToJson).toList(),
       if (relationships.isNotEmpty)
-        'drift_relationships':
-            relationships.map(_relationshipToJson).toList(),
+        'drift_relationships': relationships.map(_relationshipToJson).toList(),
       if (quizItems.isNotEmpty)
         'drift_quiz_items': quizItems.map(_quizItemToJson).toList(),
       if (documents.isNotEmpty)
         'drift_documents': documents.map(_documentToJson).toList(),
-      if (topics.isNotEmpty)
-        'drift_topics': topics.map(_topicToJson).toList(),
+      if (topics.isNotEmpty) 'drift_topics': topics.map(_topicToJson).toList(),
       if (topicDocuments.isNotEmpty)
         'drift_topic_documents':
             topicDocuments.map(_topicDocumentToJson).toList(),
@@ -127,75 +129,74 @@ class GraphChangeset {
   static const _typeConverter = RelationshipTypeConverter();
 
   static Map<String, Object?> _conceptToJson(DriftConcept c) => {
-        'id': c.id,
-        'name': c.name,
-        'description': c.description,
-        'source_document_id': c.sourceDocumentId,
-        'tags': _tagsConverter.toSql(c.tags),
-        'parent_concept_id': c.parentConceptId,
-        'embedding':
-            c.embedding != null ? base64Encode(c.embedding!) : null,
-        'hlc': c.hlc,
-        'is_deleted': c.isDeleted ? 1 : 0,
-      };
+    'id': c.id,
+    'name': c.name,
+    'description': c.description,
+    'source_document_id': c.sourceDocumentId,
+    'tags': _tagsConverter.toSql(c.tags),
+    'parent_concept_id': c.parentConceptId,
+    'embedding': c.embedding != null ? base64Encode(c.embedding!) : null,
+    'hlc': c.hlc,
+    'is_deleted': c.isDeleted ? 1 : 0,
+  };
 
   static Map<String, Object?> _relationshipToJson(DriftRelationship r) => {
-        'id': r.id,
-        'from_concept_id': r.fromConceptId,
-        'to_concept_id': r.toConceptId,
-        'label': r.label,
-        'description': r.description,
-        'type': _typeConverter.toSql(r.type),
-        'hlc': r.hlc,
-        'is_deleted': r.isDeleted ? 1 : 0,
-      };
+    'id': r.id,
+    'from_concept_id': r.fromConceptId,
+    'to_concept_id': r.toConceptId,
+    'label': r.label,
+    'description': r.description,
+    'type': _typeConverter.toSql(r.type),
+    'hlc': r.hlc,
+    'is_deleted': r.isDeleted ? 1 : 0,
+  };
 
   static Map<String, Object?> _quizItemToJson(DriftQuizItem q) => {
-        'id': q.id,
-        'concept_id': q.conceptId,
-        'question': q.question,
-        'answer': q.answer,
-        'interval': q.interval,
-        'next_review': q.nextReview,
-        'last_review': q.lastReview,
-        'difficulty': q.difficulty,
-        'stability': q.stability,
-        'fsrs_state': q.fsrsState,
-        'lapses': q.lapses,
-        'predicted_difficulty': q.predictedDifficulty,
-        'review_count': q.reviewCount,
-        'hlc': q.hlc,
-        'is_deleted': q.isDeleted ? 1 : 0,
-      };
+    'id': q.id,
+    'concept_id': q.conceptId,
+    'question': q.question,
+    'answer': q.answer,
+    'interval': q.interval,
+    'next_review': q.nextReview,
+    'last_review': q.lastReview,
+    'difficulty': q.difficulty,
+    'stability': q.stability,
+    'fsrs_state': q.fsrsState,
+    'lapses': q.lapses,
+    'predicted_difficulty': q.predictedDifficulty,
+    'review_count': q.reviewCount,
+    'hlc': q.hlc,
+    'is_deleted': q.isDeleted ? 1 : 0,
+  };
 
   static Map<String, Object?> _documentToJson(DriftDocument d) => {
-        'document_id': d.documentId,
-        'title': d.title,
-        'updated_at': d.updatedAt,
-        'ingested_at': d.ingestedAt,
-        'collection_id': d.collectionId,
-        'collection_name': d.collectionName,
-        'ingested_text': d.ingestedText,
-        'hlc': d.hlc,
-        'is_deleted': d.isDeleted ? 1 : 0,
-      };
+    'document_id': d.documentId,
+    'title': d.title,
+    'updated_at': d.updatedAt,
+    'ingested_at': d.ingestedAt,
+    'collection_id': d.collectionId,
+    'collection_name': d.collectionName,
+    'ingested_text': d.ingestedText,
+    'hlc': d.hlc,
+    'is_deleted': d.isDeleted ? 1 : 0,
+  };
 
   static Map<String, Object?> _topicToJson(DriftTopic t) => {
-        'id': t.id,
-        'name': t.name,
-        'description': t.description,
-        'created_at': t.createdAt,
-        'last_ingested_at': t.lastIngestedAt,
-        'hlc': t.hlc,
-        'is_deleted': t.isDeleted ? 1 : 0,
-      };
+    'id': t.id,
+    'name': t.name,
+    'description': t.description,
+    'created_at': t.createdAt,
+    'last_ingested_at': t.lastIngestedAt,
+    'hlc': t.hlc,
+    'is_deleted': t.isDeleted ? 1 : 0,
+  };
 
   static Map<String, Object?> _topicDocumentToJson(DriftTopicDocument td) => {
-        'topic_id': td.topicId,
-        'document_id': td.documentId,
-        'hlc': td.hlc,
-        'is_deleted': td.isDeleted ? 1 : 0,
-      };
+    'topic_id': td.topicId,
+    'document_id': td.documentId,
+    'hlc': td.hlc,
+    'is_deleted': td.isDeleted ? 1 : 0,
+  };
 
   // ---------------------------------------------------------------------------
   // Deserialization helpers — JSON map → Drift data class
@@ -207,9 +208,7 @@ class GraphChangeset {
   ) {
     if (raw == null) return const [];
     final list = raw as List<dynamic>;
-    return list
-        .map((e) => parser(e as Map<String, dynamic>))
-        .toList();
+    return list.map((e) => parser(e as Map<String, dynamic>)).toList();
   }
 
   static DriftConcept _conceptFromJson(Map<String, dynamic> m) {
@@ -220,9 +219,10 @@ class GraphChangeset {
       sourceDocumentId: m['source_document_id'] as String,
       tags: _tagsConverter.fromSql(m['tags'] as String),
       parentConceptId: m['parent_concept_id'] as String?,
-      embedding: m['embedding'] != null
-          ? base64Decode(m['embedding'] as String)
-          : null,
+      embedding:
+          m['embedding'] != null
+              ? base64Decode(m['embedding'] as String)
+              : null,
       hlc: m['hlc'] as String,
       isDeleted: _parseBool(m['is_deleted']),
     );

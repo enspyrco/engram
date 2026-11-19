@@ -175,9 +175,7 @@ void main() {
         await tester.pumpAndSettle();
       });
 
-      testWidgets('right drag label changes with displacement', (
-        tester,
-      ) async {
+      testWidgets('right drag label changes with displacement', (tester) async {
         await _pumpCard(tester, onRate: (_) {});
 
         final center = tester.getCenter(find.byType(SwipeableQuizCard));

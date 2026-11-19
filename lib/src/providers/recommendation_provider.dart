@@ -13,14 +13,7 @@ import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 
 /// Phase of the recommendation pipeline.
-enum RecommendationPhase {
-  idle,
-  analyzing,
-  searching,
-  evaluating,
-  done,
-  error,
-}
+enum RecommendationPhase { idle, analyzing, searching, evaluating, done, error }
 
 /// Status of a single recommendation's ingestion.
 enum RecommendationIngestStatus {
@@ -226,8 +219,7 @@ class RecommendationNotifier extends Notifier<RecommendationState> {
 
       // 4. Extract knowledge via Claude.
       final extractionService = ref.read(extractionServiceProvider);
-      final existingIds =
-          graphBefore.concepts.map((c) => c.id).toList();
+      final existingIds = graphBefore.concepts.map((c) => c.id).toList();
       final predictionAccuracy = ref.read(difficultyEvaluationProvider);
 
       final extraction = await extractionService.extract(
@@ -241,15 +233,17 @@ class RecommendationNotifier extends Notifier<RecommendationState> {
       final newConceptIds = extraction.concepts.map((c) => c.id).toSet();
 
       // 5. Merge into graph via non-staggered ingest.
-      await ref.read(knowledgeGraphProvider.notifier).ingestExtraction(
-        extraction,
-        documentId: docId,
-        documentTitle: title,
-        updatedAt: ref.read(clockProvider)().toIso8601String(),
-        collectionId: recommendation.collectionId,
-        collectionName: recommendation.collectionName,
-        documentText: content,
-      );
+      await ref
+          .read(knowledgeGraphProvider.notifier)
+          .ingestExtraction(
+            extraction,
+            documentId: docId,
+            documentTitle: title,
+            updatedAt: ref.read(clockProvider)().toIso8601String(),
+            collectionId: recommendation.collectionId,
+            collectionName: recommendation.collectionName,
+            documentText: content,
+          );
 
       // 6. Set status → evaluating.
       updateIngest(

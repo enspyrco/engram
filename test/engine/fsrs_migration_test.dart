@@ -75,48 +75,52 @@ void main() {
       expect(item.lapses, 1);
     });
 
-    test('fromJson migrates Phase 1 legacy card (difficulty only) to full FSRS',
-        () {
-      final json = {
-        'id': 'q3',
-        'conceptId': 'c3',
-        'question': 'What is Z?',
-        'answer': 'Z is W',
-        'easeFactor': 2.5,
-        'interval': 0,
-        'repetitions': 0,
-        'nextReview': '2026-02-20T00:00:00.000Z',
-        'lastReview': null,
-        'difficulty': 7.0,
-        // No stability or fsrsState — Phase 1 legacy
-      };
+    test(
+      'fromJson migrates Phase 1 legacy card (difficulty only) to full FSRS',
+      () {
+        final json = {
+          'id': 'q3',
+          'conceptId': 'c3',
+          'question': 'What is Z?',
+          'answer': 'Z is W',
+          'easeFactor': 2.5,
+          'interval': 0,
+          'repetitions': 0,
+          'nextReview': '2026-02-20T00:00:00.000Z',
+          'lastReview': null,
+          'difficulty': 7.0,
+          // No stability or fsrsState — Phase 1 legacy
+        };
 
-      final item = QuizItem.fromJson(json);
+        final item = QuizItem.fromJson(json);
 
-      expect(item.isFsrs, isTrue);
-      expect(item.difficulty, 7.0); // preserved from Phase 1
-      expect(item.stability, isNotNull);
-      expect(item.stability, greaterThan(0));
-      expect(item.fsrsState, isNotNull);
-      expect(item.lapses, isNotNull);
-    });
+        expect(item.isFsrs, isTrue);
+        expect(item.difficulty, 7.0); // preserved from Phase 1
+        expect(item.stability, isNotNull);
+        expect(item.stability, greaterThan(0));
+        expect(item.fsrsState, isNotNull);
+        expect(item.lapses, isNotNull);
+      },
+    );
 
-    test('newCard() without predictedDifficulty creates FSRS card with D=5.0',
-        () {
-      final item = QuizItem.newCard(
-        id: 'q4',
-        conceptId: 'c4',
-        question: 'What is W?',
-        answer: 'W is V',
-      );
+    test(
+      'newCard() without predictedDifficulty creates FSRS card with D=5.0',
+      () {
+        final item = QuizItem.newCard(
+          id: 'q4',
+          conceptId: 'c4',
+          question: 'What is W?',
+          answer: 'W is V',
+        );
 
-      expect(item.isFsrs, isTrue);
-      expect(item.difficulty, 5.0);
-      expect(item.stability, isNotNull);
-      expect(item.stability, greaterThan(0));
-      expect(item.fsrsState, isNotNull);
-      expect(item.lapses, 0);
-    });
+        expect(item.isFsrs, isTrue);
+        expect(item.difficulty, 5.0);
+        expect(item.stability, isNotNull);
+        expect(item.stability, greaterThan(0));
+        expect(item.fsrsState, isNotNull);
+        expect(item.lapses, 0);
+      },
+    );
 
     test('migrated card uses stability for isMasteredForUnlock', () {
       final json = {
@@ -125,7 +129,8 @@ void main() {
         'question': 'What is V?',
         'answer': 'V is U',
         'easeFactor': 2.5,
-        'interval': 30, // SM-2 interval would qualify, but FSRS stability decides
+        'interval':
+            30, // SM-2 interval would qualify, but FSRS stability decides
         'repetitions': 5,
         'nextReview': '2026-03-20T00:00:00.000Z',
         'lastReview': '2026-02-15T00:00:00.000Z',

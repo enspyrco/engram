@@ -106,9 +106,7 @@ void main() {
     });
 
     test('returns empty list for empty timing data', () {
-      const markers = [
-        ConceptMarker(conceptId: 'a', startChar: 0, endChar: 5),
-      ];
+      const markers = [ConceptMarker(conceptId: 'a', startChar: 0, endChar: 5)];
 
       final result = mapMarkersToTimestamps(
         markers: markers,
