@@ -21,8 +21,8 @@ class ExtractionResult {
   final List<QuizItem> quizItems;
 
   /// Quiz items Claude gave a rubric that `Rubric.parse` rejected. Those
-  /// cards have no rubric, the same as cards Claude gave none, so this is the
-  /// only signal that rubric output has gone wrong.
+  /// cards have no rubric, the same as cards Claude gave none, so this count
+  /// is what tells a malformed rubric from an omitted one.
   final int rejectedRubricCount;
 }
 

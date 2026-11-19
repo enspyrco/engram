@@ -645,6 +645,8 @@ void main() {
           quizItem('valid', '["names both terms","explains why"]'),
           quizItem('one-criterion', '["only one"]'),
           quizItem('blank', '["names both terms","  "]'),
+          quizItem('not-json', '["names both terms",'),
+          quizItem('empty', ''),
           quizItem('absent', null),
         ],
       });
@@ -653,6 +655,8 @@ void main() {
       expect(byId['valid']?.toList(), ['names both terms', 'explains why']);
       expect(byId['one-criterion'], isNull);
       expect(byId['blank'], isNull);
+      expect(byId['not-json'], isNull);
+      expect(byId['empty'], isNull);
       expect(byId['absent'], isNull);
     });
 

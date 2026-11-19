@@ -265,7 +265,7 @@ class GraphChangeset {
       // A peer's rubric is validated here, so the column only ever holds a
       // canonical Rubric or NULL.
       rubric: switch (m['rubric']) {
-        final String sql => Rubric.parse(jsonDecode(sql))?.criteria,
+        final String sql => Rubric.parseJsonText(sql)?.criteria,
         _ => null,
       },
       hlc: m['hlc'] as String,

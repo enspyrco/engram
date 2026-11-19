@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
@@ -29,6 +31,16 @@ final class Rubric {
       return null;
     }
     return Rubric._(criteria.lock);
+  }
+
+  /// Reads a rubric stored or sent as JSON text; null for anything [parse]
+  /// rejects, including text that is not JSON.
+  static Rubric? parseJsonText(String text) {
+    try {
+      return parse(jsonDecode(text));
+    } on FormatException {
+      return null;
+    }
   }
 
   final IList<String> criteria;
