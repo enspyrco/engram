@@ -363,9 +363,9 @@ void main() {
           totalPredicted: 15,
           meanAbsoluteError: 1.5,
           bandAccuracy: {
-            'low': BandAccuracy(correct: 3, predicted: 4),
-            'medium': BandAccuracy(correct: 4, predicted: 5),
-            'high': BandAccuracy(correct: 0, predicted: 1),
+            DifficultyBand.low: BandAccuracy(correct: 3, predicted: 4),
+            DifficultyBand.medium: BandAccuracy(correct: 4, predicted: 5),
+            DifficultyBand.high: BandAccuracy(correct: 0, predicted: 1),
           },
         );
 

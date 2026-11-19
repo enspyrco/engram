@@ -50,7 +50,11 @@ void main() {
     test('learningConceptIds filters correctly', () {
       const snapshot = DetailedMasterySnapshot(
         summary: MasterySnapshot(),
-        conceptMastery: {'c1': MasteryState.mastered, 'c2': MasteryState.learning, 'c3': MasteryState.learning},
+        conceptMastery: {
+          'c1': MasteryState.mastered,
+          'c2': MasteryState.learning,
+          'c3': MasteryState.learning,
+        },
       );
 
       expect(snapshot.learningConceptIds, unorderedEquals(['c2', 'c3']));
