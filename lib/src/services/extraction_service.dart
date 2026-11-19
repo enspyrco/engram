@@ -382,17 +382,12 @@ class ExtractionService {
     if (mae != null) {
       buf.writeln('- Mean absolute error: ${mae.toStringAsFixed(1)}/10');
     }
-    for (final band in ['low', 'medium', 'high']) {
+    for (final band in DifficultyBand.values) {
       final accuracy = evaluation.bandAccuracy[band];
       if (accuracy != null) {
-        final label = switch (band) {
-          'low' => 'Low band (1-3)',
-          'medium' => 'Medium band (4-6)',
-          'high' => 'High band (7-10)',
-          _ => band,
-        };
         buf.writeln(
-          '- $label: ${accuracy.correct}/${accuracy.predicted} correct',
+          '- ${band.label} band (${band.range}): '
+          '${accuracy.correct}/${accuracy.predicted} correct',
         );
       }
     }

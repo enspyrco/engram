@@ -703,7 +703,7 @@ class _PredictionAccuracyCard extends StatelessWidget {
               _row('Mean absolute error', mae.toStringAsFixed(1)),
             for (final entry in evaluation.bandAccuracy.entries)
               _row(
-                '${entry.key[0].toUpperCase()}${entry.key.substring(1)} band',
+                '${entry.key.label} band',
                 '${entry.value.correct}/${entry.value.predicted} correct',
               ),
           ],

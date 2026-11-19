@@ -28,6 +28,20 @@ final googleSignInProvider = Provider<GoogleSignIn>((ref) {
   return GoogleSignIn(scopes: ['email', 'profile']);
 });
 
+/// The [FirebaseAuthException.code]s that mean the user dismissed the
+/// sign-in popup rather than sign-in failing.
+enum PopupDismissal {
+  popupClosedByUser,
+  cancelledPopupRequest;
+
+  /// Reads a Firebase Auth error code; null for any other code.
+  static PopupDismissal? parse(String code) => switch (code) {
+    'popup-closed-by-user' => popupClosedByUser,
+    'cancelled-popup-request' => cancelledPopupRequest,
+    _ => null,
+  };
+}
+
 /// Signs in with Google. Returns the Firebase [User] or null on cancel.
 ///
 /// Google always provides displayName, email, and photoUrl on every sign-in.
@@ -55,10 +69,7 @@ Future<User?> signInWithGoogle(
       userCredential = await auth.signInWithPopup(provider);
     } on FirebaseAuthException catch (e) {
       // User dismissed the popup — treat as cancellation, not failure.
-      if (e.code == 'popup-closed-by-user' ||
-          e.code == 'cancelled-popup-request') {
-        return null;
-      }
+      if (PopupDismissal.parse(e.code) != null) return null;
       rethrow;
     }
     final user = userCredential.user;

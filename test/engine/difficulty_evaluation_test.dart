@@ -126,15 +126,15 @@ void main() {
 
       expect(result.evaluatedCount, 3);
 
-      final low = result.bandAccuracy['low']!;
+      final low = result.bandAccuracy[DifficultyBand.low]!;
       expect(low.correct, 1);
       expect(low.predicted, 1);
 
-      final medium = result.bandAccuracy['medium']!;
+      final medium = result.bandAccuracy[DifficultyBand.medium]!;
       expect(medium.correct, 1);
       expect(medium.predicted, 1);
 
-      final high = result.bandAccuracy['high']!;
+      final high = result.bandAccuracy[DifficultyBand.high]!;
       expect(high.correct, 0);
       expect(high.predicted, 1);
     });
@@ -182,23 +182,23 @@ void main() {
 
   group('difficultyBand', () {
     test('low band for 1-3', () {
-      expect(difficultyBand(1.0), 'low');
-      expect(difficultyBand(2.5), 'low');
-      expect(difficultyBand(3.0), 'low');
+      expect(difficultyBand(1.0), DifficultyBand.low);
+      expect(difficultyBand(2.5), DifficultyBand.low);
+      expect(difficultyBand(3.0), DifficultyBand.low);
     });
 
     test('medium band for 4-6', () {
-      expect(difficultyBand(3.1), 'medium');
-      expect(difficultyBand(4.0), 'medium');
-      expect(difficultyBand(5.0), 'medium');
-      expect(difficultyBand(6.0), 'medium');
+      expect(difficultyBand(3.1), DifficultyBand.medium);
+      expect(difficultyBand(4.0), DifficultyBand.medium);
+      expect(difficultyBand(5.0), DifficultyBand.medium);
+      expect(difficultyBand(6.0), DifficultyBand.medium);
     });
 
     test('high band for 7-10', () {
-      expect(difficultyBand(6.1), 'high');
-      expect(difficultyBand(7.0), 'high');
-      expect(difficultyBand(9.0), 'high');
-      expect(difficultyBand(10.0), 'high');
+      expect(difficultyBand(6.1), DifficultyBand.high);
+      expect(difficultyBand(7.0), DifficultyBand.high);
+      expect(difficultyBand(9.0), DifficultyBand.high);
+      expect(difficultyBand(10.0), DifficultyBand.high);
     });
   });
 

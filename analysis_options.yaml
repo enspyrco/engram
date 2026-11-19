@@ -16,3 +16,12 @@ linter:
     prefer_final_locals: true
     sort_constructors_first: true
     unawaited_futures: true
+
+plugins:
+  is_lint_rules:
+    version: ^0.1.2
+    diagnostics:
+      no_default_on_closed_type: true
+      no_json_object_check: true
+      no_string_literal_compare: true
+      no_visible_for_testing: true
