@@ -1,3 +1,4 @@
+import 'package:engram/src/engine/mastery_state.dart';
 import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/detailed_mastery_snapshot.dart';
 import 'package:engram/src/models/friend.dart';
@@ -51,7 +52,7 @@ void main() {
           friend: const Friend(uid: 'u1', displayName: 'Alice'),
           detailedSnapshot: const DetailedMasterySnapshot(
             summary: MasterySnapshot(totalConcepts: 2, mastered: 1),
-            conceptMastery: {'c1': 'mastered'},
+            conceptMastery: {'c1': MasteryState.mastered},
           ),
         ),
       ];
@@ -112,7 +113,7 @@ void main() {
           friend: const Friend(uid: 'u1', displayName: 'Alice'),
           detailedSnapshot: const DetailedMasterySnapshot(
             summary: MasterySnapshot(totalConcepts: 2, mastered: 1),
-            conceptMastery: {'c1': 'mastered'},
+            conceptMastery: {'c1': MasteryState.mastered},
           ),
         ),
       ];

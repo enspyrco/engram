@@ -1,3 +1,4 @@
+import 'package:engram/src/engine/mastery_state.dart';
 import 'package:engram/src/models/detailed_mastery_snapshot.dart';
 import 'package:engram/src/models/friend.dart';
 import 'package:engram/src/models/mastery_snapshot.dart';
@@ -29,12 +30,12 @@ void main() {
       container.read(teamSnapshotsProvider.notifier).setSnapshots({
         'u1': const DetailedMasterySnapshot(
           summary: MasterySnapshot(totalConcepts: 5, mastered: 3),
-          conceptMastery: {'c1': 'mastered', 'c2': 'learning'},
+          conceptMastery: {'c1': MasteryState.mastered, 'c2': MasteryState.learning},
         ),
         // u2 intentionally missing
         'u3': const DetailedMasterySnapshot(
           summary: MasterySnapshot(totalConcepts: 2, mastered: 1),
-          conceptMastery: {'c1': 'mastered'},
+          conceptMastery: {'c1': MasteryState.mastered},
         ),
       });
 
@@ -91,10 +92,10 @@ void main() {
         'u1': const DetailedMasterySnapshot(
           summary: MasterySnapshot(totalConcepts: 4, mastered: 2),
           conceptMastery: {
-            'c1': 'mastered',
-            'c2': 'mastered',
-            'c3': 'learning',
-            'c4': 'due',
+            'c1': MasteryState.mastered,
+            'c2': MasteryState.mastered,
+            'c3': MasteryState.learning,
+            'c4': MasteryState.due,
           },
         ),
       });

@@ -1,3 +1,4 @@
+import 'package:engram/src/engine/mastery_state.dart';
 import 'package:engram/src/models/detailed_mastery_snapshot.dart';
 import 'package:engram/src/models/mastery_snapshot.dart';
 import 'package:test/test.dart';
@@ -14,10 +15,10 @@ void main() {
           streak: 7,
         ),
         conceptMastery: const {
-          'c1': 'mastered',
-          'c2': 'learning',
-          'c3': 'mastered',
-          'c4': 'due',
+          'c1': MasteryState.mastered,
+          'c2': MasteryState.learning,
+          'c3': MasteryState.mastered,
+          'c4': MasteryState.due,
         },
         updatedAt: DateTime.utc(2025, 6, 15, 12),
       );
@@ -28,7 +29,7 @@ void main() {
       expect(restored.summary.totalConcepts, 10);
       expect(restored.summary.mastered, 5);
       expect(restored.conceptMastery, hasLength(4));
-      expect(restored.conceptMastery['c1'], 'mastered');
+      expect(restored.conceptMastery['c1'], MasteryState.mastered);
       expect(restored.updatedAt, DateTime.utc(2025, 6, 15, 12));
     });
 
@@ -36,10 +37,10 @@ void main() {
       const snapshot = DetailedMasterySnapshot(
         summary: MasterySnapshot(),
         conceptMastery: {
-          'c1': 'mastered',
-          'c2': 'learning',
-          'c3': 'mastered',
-          'c4': 'due',
+          'c1': MasteryState.mastered,
+          'c2': MasteryState.learning,
+          'c3': MasteryState.mastered,
+          'c4': MasteryState.due,
         },
       );
 
@@ -49,7 +50,7 @@ void main() {
     test('learningConceptIds filters correctly', () {
       const snapshot = DetailedMasterySnapshot(
         summary: MasterySnapshot(),
-        conceptMastery: {'c1': 'mastered', 'c2': 'learning', 'c3': 'learning'},
+        conceptMastery: {'c1': MasteryState.mastered, 'c2': MasteryState.learning, 'c3': MasteryState.learning},
       );
 
       expect(snapshot.learningConceptIds, unorderedEquals(['c2', 'c3']));
@@ -71,6 +72,23 @@ void main() {
 
       expect(snapshot.summary.totalConcepts, 5);
       expect(snapshot.conceptMastery, isEmpty);
+    });
+
+    test('fromJson drops unknown mastery state names', () {
+      final snapshot = DetailedMasterySnapshot.fromJson(const {
+        'conceptMastery': {'c1': 'mastered', 'c2': 'transcendent', 'c3': 7},
+      });
+
+      expect(snapshot.conceptMastery, {'c1': MasteryState.mastered});
+    });
+
+    test('toJson writes state names', () {
+      const snapshot = DetailedMasterySnapshot(
+        summary: MasterySnapshot(),
+        conceptMastery: {'c1': MasteryState.fading},
+      );
+
+      expect(snapshot.toJson()['conceptMastery'], {'c1': 'fading'});
     });
   });
 }

@@ -113,7 +113,9 @@ class _LoadingView extends StatelessWidget {
       RecommendationPhase.analyzing => 'Analyzing knowledge gaps...',
       RecommendationPhase.searching => 'Searching Outline wiki...',
       RecommendationPhase.evaluating => 'Evaluating candidates with Claude...',
-      _ => 'Working...',
+      RecommendationPhase.idle ||
+      RecommendationPhase.done ||
+      RecommendationPhase.error => 'Working...',
     };
 
     return Center(

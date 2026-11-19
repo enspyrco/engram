@@ -1,14 +1,30 @@
 import '../models/quiz_item.dart';
 
+/// Coarse difficulty band used to score Claude's difficulty predictions.
+enum DifficultyBand {
+  /// 1.0-3.0: pure fact recall.
+  low('Low', '1-3'),
+
+  /// 3.1-6.0: mechanism/process.
+  medium('Medium', '4-6'),
+
+  /// 6.1-10.0: synthesis/abstract reasoning.
+  high('High', '7-10');
+
+  const DifficultyBand(this.label, this.range);
+
+  /// Display name, e.g. `Low`.
+  final String label;
+
+  /// Rounded difficulty range shown to Claude, e.g. `1-3`.
+  final String range;
+}
+
 /// Returns the difficulty band for a given difficulty value (1.0-10.0).
-///
-/// - `'low'`: 1.0-3.0 (pure fact recall)
-/// - `'medium'`: 3.1-6.0 (mechanism/process)
-/// - `'high'`: 6.1-10.0 (synthesis/abstract reasoning)
-String difficultyBand(double difficulty) {
-  if (difficulty <= 3.0) return 'low';
-  if (difficulty <= 6.0) return 'medium';
-  return 'high';
+DifficultyBand difficultyBand(double difficulty) {
+  if (difficulty <= 3.0) return DifficultyBand.low;
+  if (difficulty <= 6.0) return DifficultyBand.medium;
+  return DifficultyBand.high;
 }
 
 /// Evaluate how well Claude's predicted difficulties match FSRS actuals.
@@ -39,8 +55,8 @@ DifficultyEvaluationResult evaluatePredictions(
   // Compute mean absolute error
   var totalError = 0.0;
   var evaluatedCount = 0;
-  final bandCorrect = <String, int>{'low': 0, 'medium': 0, 'high': 0};
-  final bandPredicted = <String, int>{'low': 0, 'medium': 0, 'high': 0};
+  final bandCorrect = {for (final band in DifficultyBand.values) band: 0};
+  final bandPredicted = {for (final band in DifficultyBand.values) band: 0};
 
   for (final item in evaluated) {
     final predicted = item.predictedDifficulty!;
@@ -69,8 +85,8 @@ DifficultyEvaluationResult evaluatePredictions(
     );
   }
 
-  final bandAccuracy = <String, BandAccuracy>{};
-  for (final band in ['low', 'medium', 'high']) {
+  final bandAccuracy = <DifficultyBand, BandAccuracy>{};
+  for (final band in DifficultyBand.values) {
     final predicted = bandPredicted[band]!;
     if (predicted > 0) {
       bandAccuracy[band] = BandAccuracy(
@@ -117,8 +133,8 @@ class DifficultyEvaluationResult {
   final double? meanAbsoluteError;
 
   /// Per-band accuracy: how often the predicted band matched the actual band.
-  /// Keys are `'low'`, `'medium'`, `'high'`. Only populated bands are present.
-  final Map<String, BandAccuracy> bandAccuracy;
+  /// Only populated bands are present.
+  final Map<DifficultyBand, BandAccuracy> bandAccuracy;
 }
 
 /// Accuracy for a single difficulty band.
