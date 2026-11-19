@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import '../engine/mastery_state.dart';
 import 'mastery_snapshot.dart';
 
 /// Per-concept mastery data shared with teammates for graph overlay rendering.
@@ -16,6 +17,7 @@ class DetailedMasterySnapshot {
   });
 
   factory DetailedMasterySnapshot.fromJson(Map<String, dynamic> json) {
+    final masteryByName = MasteryState.values.asNameMap();
     return DetailedMasterySnapshot(
       summary:
           json['summary'] != null
@@ -23,11 +25,13 @@ class DetailedMasterySnapshot {
                 json['summary'] as Map<String, dynamic>,
               )
               : const MasterySnapshot(),
-      conceptMastery:
-          (json['conceptMastery'] as Map<String, dynamic>?)?.map(
-            (k, v) => MapEntry(k, v as String),
-          ) ??
-          const {},
+      // Unknown state names (from a newer client) are dropped.
+      conceptMastery: {
+        for (final MapEntry(:key, :value)
+            in (json['conceptMastery'] as Map<String, dynamic>? ?? const {})
+                .entries)
+          if (masteryByName[value] case final state?) key: state,
+      },
       updatedAt:
           json['updatedAt'] != null
               ? DateTime.parse(json['updatedAt'] as String)
@@ -38,30 +42,34 @@ class DetailedMasterySnapshot {
   /// Aggregate mastery counts (same as the existing lightweight snapshot).
   final MasterySnapshot summary;
 
-  /// Maps conceptId to MasteryState name (e.g. 'mastered', 'learning').
-  /// Only includes concepts with state != 'locked' to keep payload small.
-  final Map<String, String> conceptMastery;
+  /// Maps conceptId to its mastery state.
+  /// Only includes concepts that are not [MasteryState.locked], to keep the
+  /// payload small.
+  final Map<String, MasteryState> conceptMastery;
 
   /// Timestamp of when this snapshot was last updated.
   final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => {
     'summary': summary.toJson(),
-    'conceptMastery': conceptMastery,
+    'conceptMastery': {
+      for (final MapEntry(:key, :value) in conceptMastery.entries)
+        key: value.name,
+    },
     'updatedAt': updatedAt?.toIso8601String(),
   };
 
   /// Concept IDs where this friend has mastered state.
   List<String> get masteredConceptIds =>
       conceptMastery.entries
-          .where((e) => e.value == 'mastered')
+          .where((e) => e.value == MasteryState.mastered)
           .map((e) => e.key)
           .toList();
 
   /// Concept IDs where this friend is actively learning.
   List<String> get learningConceptIds =>
       conceptMastery.entries
-          .where((e) => e.value == 'learning')
+          .where((e) => e.value == MasteryState.learning)
           .map((e) => e.key)
           .toList();
 }

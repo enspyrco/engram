@@ -68,7 +68,7 @@ class SplitConceptSheet extends ConsumerWidget {
                 ),
               ],
             ),
-            _ => const SizedBox.shrink(),
+            SplitPhase.idle => const SizedBox.shrink(),
           },
         );
       },
