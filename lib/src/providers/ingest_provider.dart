@@ -342,7 +342,8 @@ class IngestNotifier extends Notifier<IngestState> {
           '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
           '${result.concepts.length} concepts, '
           '${result.relationships.length} relationships, '
-          '${result.quizItems.length} quiz items',
+          '${result.quizItems.length} quiz items, '
+          '${result.rejectedRubricCount} rubrics rejected',
         );
 
         // Auto-split high-difficulty items into sub-concepts
@@ -568,7 +569,8 @@ class IngestNotifier extends Notifier<IngestState> {
           '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
           '${result.concepts.length} concepts, '
           '${result.relationships.length} relationships, '
-          '${result.quizItems.length} quiz items',
+          '${result.quizItems.length} quiz items, '
+          '${result.rejectedRubricCount} rubrics rejected',
         );
 
         // Auto-split high-difficulty items into sub-concepts

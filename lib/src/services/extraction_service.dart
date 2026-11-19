@@ -426,6 +426,7 @@ class ExtractionService {
     final subConcepts = input['subConcepts'] as List<dynamic>? ?? [];
 
     final entries = <SubConceptEntry>[];
+    var rejectedRubricCount = 0;
     for (final sc in subConcepts) {
       final map = sc as Map<String, dynamic>;
       final conceptId = map['id'] as String;
@@ -442,6 +443,8 @@ class ExtractionService {
       final quizItems =
           quizItemsList.map((q) {
             final qMap = q as Map<String, dynamic>;
+            final rubric = Rubric.parse(qMap['rubric']);
+            if (rubric == null && qMap['rubric'] != null) rejectedRubricCount++;
             return QuizItem.newCard(
               id: qMap['id'] as String,
               conceptId: conceptId,
@@ -449,14 +452,17 @@ class ExtractionService {
               answer: qMap['answer'] as String,
               predictedDifficulty:
                   (qMap['predictedDifficulty'] as num?)?.toDouble(),
-              rubric: Rubric.parse(qMap['rubric']),
+              rubric: rubric,
             );
           }).toList();
 
       entries.add(SubConceptEntry(concept: concept, quizItems: quizItems));
     }
 
-    return SubConceptSuggestion(entries: entries);
+    return SubConceptSuggestion(
+      entries: entries,
+      rejectedRubricCount: rejectedRubricCount,
+    );
   }
 
   ExtractionResult _parseResult(
@@ -518,6 +524,7 @@ class ExtractionService {
     }
 
     final quizItems = <QuizItem>[];
+    var rejectedRubricCount = 0;
     for (final q in quizItemsList) {
       final map = q as Map<String, dynamic>;
       final conceptId = map['conceptId'] as String;
@@ -526,6 +533,9 @@ class ExtractionService {
         continue;
       }
 
+      final rubric = Rubric.parse(map['rubric']);
+      if (rubric == null && map['rubric'] != null) rejectedRubricCount++;
+
       quizItems.add(
         QuizItem.newCard(
           id: map['id'] as String,
@@ -533,7 +543,7 @@ class ExtractionService {
           question: map['question'] as String,
           answer: map['answer'] as String,
           predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
-          rubric: Rubric.parse(map['rubric']),
+          rubric: rubric,
         ),
       );
     }
@@ -542,6 +552,7 @@ class ExtractionService {
       concepts: concepts,
       relationships: relationships,
       quizItems: quizItems,
+      rejectedRubricCount: rejectedRubricCount,
     );
   }
 }

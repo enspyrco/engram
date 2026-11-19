@@ -10,13 +10,16 @@ class MockAnthropicClient extends Mock implements AnthropicClient {}
 class FakeCreateMessageRequest extends Fake implements CreateMessageRequest {}
 
 /// Helper to build a Message with a tool use block containing the given input.
-Message _toolUseMessage(Map<String, dynamic> input) {
+Message _toolUseMessage(
+  Map<String, dynamic> input, {
+  String toolName = 'extract_knowledge',
+}) {
   return Message(
     id: 'msg-test',
     role: MessageRole.assistant,
     stopReason: StopReason.toolUse,
     content: MessageContent.blocks([
-      Block.toolUse(id: 'tu-1', name: 'extract_knowledge', input: input),
+      Block.toolUse(id: 'tu-1', name: toolName, input: input),
     ]),
     model: 'claude-sonnet-4-5-20250929',
     type: 'message',
@@ -35,6 +38,90 @@ void main() {
   setUp(() {
     mockClient = MockAnthropicClient();
     service = ExtractionService(apiKey: 'test-key', client: mockClient);
+  });
+
+  group('ExtractionService rubrics', () {
+    test('keeps valid rubrics and counts the ones it rejects', () async {
+      Map<String, dynamic> item(String id, Object? rubric) => {
+        'id': id,
+        'conceptId': 'c1',
+        'question': 'Q?',
+        'answer': 'A.',
+        'rubric': rubric,
+      };
+      when(
+        () => mockClient.createMessage(request: any(named: 'request')),
+      ).thenAnswer(
+        (_) async => _toolUseMessage({
+          'concepts': [
+            {'id': 'c1', 'name': 'C', 'description': 'D'},
+          ],
+          'quizItems': [
+            item('valid', ['names both terms', 'explains why']),
+            item('too-many', ['a', 'b', 'c', 'd', 'e']),
+            item('not-a-string', ['names both terms', 7]),
+            item('absent', null),
+          ],
+        }),
+      );
+
+      final result = await service.extract(
+        documentTitle: 'Doc',
+        documentContent: 'Content',
+      );
+
+      final byId = {for (final q in result.quizItems) q.id: q.rubric};
+      expect(byId.keys, ['valid', 'too-many', 'not-a-string', 'absent']);
+      expect(byId['valid']?.criteria, ['names both terms', 'explains why']);
+      expect(byId['too-many'], isNull);
+      expect(byId['not-a-string'], isNull);
+      expect(byId['absent'], isNull);
+      expect(result.rejectedRubricCount, 2);
+    });
+
+    test('sub-concept split counts rejected rubrics too', () async {
+      when(
+        () => mockClient.createMessage(request: any(named: 'request')),
+      ).thenAnswer(
+        (_) async => _toolUseMessage(toolName: 'suggest_sub_concepts', {
+          'subConcepts': [
+            {
+              'id': 'parent-a',
+              'name': 'A',
+              'description': 'D',
+              'quizItems': [
+                {
+                  'id': 'qa',
+                  'question': 'Q?',
+                  'answer': 'A.',
+                  'rubric': ['names both terms', 'explains why'],
+                },
+                {
+                  'id': 'qb',
+                  'question': 'Q?',
+                  'answer': 'A.',
+                  'rubric': ['only one'],
+                },
+              ],
+            },
+          ],
+        }),
+      );
+
+      final suggestion = await service.generateSubConcepts(
+        parentConceptId: 'parent',
+        parentName: 'Parent',
+        parentDescription: 'D',
+        quizQuestion: 'Q?',
+        quizAnswer: 'A.',
+        sourceDocumentId: 'doc',
+      );
+
+      final items = suggestion.entries.single.quizItems;
+      expect(items.first.rubric, isNotNull);
+      expect(items.last.rubric, isNull);
+      expect(suggestion.rejectedRubricCount, 1);
+    });
   });
 
   group('ExtractionService cross-document relationships', () {
