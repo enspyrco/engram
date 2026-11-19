@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:engram/src/models/relationship.dart';
@@ -491,6 +493,59 @@ void main() {
 
       final row = (await db.select(db.driftConcepts).get()).first;
       expect(row.isDeleted, isTrue);
+    });
+  });
+
+  group('Schema migration v3→v4', () {
+    late Directory dir;
+    late File file;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('engram_migration_');
+      file = File('${dir.path}/engram.sqlite');
+    });
+
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    /// Writes a database file in the v3 shape: the current schema without
+    /// the `rubric` column, holding one quiz item, at `user_version = 3`.
+    Future<void> writeV3Database() async {
+      final v4 = EngramDatabase.forTesting(NativeDatabase(file));
+      await v4
+          .into(v4.driftQuizItems)
+          .insert(
+            DriftQuizItemsCompanion.insert(
+              id: 'q1',
+              conceptId: 'c1',
+              question: 'Q?',
+              answer: 'A.',
+              interval: 0,
+              nextReview: '2026-01-01T00:00:00.000Z',
+            ),
+          );
+      await v4.customStatement(
+        'ALTER TABLE drift_quiz_items DROP COLUMN rubric',
+      );
+      await v4.customStatement('PRAGMA user_version = 3');
+      await v4.close();
+    }
+
+    test('upgrading adds the rubric column and keeps existing rows', () async {
+      await writeV3Database();
+
+      final upgraded = EngramDatabase.forTesting(NativeDatabase(file));
+      addTearDown(upgraded.close);
+
+      final rows = await upgraded.select(upgraded.driftQuizItems).get();
+      expect(rows.single.id, 'q1');
+      expect(rows.single.rubric, isNull);
+
+      await (upgraded.update(upgraded.driftQuizItems)..where(
+        (t) => t.id.equals('q1'),
+      )).write(DriftQuizItemsCompanion(rubric: Value(IList(const ['a', 'b']))));
+      final updated =
+          await upgraded.select(upgraded.driftQuizItems).getSingle();
+      expect(updated.rubric?.toList(), ['a', 'b']);
     });
   });
 

@@ -1,11 +1,11 @@
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 import '../engine/difficulty_evaluation.dart';
 import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
+import '../models/rubric.dart';
 import '../models/sub_concept_suggestion.dart';
 import 'retry.dart';
 
@@ -145,6 +145,8 @@ const _extractionTool = Tool.custom(
             'rubric': {
               'type': 'array',
               'items': {'type': 'string'},
+              'minItems': Rubric.minCriteria,
+              'maxItems': Rubric.maxCriteria,
               'description':
                   '2-4 short grading criteria an independent grader checks a free-text answer against (e.g. "names both terms", "explains why X is needed"). Omit only for pure single-token recall.',
             },
@@ -164,6 +166,8 @@ Guidelines:
 - Sub-concept IDs must extend the parent ID (e.g. parent "docker-compose" → children "docker-compose-services", "docker-compose-volumes").
 - Create 1-2 quiz items per sub-concept that test understanding of that specific aspect.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- The `question` is a free-recall PROBE: it must NOT contain or leak the answer, and must never be yes/no or multiple-choice.
+- For each quiz item, provide a `rubric`: 2-4 short, checkable grading criteria an independent grader uses to score a learner's free-text answer. Concrete enough to test mechanism, not vibes.
 - Sub-concept items should have difficulty in the 4-6 range, as they decompose complex concepts into manageable pieces.
 ''';
 
@@ -224,6 +228,8 @@ const _splitTool = Tool.custom(
                   'rubric': {
                     'type': 'array',
                     'items': {'type': 'string'},
+                    'minItems': Rubric.minCriteria,
+                    'maxItems': Rubric.maxCriteria,
                     'description':
                         '2-4 short grading criteria an independent grader checks a free-text answer against. Omit only for pure single-token recall.',
                   },
@@ -441,10 +447,7 @@ class ExtractionService {
               answer: qMap['answer'] as String,
               predictedDifficulty:
                   (qMap['predictedDifficulty'] as num?)?.toDouble(),
-              rubric:
-                  (qMap['rubric'] as List<dynamic>?)
-                      ?.map((e) => e as String)
-                      .toIList(),
+              rubric: Rubric.parse(qMap['rubric']),
             );
           }).toList();
 
@@ -528,10 +531,7 @@ class ExtractionService {
           question: map['question'] as String,
           answer: map['answer'] as String,
           predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
-          rubric:
-              (map['rubric'] as List<dynamic>?)
-                  ?.map((e) => e as String)
-                  .toIList(),
+          rubric: Rubric.parse(map['rubric']),
         ),
       );
     }

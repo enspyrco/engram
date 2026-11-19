@@ -4,6 +4,7 @@ import '../../models/concept.dart';
 import '../../models/document_metadata.dart';
 import '../../models/quiz_item.dart';
 import '../../models/relationship.dart';
+import '../../models/rubric.dart';
 import '../../models/topic.dart';
 import 'engram_database.dart';
 
@@ -152,7 +153,7 @@ extension QuizItemToCompanion on QuizItem {
               ? Value(predictedDifficulty)
               : const Value.absent(),
       reviewCount: Value(reviewCount),
-      rubric: rubric != null ? Value(rubric) : const Value.absent(),
+      rubric: Value(rubric?.criteria),
       hlc: Value(hlc),
     );
   }
@@ -178,7 +179,7 @@ extension DriftQuizItemToDomain on DriftQuizItem {
       lapses: lapses,
       predictedDifficulty: predictedDifficulty,
       reviewCount: reviewCount,
-      rubric: rubric,
+      rubric: Rubric.parse(rubric?.unlock),
     );
   }
 
@@ -201,7 +202,7 @@ extension DriftQuizItemToDomain on DriftQuizItem {
             ? Value(predictedDifficulty)
             : const Value.absent(),
     reviewCount: Value(reviewCount),
-    rubric: rubric != null ? Value(rubric) : const Value.absent(),
+    rubric: Value(rubric),
     hlc: Value(hlc),
     isDeleted: Value(isDeleted),
   );

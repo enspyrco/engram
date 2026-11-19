@@ -7,6 +7,7 @@ import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/document_metadata.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/relationship.dart';
+import 'package:engram/src/models/rubric.dart';
 import 'package:engram/src/models/topic.dart';
 import 'package:engram/src/storage/drift/drift_graph_repository.dart';
 import 'package:engram/src/storage/drift/engram_database.dart';
@@ -84,6 +85,8 @@ void main() {
           lapses: 1,
           predictedDifficulty: 3.8,
           reviewCount: 7,
+          rubric:
+              Rubric.parse(['names a container runtime', 'says what runs'])!,
         ),
         testQuizItem(
           id: 'q2',
@@ -236,6 +239,44 @@ void main() {
       final loaded = await repoA.load();
       final c1 = loaded.concepts.firstWhere((c) => c.id == 'c1');
       expect(c1.description, 'Updated by device B');
+    });
+
+    test('a review on another device keeps the rubric', () async {
+      // A extracts the card with a rubric; B receives it and reviews it;
+      // A merges B's newer row, which replaces A's whole row. Changesets go
+      // through JSON as they do in FirestoreSyncTransport.
+      GraphChangeset overTheWire(GraphChangeset changeset) =>
+          GraphChangeset.fromJson(changeset.toJson());
+
+      await repoA.save(fullGraph());
+      await repoB.mergeChangeset(
+        overTheWire(await repoA.getChangeset(modifiedAfter: '')),
+      );
+
+      final onB = (await repoB.load()).quizItems.firstWhere(
+        (q) => q.id == 'q1',
+      );
+      final reviewed = onB.withFsrsReview(
+        difficulty: 5.0,
+        stability: 20.0,
+        fsrsState: 2,
+        lapses: 1,
+        interval: 20,
+        nextReview: DateTime.utc(2026, 3, 1),
+      );
+      await repoB.updateQuizItem(await repoB.load(), reviewed);
+
+      final sinceA = await repoA.getLastModified();
+      await repoA.mergeChangeset(
+        overTheWire(await repoB.getChangeset(modifiedAfter: sinceA)),
+      );
+
+      final onA = (await repoA.load()).quizItems.firstWhere(
+        (q) => q.id == 'q1',
+      );
+      expect(onA.reviewCount, reviewed.reviewCount);
+      expect(onA.rubric, fullGraph().quizItems.first.rubric);
+      expect(onA.rubric, isNotNull);
     });
 
     test('older incoming row is skipped', () async {
@@ -501,6 +542,26 @@ void main() {
       final td = restored.topicDocuments.first;
       expect(td.topicId, 't1');
       expect(td.documentId, 'doc1');
+    });
+
+    test('toJson/fromJson preserves every column of every row', () async {
+      // Drift data classes compare every column, so a column the wire format
+      // drops fails here even if no field-level assertion above names it.
+      await repoA.save(fullGraph());
+      final original = await repoA.getChangeset(modifiedAfter: '');
+      final restored = GraphChangeset.fromJson(original.toJson());
+
+      expect(restored.concepts, unorderedEquals(original.concepts));
+      expect(restored.relationships, unorderedEquals(original.relationships));
+      expect(restored.quizItems, unorderedEquals(original.quizItems));
+      expect(restored.documents, unorderedEquals(original.documents));
+      expect(restored.topics, unorderedEquals(original.topics));
+      expect(restored.topicDocuments, unorderedEquals(original.topicDocuments));
+      expect(
+        original.quizItems.firstWhere((q) => q.id == 'q1').rubric,
+        isNotNull,
+        reason: 'fixture must populate rubric for this test to cover it',
+      );
     });
 
     test('fromJson handles missing table keys gracefully', () {

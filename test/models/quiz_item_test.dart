@@ -1,5 +1,5 @@
 import 'package:engram/src/models/quiz_item.dart';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
+import 'package:engram/src/models/rubric.dart';
 import 'package:test/test.dart';
 
 import '../helpers/quiz_item_helpers.dart';
@@ -371,14 +371,14 @@ void main() {
         stability: 3.26,
         fsrsState: 1,
         lapses: 0,
-        rubric: const ['names both terms', 'explains why X is needed'].lock,
+        rubric: Rubric.parse(['names both terms', 'explains why X is needed'])!,
       );
 
       final json = original.toJson();
       expect(json['rubric'], ['names both terms', 'explains why X is needed']);
 
       final restored = QuizItem.fromJson(json);
-      expect(restored.rubric?.unlock, [
+      expect(restored.rubric?.criteria, [
         'names both terms',
         'explains why X is needed',
       ]);
@@ -391,7 +391,9 @@ void main() {
     });
 
     test('rubric is preserved across withFsrsReview', () {
-      final item = testQuizItem(rubric: const ['criterion one'].lock);
+      final item = testQuizItem(
+        rubric: Rubric.parse(['criterion one', 'criterion two'])!,
+      );
       final reviewed = item.withFsrsReview(
         difficulty: 6.0,
         stability: 10.0,
@@ -400,12 +402,12 @@ void main() {
         interval: 10,
         nextReview: now.add(const Duration(days: 10)),
       );
-      expect(reviewed.rubric?.unlock, ['criterion one']);
+      expect(reviewed.rubric, item.rubric);
     });
 
     test('toContentSnapshot includes rubric when present (for challenges)', () {
       final item = testQuizItem(
-        rubric: const ['criterion one', 'criterion two'].lock,
+        rubric: Rubric.parse(['criterion one', 'criterion two'])!,
       );
       expect(item.toContentSnapshot()['rubric'], [
         'criterion one',
