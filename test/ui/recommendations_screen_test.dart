@@ -9,7 +9,7 @@ import 'package:engram/src/providers/knowledge_graph_provider.dart';
 import 'package:engram/src/providers/network_health_provider.dart';
 import 'package:engram/src/providers/recommendation_provider.dart';
 import 'package:engram/src/ui/screens/recommendations_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

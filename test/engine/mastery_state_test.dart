@@ -5,7 +5,7 @@ import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,5 +1,5 @@
 import 'package:engram/src/engine/fsrs_engine.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 /// A wrapper that adds horizontal swipe-to-rate gestures around a quiz card.

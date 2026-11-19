@@ -4,7 +4,7 @@ import 'package:engram/src/models/knowledge_graph.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
 import 'package:engram/src/ui/graph/force_directed_graph_widget.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';

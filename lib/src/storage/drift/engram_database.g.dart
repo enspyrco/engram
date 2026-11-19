@@ -4016,8 +4016,12 @@ class $$DriftConceptsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<$DriftConceptsTable, DriftConcept>(table),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftConceptsTable,
+                            DriftConcept
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -4302,8 +4306,15 @@ class $$DriftRelationshipsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<
+                            $DriftRelationshipsTable,
+                            DriftRelationship
+                          >(table),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftRelationshipsTable,
+                            DriftRelationship
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -4723,8 +4734,14 @@ class $$DriftQuizItemsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<$DriftQuizItemsTable, DriftQuizItem>(
+                            table,
+                          ),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftQuizItemsTable,
+                            DriftQuizItem
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -5026,8 +5043,14 @@ class $$DriftDocumentsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<$DriftDocumentsTable, DriftDocument>(
+                            table,
+                          ),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftDocumentsTable,
+                            DriftDocument
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -5276,8 +5299,12 @@ class $$DriftTopicsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<$DriftTopicsTable, DriftTopic>(table),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftTopicsTable,
+                            DriftTopic
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -5481,8 +5508,15 @@ class $$DriftTopicDocumentsTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<
+                            $DriftTopicDocumentsTable,
+                            DriftTopicDocument
+                          >(table),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftTopicDocumentsTable,
+                            DriftTopicDocument
+                          >(db, table, e),
                         ),
                       )
                       .toList(),
@@ -5671,8 +5705,15 @@ class $$DriftSyncMetadataTableTableManager
                   p0
                       .map(
                         (e) => (
-                          e.readTable(table),
-                          BaseReferences(db, table, e),
+                          e.readTable<
+                            $DriftSyncMetadataTable,
+                            DriftSyncMetadataData
+                          >(table),
+                          BaseReferences<
+                            _$EngramDatabase,
+                            $DriftSyncMetadataTable,
+                            DriftSyncMetadataData
+                          >(db, table, e),
                         ),
                       )
                       .toList(),

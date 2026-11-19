@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../engine/highlight_propagation.dart';
 import '../../../models/knowledge_graph.dart';

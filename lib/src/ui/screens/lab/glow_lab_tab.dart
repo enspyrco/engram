@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../models/knowledge_graph.dart';
 import '../../graph/force_directed_graph_widget.dart';
