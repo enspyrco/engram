@@ -30,20 +30,26 @@ The whole thing emerged from a recursive accident: ingesting an Anthropic course
 
 - **Flutter** + **Riverpod** (manual, no codegen) for state management
 - **Firebase Auth** (Google + Apple Sign-In) for authentication
-- **Cloud Firestore** for storage (migrating to local-first Drift/SQLite — see `docs/LOCAL_FIRST.md`)
+- **Local-first storage** — Drift/SQLite on the device is the source of truth; Firestore is a sync peer (see `docs/LOCAL_FIRST.md`)
+- **CRDT sync** — hybrid logical clocks, last-writer-wins merge and tombstones, synced on launch, every 5 minutes and on app resume/pause (see `docs/CRDT_SYNC_ARCHITECTURE.md`)
 - **Claude API** (`anthropic_sdk_dart`) for extraction, difficulty prediction, gap evaluation, and recommendation scoring
+- **Narration** — ElevenLabs TTS with character-level timestamps, the groundwork for nodes that light up in sync with a spoken explanation
 - **Custom `ForceDirectedGraphWidget`** — `CustomPainter` + Fruchterman-Reingold layout with velocity-based physics, viscous edge damping, circle initial placement, centering gravity, and incremental pinned layout
 - **FSRS** (`fsrs` package) — pure-function scheduling with extraction-informed difficulty
 
 See `CLAUDE.md` for the full architecture reference.
+
+## Try It
+
+A web build is live at **https://engram-26a3a.web.app**. You'll need your own [Outline](https://www.getoutline.com/) wiki URL + API key and an Anthropic API key (entered in Settings) to ingest anything.
 
 ## Development
 
 ```bash
 flutter pub get
 flutter analyze
-flutter test          # 700+ tests
-flutter run -d macos
+flutter test          # 900+ tests
+flutter run -d macos  # also runs on iOS, Android and web
 ```
 
 ## Design Documents
@@ -57,6 +63,19 @@ flutter run -d macos
 | [`LOCAL_FIRST.md`](docs/LOCAL_FIRST.md) | Device as source of truth, server as sync peer |
 | [`CRDT_SYNC_ARCHITECTURE.md`](docs/CRDT_SYNC_ARCHITECTURE.md) | How knowledge graph operations map to CRDTs |
 | [`GRAPH_STATE_MANAGEMENT.md`](docs/GRAPH_STATE_MANAGEMENT.md) | Why Riverpod won, and how to normalize incrementally |
+| [`P2P_SYNC_ARCHITECTURE.md`](docs/P2P_SYNC_ARCHITECTURE.md) | Optional device-to-device sync for data sovereignty (decision pending) |
+| [`SOCIAL_KNOWLEDGE_PLAN.md`](docs/SOCIAL_KNOWLEDGE_PLAN.md) | A federated graph where each learner has their own view and can borrow others' structure |
+| [`CONSOLIDATION_SCIENCE.md`](docs/CONSOLIDATION_SCIENCE.md) | Five research fields on what a learning system should remember, forget and transform |
+| [`FUTURE_DIRECTIONS.md`](docs/FUTURE_DIRECTIONS.md) | AI audio/video for narration-synced graph animation |
+| [`personal-knowledge-graph.html`](design/personal-knowledge-graph.html) | Design for a personal knowledge graph that grows beyond the wiki |
+
+## Where It's Heading
+
+Work in flight, open as PRs:
+
+- **Dialogue grading** — a blind assessor that grades free-text answers against a rubric, proven valid before any tutor is built on it: [#146](https://github.com/enspyrco/engram/pull/146)
+- **The Diamond Age direction** — Engram as the Primer's Book: [#142](https://github.com/enspyrco/engram/pull/142)
+- **Curiosity glow** — a curvature engine over a personal knowledge graph: [#143](https://github.com/enspyrco/engram/pull/143)
 
 ---
 
