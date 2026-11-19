@@ -67,7 +67,7 @@ flutter run -d macos  # also runs on iOS, Android and web
 | [`SOCIAL_KNOWLEDGE_PLAN.md`](docs/SOCIAL_KNOWLEDGE_PLAN.md) | A federated graph where each learner has their own view and can borrow others' structure |
 | [`CONSOLIDATION_SCIENCE.md`](docs/CONSOLIDATION_SCIENCE.md) | Five research fields on what a learning system should remember, forget and transform |
 | [`FUTURE_DIRECTIONS.md`](docs/FUTURE_DIRECTIONS.md) | AI audio/video for narration-synced graph animation |
-| [`personal-knowledge-graph.html`](design/personal-knowledge-graph.html) | Design for a personal knowledge graph that grows beyond the wiki |
+| [Personal Knowledge Graph](https://enspyrco.github.io/engram/design/personal-knowledge-graph.html) | Design for a personal knowledge graph that grows beyond the wiki ([all rendered design docs](https://enspyrco.github.io/engram/design/)) |
 
 ## Where It's Heading
 
