@@ -30,7 +30,10 @@ void main() {
       container.read(teamSnapshotsProvider.notifier).setSnapshots({
         'u1': const DetailedMasterySnapshot(
           summary: MasterySnapshot(totalConcepts: 5, mastered: 3),
-          conceptMastery: {'c1': MasteryState.mastered, 'c2': MasteryState.learning},
+          conceptMastery: {
+            'c1': MasteryState.mastered,
+            'c2': MasteryState.learning,
+          },
         ),
         // u2 intentionally missing
         'u3': const DetailedMasterySnapshot(
