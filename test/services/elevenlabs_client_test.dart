@@ -10,10 +10,7 @@ void main() {
     test('synthesizeWithTimestamps returns audio and alignment data', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.host, 'api.elevenlabs.io');
-        expect(
-          request.url.path,
-          contains('/v1/text-to-speech/'),
-        );
+        expect(request.url.path, contains('/v1/text-to-speech/'));
         expect(request.url.path, endsWith('/with-timestamps'));
         expect(request.headers['xi-api-key'], 'test-key');
         expect(request.headers['Content-Type'], 'application/json');

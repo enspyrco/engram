@@ -446,9 +446,10 @@ class _CuriositySummaryRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final topRec = recState.recommendations.isNotEmpty
-        ? recState.recommendations.first
-        : null;
+    final topRec =
+        recState.recommendations.isNotEmpty
+            ? recState.recommendations.first
+            : null;
     final scanning =
         recState.phase != RecommendationPhase.idle &&
         recState.phase != RecommendationPhase.done &&
@@ -481,8 +482,11 @@ class _CuriositySummaryRow extends ConsumerWidget {
             )
           else
             TextButton.icon(
-              onPressed: () =>
-                  ref.read(recommendationProvider.notifier).findRecommendations(),
+              onPressed:
+                  () =>
+                      ref
+                          .read(recommendationProvider.notifier)
+                          .findRecommendations(),
               icon: const Icon(Icons.search, size: 16),
               label: const Text('Scan'),
               style: TextButton.styleFrom(
@@ -494,11 +498,12 @@ class _CuriositySummaryRow extends ConsumerWidget {
             icon: const Icon(Icons.explore, size: 18),
             tooltip: 'Explore recommendations',
             visualDensity: VisualDensity.compact,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RecommendationsScreen(),
-              ),
-            ),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RecommendationsScreen(),
+                  ),
+                ),
           ),
         ],
       ),
@@ -694,7 +699,8 @@ class _PredictionAccuracyCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _row('Cards evaluated', '${evaluation.evaluatedCount}'),
-            if (mae != null) _row('Mean absolute error', mae.toStringAsFixed(1)),
+            if (mae != null)
+              _row('Mean absolute error', mae.toStringAsFixed(1)),
             for (final entry in evaluation.bandAccuracy.entries)
               _row(
                 '${entry.key.label} band',
@@ -726,9 +732,10 @@ class _CuriosityCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final topRec = recState.recommendations.isNotEmpty
-        ? recState.recommendations.first
-        : null;
+    final topRec =
+        recState.recommendations.isNotEmpty
+            ? recState.recommendations.first
+            : null;
 
     return Card(
       child: Padding(
@@ -750,9 +757,9 @@ class _CuriosityCard extends ConsumerWidget {
               Text(
                 'Top pick: "${topRec.documentTitle}" '
                 '(${(topRec.score * 100).toInt()}% fit)',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontStyle: FontStyle.italic,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
               ),
             ],
             const SizedBox(height: 12),
@@ -871,9 +878,7 @@ class _NarrateButton extends ConsumerWidget {
           _startNarration(context, ref);
         }
       },
-      child: Icon(
-        isActive ? Icons.graphic_eq : Icons.record_voice_over,
-      ),
+      child: Icon(isActive ? Icons.graphic_eq : Icons.record_voice_over),
     );
   }
 
@@ -895,29 +900,30 @@ class _NarrateButton extends ConsumerWidget {
       return;
     }
 
-    final concepts = graph.concepts
-        .map((c) => ConceptSummary(id: c.id, name: c.name))
-        .toList();
+    final concepts =
+        graph.concepts
+            .map((c) => ConceptSummary(id: c.id, name: c.name))
+            .toList();
     final conceptNames = {for (final c in graph.concepts) c.id: c.name};
-    final relationships = graph.relationships
-        .where(
-          (r) =>
-              conceptNames.containsKey(r.fromConceptId) &&
-              conceptNames.containsKey(r.toConceptId),
-        )
-        .map(
-          (r) => RelationshipSummary(
-            fromName: conceptNames[r.fromConceptId]!,
-            toName: conceptNames[r.toConceptId]!,
-            label: r.label,
-          ),
-        )
-        .toList();
+    final relationships =
+        graph.relationships
+            .where(
+              (r) =>
+                  conceptNames.containsKey(r.fromConceptId) &&
+                  conceptNames.containsKey(r.toConceptId),
+            )
+            .map(
+              (r) => RelationshipSummary(
+                fromName: conceptNames[r.fromConceptId]!,
+                toName: conceptNames[r.toConceptId]!,
+                label: r.label,
+              ),
+            )
+            .toList();
 
-    ref.read(narrationProvider.notifier).generateNarration(
-      concepts: concepts,
-      relationships: relationships,
-    );
+    ref
+        .read(narrationProvider.notifier)
+        .generateNarration(concepts: concepts, relationships: relationships);
 
     _showControls(context);
   }
@@ -925,10 +931,7 @@ class _NarrateButton extends ConsumerWidget {
   void _showControls(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (_) => const SizedBox(
-        height: 180,
-        child: NarrationControls(),
-      ),
+      builder: (_) => const SizedBox(height: 180, child: NarrationControls()),
     );
   }
 }

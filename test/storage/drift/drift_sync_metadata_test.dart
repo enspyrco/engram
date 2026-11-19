@@ -23,15 +23,24 @@ void main() {
     });
 
     test('updateLastSyncedHlc creates a new row', () async {
-      await repo.updateLastSyncedHlc('peer-1', '2026-01-01T00:00:00.000Z-0000-peer-1');
+      await repo.updateLastSyncedHlc(
+        'peer-1',
+        '2026-01-01T00:00:00.000Z-0000-peer-1',
+      );
 
       final hlc = await repo.getLastSyncedHlc('peer-1');
       expect(hlc, '2026-01-01T00:00:00.000Z-0000-peer-1');
     });
 
     test('updateLastSyncedHlc upserts existing row', () async {
-      await repo.updateLastSyncedHlc('peer-1', '2026-01-01T00:00:00.000Z-0000-peer-1');
-      await repo.updateLastSyncedHlc('peer-1', '2026-02-01T00:00:00.000Z-0000-peer-1');
+      await repo.updateLastSyncedHlc(
+        'peer-1',
+        '2026-01-01T00:00:00.000Z-0000-peer-1',
+      );
+      await repo.updateLastSyncedHlc(
+        'peer-1',
+        '2026-02-01T00:00:00.000Z-0000-peer-1',
+      );
 
       final hlc = await repo.getLastSyncedHlc('peer-1');
       expect(hlc, '2026-02-01T00:00:00.000Z-0000-peer-1');

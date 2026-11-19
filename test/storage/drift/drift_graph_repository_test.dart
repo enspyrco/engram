@@ -167,34 +167,36 @@ void main() {
       expect(topic.lastIngestedAt, DateTime.utc(2026, 2, 20));
     });
 
-    test('replaces all data atomically (save A, save B, only B exists)',
-        () async {
-      final graphA = fullGraph();
-      await repo.save(graphA);
+    test(
+      'replaces all data atomically (save A, save B, only B exists)',
+      () async {
+        final graphA = fullGraph();
+        await repo.save(graphA);
 
-      // Save a completely different graph
-      final graphB = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'cx',
-            name: 'Rust',
-            description: 'Systems language',
-            sourceDocumentId: 'docX',
-          ),
-        ],
-      );
-      await repo.save(graphB);
+        // Save a completely different graph
+        final graphB = KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'cx',
+              name: 'Rust',
+              description: 'Systems language',
+              sourceDocumentId: 'docX',
+            ),
+          ],
+        );
+        await repo.save(graphB);
 
-      final loaded = await repo.load();
+        final loaded = await repo.load();
 
-      // Only graph B data should exist
-      expect(loaded.concepts.length, 1);
-      expect(loaded.concepts.first.id, 'cx');
-      expect(loaded.relationships, isEmpty);
-      expect(loaded.quizItems, isEmpty);
-      expect(loaded.documentMetadata, isEmpty);
-      expect(loaded.topics, isEmpty);
-    });
+        // Only graph B data should exist
+        expect(loaded.concepts.length, 1);
+        expect(loaded.concepts.first.id, 'cx');
+        expect(loaded.relationships, isEmpty);
+        expect(loaded.quizItems, isEmpty);
+        expect(loaded.documentMetadata, isEmpty);
+        expect(loaded.topics, isEmpty);
+      },
+    );
 
     test('handles empty graph', () async {
       // Save non-empty first
@@ -383,16 +385,18 @@ void main() {
       expect(emissions.first.concepts.length, 2);
 
       // Trigger a change
-      await repo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'cx',
-            name: 'Rust',
-            description: 'Systems language',
-            sourceDocumentId: 'docX',
-          ),
-        ],
-      ));
+      await repo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'cx',
+              name: 'Rust',
+              description: 'Systems language',
+              sourceDocumentId: 'docX',
+            ),
+          ],
+        ),
+      );
 
       // Wait for the second emission
       await completer.future.timeout(const Duration(seconds: 5));
@@ -604,8 +608,9 @@ void main() {
       expect(loaded.concepts.any((c) => c.id == 'c1'), isTrue);
 
       // Raw DB should show isDeleted = false
-      final rawRow = (await db.select(db.driftConcepts).get())
-          .firstWhere((c) => c.id == 'c1');
+      final rawRow = (await db.select(db.driftConcepts).get()).firstWhere(
+        (c) => c.id == 'c1',
+      );
       expect(rawRow.isDeleted, isFalse);
     });
 
@@ -677,10 +682,7 @@ void main() {
 
       final tombstoned = rawPairs.where((r) => r.isDeleted).toList();
       expect(tombstoned.length, 2);
-      expect(
-        tombstoned.map((r) => r.documentId).toSet(),
-        {'doc2', 'doc3'},
-      );
+      expect(tombstoned.map((r) => r.documentId).toSet(), {'doc2', 'doc3'});
     });
 
     test('HLC is stamped on tombstoned orphan rows', () async {
@@ -732,19 +734,19 @@ void main() {
       // Save and tombstone: save full graph, then save without c2/r1/q2
       await hlcRepo.save(fullGraph());
 
-      await hlcRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        quizItems: [
-          testQuizItem(id: 'q1', conceptId: 'c1'),
-        ],
-      ));
+      await hlcRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
+        ),
+      );
 
       // c2, r1, q2 are tombstoned. Purge tombstones older than "now".
       final purgeThreshold = hlcManager.now().toString();
@@ -766,16 +768,18 @@ void main() {
       final purgeThreshold = hlcManager.now().toString();
 
       // Now tombstone c2 (its HLC will be after purgeThreshold)
-      await hlcRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await hlcRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker',
+              description: 'Container runtime',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       final purged = await hlcRepo.purgeTombstones(before: purgeThreshold);
 
@@ -847,9 +851,7 @@ void main() {
             sourceDocumentId: 'doc1',
           ),
         ],
-        quizItems: [
-          testQuizItem(id: 'q1', conceptId: 'c1'),
-        ],
+        quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
       );
 
       await hlcRepo.save(graph);
@@ -874,27 +876,18 @@ void main() {
             sourceDocumentId: 'doc1',
           ),
         ],
-        quizItems: [
-          testQuizItem(id: 'q1', conceptId: 'c1'),
-        ],
+        quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
       );
 
       await hlcRepo.save(graph);
-      final hlcAfterSave = (await db.select(db.driftQuizItems).get())
-          .first
-          .hlc;
+      final hlcAfterSave = (await db.select(db.driftQuizItems).get()).first.hlc;
 
       // Update the quiz item
-      final updated = testQuizItem(
-        id: 'q1',
-        conceptId: 'c1',
-        difficulty: 5.0,
-      );
+      final updated = testQuizItem(id: 'q1', conceptId: 'c1', difficulty: 5.0);
       await hlcRepo.updateQuizItem(graph, updated);
 
-      final hlcAfterUpdate = (await db.select(db.driftQuizItems).get())
-          .first
-          .hlc;
+      final hlcAfterUpdate =
+          (await db.select(db.driftQuizItems).get()).first.hlc;
 
       // HLC should have advanced
       expect(hlcAfterUpdate, isNot(equals(hlcAfterSave)));
@@ -961,16 +954,18 @@ void main() {
   group('isDeleted filtering', () {
     test('load excludes rows with isDeleted = true', () async {
       // Insert a concept normally
-      await repo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Visible',
-            description: 'Should appear',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await repo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Visible',
+              description: 'Should appear',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       // Tombstone it via raw SQL (simulating a CRDT merge)
       await db.customStatement(
@@ -978,21 +973,26 @@ void main() {
       );
 
       final loaded = await repo.load();
-      expect(loaded.concepts, isEmpty,
-          reason: 'Tombstoned concept should not appear in load()');
+      expect(
+        loaded.concepts,
+        isEmpty,
+        reason: 'Tombstoned concept should not appear in load()',
+      );
     });
 
     test('tombstoned rows still exist in raw DB', () async {
-      await repo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Tombstoned',
-            description: 'Hidden but present',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await repo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Tombstoned',
+              description: 'Hidden but present',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       await db.customStatement(
         "UPDATE drift_concepts SET is_deleted = 1 WHERE id = 'c1'",
@@ -1009,35 +1009,35 @@ void main() {
     });
 
     test('isDeleted filtering works across all entity types', () async {
-      await repo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'C',
-            description: 'C',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-        relationships: const [
-          Relationship(
-            id: 'r1',
-            fromConceptId: 'c1',
-            toConceptId: 'c1',
-            label: 'self',
-          ),
-        ],
-        quizItems: [
-          testQuizItem(id: 'q1', conceptId: 'c1'),
-        ],
-        documentMetadata: [
-          DocumentMetadata(
-            documentId: 'doc1',
-            title: 'Doc',
-            updatedAt: '2026-01-01',
-            ingestedAt: DateTime.utc(2026, 1, 1),
-          ),
-        ],
-      ));
+      await repo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'C',
+              description: 'C',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+          relationships: const [
+            Relationship(
+              id: 'r1',
+              fromConceptId: 'c1',
+              toConceptId: 'c1',
+              label: 'self',
+            ),
+          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
+          documentMetadata: [
+            DocumentMetadata(
+              documentId: 'doc1',
+              title: 'Doc',
+              updatedAt: '2026-01-01',
+              ingestedAt: DateTime.utc(2026, 1, 1),
+            ),
+          ],
+        ),
+      );
 
       // Tombstone all rows
       for (final table in [

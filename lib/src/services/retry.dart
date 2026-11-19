@@ -24,7 +24,7 @@ Future<T> retryWithBackoff<T>(
   int maxRetries = 2,
   Duration baseDelay = const Duration(seconds: 1),
 }) async {
-  for (var attempt = 0;; attempt++) {
+  for (var attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (e) {

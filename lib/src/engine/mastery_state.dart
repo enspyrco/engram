@@ -84,11 +84,7 @@ MasteryState masteryStateOf(
 /// Uses FSRS retrievability directly as freshness (0.0–1.0), which is more
 /// principled than time-based linear decay. Returns 1.0 for concepts with
 /// no reviewed items.
-double freshnessOf(
-  String conceptId,
-  KnowledgeGraph graph, {
-  DateTime? now,
-}) {
+double freshnessOf(String conceptId, KnowledgeGraph graph, {DateTime? now}) {
   final items = graph.quizItems.where((q) => q.conceptId == conceptId);
 
   final reviewedItems = items.where((q) => q.isFsrs && q.lastReview != null);

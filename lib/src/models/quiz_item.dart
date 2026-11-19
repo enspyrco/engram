@@ -79,9 +79,7 @@ class QuizItem {
 
     // Auto-migrate: bootstrap FSRS state for legacy cards.
     if (stability == null || fsrsState == null) {
-      final fsrs = initializeFsrsCard(
-        predictedDifficulty: difficulty ?? 5.0,
-      );
+      final fsrs = initializeFsrsCard(predictedDifficulty: difficulty ?? 5.0);
       return QuizItem(
         id: json['id'] as String,
         conceptId: json['conceptId'] as String,
@@ -160,14 +158,16 @@ class QuizItem {
   ///
   /// After Phase 3 migration, all cards are FSRS. This getter is retained
   /// for defensive checks during the transition.
-  bool get isFsrs => difficulty != null && stability != null && fsrsState != null;
+  bool get isFsrs =>
+      difficulty != null && stability != null && fsrsState != null;
 
   /// Whether this card is mastered enough to unlock dependent concepts.
   ///
   /// Uses FSRS stability >= [masteryUnlockDays] (memory strength).
   /// The null guard is defensive — after Phase 3 migration all cards have
   /// stability, but pre-migration JSON in Firestore could still lack it.
-  bool get isMasteredForUnlock => stability != null && stability! >= masteryUnlockDays;
+  bool get isMasteredForUnlock =>
+      stability != null && stability! >= masteryUnlockDays;
 
   QuizItem withFsrsReview({
     required double difficulty,

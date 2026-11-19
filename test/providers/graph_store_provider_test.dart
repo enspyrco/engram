@@ -51,9 +51,10 @@ void main() {
         .doc('graph');
 
     for (final concept in concepts) {
-      await graphDoc.collection('concepts').doc(concept.id).set(
-            concept.toJson(),
-          );
+      await graphDoc
+          .collection('concepts')
+          .doc(concept.id)
+          .set(concept.toJson());
     }
   }
 
@@ -63,14 +64,10 @@ void main() {
       overrides: [
         engramDatabaseProvider.overrideWithValue(db),
         driftGraphRepositoryProvider.overrideWithValue(driftRepo),
-        hlcManagerProvider.overrideWithValue(
-          HlcManager(nodeId: 'test-node'),
-        ),
+        hlcManagerProvider.overrideWithValue(HlcManager(nodeId: 'test-node')),
         firestoreProvider.overrideWithValue(fakeFirestore),
         clockProvider.overrideWithValue(() => fixedClock),
-        authStateProvider.overrideWith(
-          (ref) => Stream.value(user),
-        ),
+        authStateProvider.overrideWith((ref) => Stream.value(user)),
       ],
     );
   }
@@ -90,16 +87,18 @@ void main() {
 
     test('non-empty local Drift — no Firestore read', () async {
       // Pre-populate local Drift
-      await driftRepo.save(KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c-local',
-            name: 'Local concept',
-            description: 'Already in Drift',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      ));
+      await driftRepo.save(
+        KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'c-local',
+              name: 'Local concept',
+              description: 'Already in Drift',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+        ),
+      );
 
       // Also populate Firestore (should be ignored)
       await seedFirestoreData([

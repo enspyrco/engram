@@ -22,10 +22,9 @@ import 'service_providers.dart';
 /// high-frequency position ticks while keeping the progress bar smooth.
 const _kPositionUpdateThreshold = 0.1;
 
-final narrationProvider =
-    NotifierProvider<NarrationNotifier, NarrationSession>(
-      NarrationNotifier.new,
-    );
+final narrationProvider = NotifierProvider<NarrationNotifier, NarrationSession>(
+  NarrationNotifier.new,
+);
 
 /// Computes the set of concept IDs active at the given playback [position].
 ///
@@ -83,9 +82,7 @@ class NarrationNotifier extends Notifier<NarrationSession> {
       // Parse markers from the annotated script.
       final parseResult = parseConceptMarkers(annotatedScript);
 
-      state = state.copyWith(
-        scriptText: parseResult.strippedText,
-      );
+      state = state.copyWith(scriptText: parseResult.strippedText);
 
       // Phase 2: Synthesize audio via ElevenLabs.
       state = state.copyWith(phase: NarrationPhase.synthesizingAudio);
@@ -103,9 +100,10 @@ class NarrationNotifier extends Notifier<NarrationSession> {
       );
 
       // Compute duration from the last character end time.
-      final duration = ttsResponse.characterEndTimes.isNotEmpty
-          ? ttsResponse.characterEndTimes.last
-          : 0.0;
+      final duration =
+          ttsResponse.characterEndTimes.isNotEmpty
+              ? ttsResponse.characterEndTimes.last
+              : 0.0;
 
       // Prepare audio player.
       await _preparePlayer(ttsResponse.audioBytes);
@@ -171,10 +169,7 @@ class NarrationNotifier extends Notifier<NarrationSession> {
     final seconds = position.inMilliseconds / 1000.0;
 
     // Compute which concepts are active at this position.
-    final active = computeActiveConcepts(
-      _timestampedConceptsList,
-      seconds,
-    );
+    final active = computeActiveConcepts(_timestampedConceptsList, seconds);
 
     // Only update state when the active set or position changes meaningfully.
     final newActiveConcepts = ISet(active);
@@ -228,9 +223,7 @@ class _BytesAudioSource extends StreamAudioSource {
       sourceLength: _bytes.length,
       contentLength: effectiveEnd - effectiveStart,
       offset: effectiveStart,
-      stream: Stream.value(
-        _bytes.sublist(effectiveStart, effectiveEnd),
-      ),
+      stream: Stream.value(_bytes.sublist(effectiveStart, effectiveEnd)),
       contentType: 'audio/mpeg',
     );
   }

@@ -330,10 +330,7 @@ void main() {
       );
       final analyzer = GraphAnalyzer(graph);
 
-      expect(
-        masteryStateOf('c1', graph, analyzer, now: now),
-        MasteryState.due,
-      );
+      expect(masteryStateOf('c1', graph, analyzer, now: now), MasteryState.due);
     });
 
     test('mastered when FSRS retrievability >= 0.85', () {
@@ -589,7 +586,6 @@ void main() {
 
       expect(freshnessOf('c1', graph), 1.0);
     });
-
   });
 
   test('masteryColors has all five states', () {

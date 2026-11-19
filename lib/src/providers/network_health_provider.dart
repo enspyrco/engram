@@ -17,8 +17,5 @@ final networkHealthProvider = Provider<NetworkHealth>((ref) {
     return const NetworkHealth(score: 1.0, tier: HealthTier.healthy);
   }
   final clusters = ref.watch(clusterProvider);
-  return NetworkHealthScorer(
-    graph,
-    clusters: clusters,
-  ).score();
+  return NetworkHealthScorer(graph, clusters: clusters).score();
 });

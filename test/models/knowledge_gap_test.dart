@@ -41,25 +41,28 @@ void main() {
       expect(gap.suggestedSearchTerms, isEmpty);
     });
 
-    test('equality based on type + description + severity + bridgePotential', () {
-      final gap1 = KnowledgeGap(
-        type: GapType.clusterIsolation,
-        description: 'Same gap',
-        severity: 0.7,
-        bridgePotential: 0.5,
-      );
+    test(
+      'equality based on type + description + severity + bridgePotential',
+      () {
+        final gap1 = KnowledgeGap(
+          type: GapType.clusterIsolation,
+          description: 'Same gap',
+          severity: 0.7,
+          bridgePotential: 0.5,
+        );
 
-      final gap2 = KnowledgeGap(
-        type: GapType.clusterIsolation,
-        description: 'Same gap',
-        severity: 0.7,
-        bridgePotential: 0.5,
-        involvedConceptIds: ['c1'], // different concepts — still equal
-      );
+        final gap2 = KnowledgeGap(
+          type: GapType.clusterIsolation,
+          description: 'Same gap',
+          severity: 0.7,
+          bridgePotential: 0.5,
+          involvedConceptIds: ['c1'], // different concepts — still equal
+        );
 
-      expect(gap1, equals(gap2));
-      expect(gap1.hashCode, gap2.hashCode);
-    });
+        expect(gap1, equals(gap2));
+        expect(gap1.hashCode, gap2.hashCode);
+      },
+    );
 
     test('different bridgePotential makes gaps unequal', () {
       final gap1 = KnowledgeGap(

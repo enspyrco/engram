@@ -65,129 +65,131 @@ void main() {
       );
     }
 
-    test('happy path: transitions ingesting → evaluating → completed',
-        () async {
-      final httpClient = MockClient((request) async {
-        if (request.url.path == '/api/documents.info') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'id': 'doc-1',
-                'title': 'ML for DBAs',
-                'text': '# ML for DBAs\nContent here.',
-                'collectionId': 'col-1',
-              },
-            }),
-            200,
-          );
-        }
-        return http.Response('{}', 200);
-      });
+    test(
+      'happy path: transitions ingesting → evaluating → completed',
+      () async {
+        final httpClient = MockClient((request) async {
+          if (request.url.path == '/api/documents.info') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'id': 'doc-1',
+                  'title': 'ML for DBAs',
+                  'text': '# ML for DBAs\nContent here.',
+                  'collectionId': 'col-1',
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response('{}', 200);
+        });
 
-      final initialGraph = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'ml',
-            name: 'ML',
-            description: 'Machine Learning',
-            sourceDocumentId: 'd',
-          ),
-          Concept(
-            id: 'sql',
-            name: 'SQL',
-            description: 'Structured Query Language',
-            sourceDocumentId: 'd',
-          ),
-        ],
-      );
-
-      when(
-        () => mockExtraction.extract(
-          documentTitle: any(named: 'documentTitle'),
-          documentContent: any(named: 'documentContent'),
-          existingConceptIds: any(named: 'existingConceptIds'),
-          predictionAccuracy: any(named: 'predictionAccuracy'),
-        ),
-      ).thenAnswer(
-        (_) async => ExtractionResult(
+        final initialGraph = KnowledgeGraph(
           concepts: [
             Concept(
-              id: 'ml-db',
-              name: 'ML Database Integration',
-              description: 'Using ML with databases',
-              sourceDocumentId: '',
+              id: 'ml',
+              name: 'ML',
+              description: 'Machine Learning',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'sql',
+              name: 'SQL',
+              description: 'Structured Query Language',
+              sourceDocumentId: 'd',
             ),
           ],
-          relationships: const [
-            Relationship(
-              id: 'r1',
-              fromConceptId: 'ml',
-              toConceptId: 'ml-db',
-              label: 'enables',
-              type: RelationshipType.enables,
-            ),
-          ],
-          quizItems: const [],
-        ),
-      );
+        );
 
-      final container = createContainer(
-        httpClient: httpClient,
-        initialGraph: initialGraph,
-      );
-      await container.read(knowledgeGraphProvider.future);
-
-      final rec = Recommendation(
-        documentId: 'doc-1',
-        documentTitle: 'ML for DBAs',
-        gap: testGap,
-        score: 0.85,
-        reasoning: 'Bridges gap',
-        predictedNewEdges: const [
-          PredictedEdge(
-            fromConceptName: 'ML',
-            toConceptName: 'ML Database Integration',
-            type: RelationshipType.enables,
-            confidence: 0.8,
+        when(
+          () => mockExtraction.extract(
+            documentTitle: any(named: 'documentTitle'),
+            documentContent: any(named: 'documentContent'),
+            existingConceptIds: any(named: 'existingConceptIds'),
+            predictionAccuracy: any(named: 'predictionAccuracy'),
           ),
-        ],
-      );
+        ).thenAnswer(
+          (_) async => ExtractionResult(
+            concepts: [
+              Concept(
+                id: 'ml-db',
+                name: 'ML Database Integration',
+                description: 'Using ML with databases',
+                sourceDocumentId: '',
+              ),
+            ],
+            relationships: const [
+              Relationship(
+                id: 'r1',
+                fromConceptId: 'ml',
+                toConceptId: 'ml-db',
+                label: 'enables',
+                type: RelationshipType.enables,
+              ),
+            ],
+            quizItems: const [],
+          ),
+        );
 
-      // Track status transitions.
-      final statuses = <RecommendationIngestStatus>[];
-      container.listen(recommendationProvider, (prev, next) {
-        final result = next.ingestResults['doc-1'];
-        if (result != null && !statuses.contains(result.status)) {
-          statuses.add(result.status);
-        }
-      });
+        final container = createContainer(
+          httpClient: httpClient,
+          initialGraph: initialGraph,
+        );
+        await container.read(knowledgeGraphProvider.future);
 
-      await container
-          .read(recommendationProvider.notifier)
-          .ingestRecommendation(rec);
+        final rec = Recommendation(
+          documentId: 'doc-1',
+          documentTitle: 'ML for DBAs',
+          gap: testGap,
+          score: 0.85,
+          reasoning: 'Bridges gap',
+          predictedNewEdges: const [
+            PredictedEdge(
+              fromConceptName: 'ML',
+              toConceptName: 'ML Database Integration',
+              type: RelationshipType.enables,
+              confidence: 0.8,
+            ),
+          ],
+        );
 
-      final state = container.read(recommendationProvider);
-      final result = state.ingestResults['doc-1'];
+        // Track status transitions.
+        final statuses = <RecommendationIngestStatus>[];
+        container.listen(recommendationProvider, (prev, next) {
+          final result = next.ingestResults['doc-1'];
+          if (result != null && !statuses.contains(result.status)) {
+            statuses.add(result.status);
+          }
+        });
 
-      expect(result, isNotNull);
-      expect(result!.status, RecommendationIngestStatus.completed);
-      expect(result.evaluation, isNotNull);
-      expect(result.evaluation!.matchedCount, 1);
-      expect(result.evaluation!.accuracy, 1.0);
+        await container
+            .read(recommendationProvider.notifier)
+            .ingestRecommendation(rec);
 
-      // Verify ingested concept IDs are populated for glow animation.
-      expect(result.ingestedConceptIds, contains('ml-db'));
+        final state = container.read(recommendationProvider);
+        final result = state.ingestResults['doc-1'];
 
-      // Verify transitions happened in order.
-      expect(
-        statuses,
-        containsAllInOrder([
-          RecommendationIngestStatus.ingesting,
-          RecommendationIngestStatus.evaluating,
-          RecommendationIngestStatus.completed,
-        ]),
-      );
-    });
+        expect(result, isNotNull);
+        expect(result!.status, RecommendationIngestStatus.completed);
+        expect(result.evaluation, isNotNull);
+        expect(result.evaluation!.matchedCount, 1);
+        expect(result.evaluation!.accuracy, 1.0);
+
+        // Verify ingested concept IDs are populated for glow animation.
+        expect(result.ingestedConceptIds, contains('ml-db'));
+
+        // Verify transitions happened in order.
+        expect(
+          statuses,
+          containsAllInOrder([
+            RecommendationIngestStatus.ingesting,
+            RecommendationIngestStatus.evaluating,
+            RecommendationIngestStatus.completed,
+          ]),
+        );
+      },
+    );
 
     test('error sets status to error with message', () async {
       final httpClient = MockClient(
@@ -311,7 +313,8 @@ void main() {
       expect(graph.concepts.map((c) => c.id), contains('c'));
       expect(graph.relationships, hasLength(1));
 
-      final result = container.read(recommendationProvider).ingestResults['doc-1'];
+      final result =
+          container.read(recommendationProvider).ingestResults['doc-1'];
       expect(result!.evaluation!.totalActualNew, greaterThanOrEqualTo(1));
     });
   });
@@ -320,7 +323,7 @@ void main() {
 /// In-memory graph notifier for provider tests (no Firestore dependency).
 class _InMemoryGraphNotifier extends KnowledgeGraphNotifier {
   _InMemoryGraphNotifier([KnowledgeGraph? initial])
-      : _graph = initial ?? KnowledgeGraph.empty;
+    : _graph = initial ?? KnowledgeGraph.empty;
 
   KnowledgeGraph _graph;
 

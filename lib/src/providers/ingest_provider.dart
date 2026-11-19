@@ -693,9 +693,8 @@ class IngestNotifier extends Notifier<IngestState> {
     final newQuizItems = <QuizItem>[];
 
     for (final item in itemsToSplit) {
-      final parentConcept = result.concepts
-          .where((c) => c.id == item.conceptId)
-          .firstOrNull;
+      final parentConcept =
+          result.concepts.where((c) => c.id == item.conceptId).firstOrNull;
       if (parentConcept == null) continue;
 
       state = state.copyWith(

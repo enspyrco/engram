@@ -12,12 +12,8 @@ import 'package:engram/src/providers/network_health_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:test/test.dart';
 
-Concept _concept(String id) => Concept(
-  id: id,
-  name: id,
-  description: 'desc',
-  sourceDocumentId: 'doc1',
-);
+Concept _concept(String id) =>
+    Concept(id: id, name: id, description: 'desc', sourceDocumentId: 'doc1');
 
 Relationship _rel(String from, String to) => Relationship(
   id: '$from-$to',
@@ -34,12 +30,12 @@ ProviderContainer _container({
   return ProviderContainer(
     overrides: [
       knowledgeGraphProvider.overrideWith(() => _FakeGraphNotifier(graph)),
-      guardianProvider.overrideWith(() => _FakeGuardianNotifier(
-        guardianState ?? GuardianState(),
-      )),
-      catastropheProvider.overrideWith(() => _FakeCatastropheNotifier(
-        catastropheState ?? CatastropheState(),
-      )),
+      guardianProvider.overrideWith(
+        () => _FakeGuardianNotifier(guardianState ?? GuardianState()),
+      ),
+      catastropheProvider.overrideWith(
+        () => _FakeCatastropheNotifier(catastropheState ?? CatastropheState()),
+      ),
       // Network health isn't watched by desiredRetentionProvider directly,
       // but catastrophe/guardian notifiers may reference it in build().
       // Override to avoid cascading provider failures.
@@ -69,11 +65,7 @@ void main() {
           _concept('b'),
           _concept('c'),
         ],
-        relationships: [
-          _rel('a', 'hub'),
-          _rel('b', 'hub'),
-          _rel('c', 'hub'),
-        ],
+        relationships: [_rel('a', 'hub'), _rel('b', 'hub'), _rel('c', 'hub')],
       );
       final container = _container(graph: graph);
       addTearDown(container.dispose);
@@ -137,9 +129,7 @@ void main() {
     });
 
     test('mission target gets 0.95 (elevated from standard/leaf)', () async {
-      final graph = KnowledgeGraph(
-        concepts: [_concept('target')],
-      );
+      final graph = KnowledgeGraph(concepts: [_concept('target')]);
       final container = _container(
         graph: graph,
         catastropheState: CatastropheState(
@@ -161,9 +151,7 @@ void main() {
     });
 
     test('guardian takes precedence over mission', () async {
-      final graph = KnowledgeGraph(
-        concepts: [_concept('both')],
-      );
+      final graph = KnowledgeGraph(concepts: [_concept('both')]);
       final container = _container(
         graph: graph,
         guardianState: GuardianState(

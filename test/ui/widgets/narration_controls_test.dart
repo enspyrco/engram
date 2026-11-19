@@ -57,9 +57,7 @@ void main() {
 
     testWidgets('shows play button when ready', (tester) async {
       await tester.pumpWidget(
-        buildApp(
-          session: const NarrationSession(phase: NarrationPhase.ready),
-        ),
+        buildApp(session: const NarrationSession(phase: NarrationPhase.ready)),
       );
       await tester.pump();
 

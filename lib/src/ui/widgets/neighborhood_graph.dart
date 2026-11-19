@@ -29,12 +29,13 @@ class NeighborhoodGraph extends StatelessWidget {
       child: ClipRect(
         child: IgnorePointer(
           child: LayoutBuilder(
-            builder: (context, constraints) => ForceDirectedGraphWidget(
-              graph: subgraph,
-              layoutWidth: constraints.maxWidth,
-              layoutHeight: constraints.maxHeight,
-              sustainedGlowMap: {conceptId: 1.0},
-            ),
+            builder:
+                (context, constraints) => ForceDirectedGraphWidget(
+                  graph: subgraph,
+                  layoutWidth: constraints.maxWidth,
+                  layoutHeight: constraints.maxHeight,
+                  sustainedGlowMap: {conceptId: 1.0},
+                ),
           ),
         ),
       ),

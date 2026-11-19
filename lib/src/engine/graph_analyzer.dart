@@ -20,8 +20,7 @@ class GraphAnalyzer {
   late final Map<String, Set<String>> _dependents = _buildDependents();
 
   /// Concept IDs mapped to their quiz items, for mastery lookups.
-  late final Map<String, List<QuizItem>> _conceptItems =
-      _buildConceptItems();
+  late final Map<String, List<QuizItem>> _conceptItems = _buildConceptItems();
 
   /// Parent → children adjacency map for sub-concept relationships.
   late final Map<String, Set<String>> _children = _buildChildren();

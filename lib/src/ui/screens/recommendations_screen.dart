@@ -29,9 +29,7 @@ class RecommendationsScreen extends ConsumerWidget {
               icon: const Icon(Icons.refresh),
               tooltip: 'Scan for recommendations',
               onPressed: () {
-                ref
-                    .read(recommendationProvider.notifier)
-                    .findRecommendations();
+                ref.read(recommendationProvider.notifier).findRecommendations();
               },
             ),
         ],
@@ -145,9 +143,10 @@ class _GapChip extends StatelessWidget {
       GapType.criticalBottleneck => Icons.warning_amber,
     };
 
-    final severityColor = gap.severity > 0.6
-        ? Theme.of(context).colorScheme.error
-        : gap.severity > 0.3
+    final severityColor =
+        gap.severity > 0.6
+            ? Theme.of(context).colorScheme.error
+            : gap.severity > 0.3
             ? Colors.amber
             : Colors.grey;
 
@@ -159,9 +158,9 @@ class _GapChip extends StatelessWidget {
             RegExp(r'[A-Z]'),
             (m) => ' ${m[0]!.toLowerCase()}',
           ),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           gap.description,
@@ -245,10 +244,7 @@ class _RecommendationCard extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 12),
-            _IngestAction(
-              recommendation: recommendation,
-              result: ingestResult,
-            ),
+            _IngestAction(recommendation: recommendation, result: ingestResult),
           ],
         ),
       ),
@@ -388,9 +384,10 @@ class _ScoreBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = score > 0.7
-        ? Colors.green
-        : score > 0.4
+    final color =
+        score > 0.7
+            ? Colors.green
+            : score > 0.4
             ? Colors.amber
             : Colors.grey;
 
@@ -493,9 +490,7 @@ class _ScanPrompt extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () {
-                ref
-                    .read(recommendationProvider.notifier)
-                    .findRecommendations();
+                ref.read(recommendationProvider.notifier).findRecommendations();
               },
               icon: const Icon(Icons.search),
               label: const Text('Scan'),

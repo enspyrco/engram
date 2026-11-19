@@ -40,8 +40,11 @@ void main() {
 
       final merged = manager.receive(remote);
       expect(merged.nodeId, equals(nodeId));
-      expect(merged >= remote, isTrue,
-          reason: 'Merged HLC should be at least as high as the remote');
+      expect(
+        merged >= remote,
+        isTrue,
+        reason: 'Merged HLC should be at least as high as the remote',
+      );
     });
 
     test('receive() preserves monotonicity when remote is behind', () {
@@ -50,15 +53,14 @@ void main() {
       final local2 = manager.now();
 
       // Create a remote HLC that is behind
-      final oldRemote = Hlc(
-        DateTime.utc(2020, 1, 1),
-        0,
-        'remote-node-002',
-      );
+      final oldRemote = Hlc(DateTime.utc(2020, 1, 1), 0, 'remote-node-002');
 
       final afterReceive = manager.receive(oldRemote);
-      expect(afterReceive >= local2, isTrue,
-          reason: 'Should not go backward after receiving an old HLC');
+      expect(
+        afterReceive >= local2,
+        isTrue,
+        reason: 'Should not go backward after receiving an old HLC',
+      );
     });
 
     test('canonical time tracks the highest HLC seen', () {

@@ -20,14 +20,11 @@ void main() {
 
     test('retries on SocketException and succeeds', () async {
       var attempts = 0;
-      final result = await retryWithBackoff(
-        () async {
-          attempts++;
-          if (attempts < 2) throw const SocketException('connection refused');
-          return 'success';
-        },
-        baseDelay: Duration.zero,
-      );
+      final result = await retryWithBackoff(() async {
+        attempts++;
+        if (attempts < 2) throw const SocketException('connection refused');
+        return 'success';
+      }, baseDelay: Duration.zero);
 
       expect(result, 'success');
       expect(attempts, 2);
@@ -35,21 +32,18 @@ void main() {
 
     test('retries on Anthropic 429 rate limit', () async {
       var attempts = 0;
-      final result = await retryWithBackoff(
-        () async {
-          attempts++;
-          if (attempts < 2) {
-            throw AnthropicClientException(
-              message: 'rate limited',
-              uri: Uri.parse('https://api.anthropic.com/v1/messages'),
-              method: HttpMethod.post,
-              code: 429,
-            );
-          }
-          return 'ok';
-        },
-        baseDelay: Duration.zero,
-      );
+      final result = await retryWithBackoff(() async {
+        attempts++;
+        if (attempts < 2) {
+          throw AnthropicClientException(
+            message: 'rate limited',
+            uri: Uri.parse('https://api.anthropic.com/v1/messages'),
+            method: HttpMethod.post,
+            code: 429,
+          );
+        }
+        return 'ok';
+      }, baseDelay: Duration.zero);
 
       expect(result, 'ok');
       expect(attempts, 2);
@@ -57,21 +51,18 @@ void main() {
 
     test('retries on Anthropic 529 overload', () async {
       var attempts = 0;
-      final result = await retryWithBackoff(
-        () async {
-          attempts++;
-          if (attempts < 2) {
-            throw AnthropicClientException(
-              message: 'overloaded',
-              uri: Uri.parse('https://api.anthropic.com/v1/messages'),
-              method: HttpMethod.post,
-              code: 529,
-            );
-          }
-          return 'ok';
-        },
-        baseDelay: Duration.zero,
-      );
+      final result = await retryWithBackoff(() async {
+        attempts++;
+        if (attempts < 2) {
+          throw AnthropicClientException(
+            message: 'overloaded',
+            uri: Uri.parse('https://api.anthropic.com/v1/messages'),
+            method: HttpMethod.post,
+            code: 529,
+          );
+        }
+        return 'ok';
+      }, baseDelay: Duration.zero);
 
       expect(result, 'ok');
       expect(attempts, 2);
@@ -79,18 +70,15 @@ void main() {
 
     test('retries on ElevenLabs 429 error', () async {
       var attempts = 0;
-      final result = await retryWithBackoff(
-        () async {
-          attempts++;
-          if (attempts < 2) {
-            throw ElevenLabsException(
-              'TTS request failed: 429 Too Many Requests',
-            );
-          }
-          return 'ok';
-        },
-        baseDelay: Duration.zero,
-      );
+      final result = await retryWithBackoff(() async {
+        attempts++;
+        if (attempts < 2) {
+          throw ElevenLabsException(
+            'TTS request failed: 429 Too Many Requests',
+          );
+        }
+        return 'ok';
+      }, baseDelay: Duration.zero);
 
       expect(result, 'ok');
       expect(attempts, 2);
@@ -116,18 +104,15 @@ void main() {
     test('does not retry on non-transient Anthropic error (400)', () async {
       var attempts = 0;
       await expectLater(
-        retryWithBackoff(
-          () async {
-            attempts++;
-            throw AnthropicClientException(
-              message: 'bad request',
-              uri: Uri.parse('https://api.anthropic.com/v1/messages'),
-              method: HttpMethod.post,
-              code: 400,
-            );
-          },
-          baseDelay: Duration.zero,
-        ),
+        retryWithBackoff(() async {
+          attempts++;
+          throw AnthropicClientException(
+            message: 'bad request',
+            uri: Uri.parse('https://api.anthropic.com/v1/messages'),
+            method: HttpMethod.post,
+            code: 400,
+          );
+        }, baseDelay: Duration.zero),
         throwsA(isA<AnthropicClientException>()),
       );
 
@@ -137,13 +122,10 @@ void main() {
     test('does not retry on non-transient errors', () async {
       var attempts = 0;
       await expectLater(
-        retryWithBackoff(
-          () async {
-            attempts++;
-            throw StateError('not transient');
-          },
-          baseDelay: Duration.zero,
-        ),
+        retryWithBackoff(() async {
+          attempts++;
+          throw StateError('not transient');
+        }, baseDelay: Duration.zero),
         throwsA(isA<StateError>()),
       );
 

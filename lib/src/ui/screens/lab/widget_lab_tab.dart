@@ -29,10 +29,22 @@ class WidgetLabTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _section('MasteryBar'),
-        _specimen('All new', const MasteryBar(newCount: 20, learningCount: 0, masteredCount: 0)),
-        _specimen('All mastered', const MasteryBar(newCount: 0, learningCount: 0, masteredCount: 20)),
-        _specimen('Balanced mix', const MasteryBar(newCount: 5, learningCount: 8, masteredCount: 7)),
-        _specimen('Mostly learning', const MasteryBar(newCount: 2, learningCount: 15, masteredCount: 3)),
+        _specimen(
+          'All new',
+          const MasteryBar(newCount: 20, learningCount: 0, masteredCount: 0),
+        ),
+        _specimen(
+          'All mastered',
+          const MasteryBar(newCount: 0, learningCount: 0, masteredCount: 20),
+        ),
+        _specimen(
+          'Balanced mix',
+          const MasteryBar(newCount: 5, learningCount: 8, masteredCount: 7),
+        ),
+        _specimen(
+          'Mostly learning',
+          const MasteryBar(newCount: 2, learningCount: 15, masteredCount: 3),
+        ),
 
         _section('FsrsRatingBar'),
         _specimen('Rating buttons', FsrsRatingBar(onRate: (_) {})),
@@ -56,10 +68,7 @@ class WidgetLabTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      tier.name,
-                      style: const TextStyle(fontSize: 10),
-                    ),
+                    Text(tier.name, style: const TextStyle(fontSize: 10)),
                   ],
                 ),
               ),
@@ -201,14 +210,8 @@ class WidgetLabTab extends StatelessWidget {
                   claimedByName: 'Bob',
                   claimedAt: labNow.subtract(const Duration(hours: 5)),
                 ),
-                const RelayLeg(
-                  conceptId: 'c',
-                  conceptName: 'Active Recall',
-                ),
-                const RelayLeg(
-                  conceptId: 'd',
-                  conceptName: 'FSRS Algorithm',
-                ),
+                const RelayLeg(conceptId: 'c', conceptName: 'Active Recall'),
+                const RelayLeg(conceptId: 'd', conceptName: 'FSRS Algorithm'),
               ],
               createdAt: labNow.subtract(const Duration(days: 2)),
               createdByUid: 'alice',
@@ -287,7 +290,11 @@ class WidgetLabTab extends StatelessWidget {
         _section('StatCard'),
         _specimenRow('With and without icons', [
           const StatCard(label: 'Cards Due', value: '12', icon: Icons.schedule),
-          const StatCard(label: 'Mastered', value: '47', icon: Icons.check_circle),
+          const StatCard(
+            label: 'Mastered',
+            value: '47',
+            icon: Icons.check_circle,
+          ),
           const StatCard(label: 'Streak', value: '5 days'),
           const StatCard(label: 'Health', value: '87%'),
         ]),
@@ -360,14 +367,15 @@ Widget _specimen(String label, Widget child) {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Builder(
-          builder: (context) => Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          builder:
+              (context) => Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
         ),
         const SizedBox(height: 4),
         child,
@@ -383,14 +391,15 @@ Widget _specimenRow(String label, List<Widget> children) {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Builder(
-          builder: (context) => Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          builder:
+              (context) => Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
         ),
         const SizedBox(height: 4),
         SingleChildScrollView(

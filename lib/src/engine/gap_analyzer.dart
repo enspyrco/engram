@@ -21,12 +21,9 @@ import 'mastery_state.dart';
 /// 4. **Critical bottlenecks** — high out-degree concepts with low mastery
 ///    that block many dependents.
 class GapAnalyzer {
-  GapAnalyzer(
-    this._graph, {
-    List<ConceptCluster>? clusters,
-    DateTime? now,
-  }) : _clusters = clusters,
-       _now = now;
+  GapAnalyzer(this._graph, {List<ConceptCluster>? clusters, DateTime? now})
+    : _clusters = clusters,
+      _now = now;
 
   final KnowledgeGraph _graph;
   final List<ConceptCluster>? _clusters;
@@ -124,10 +121,7 @@ class GapAnalyzer {
                 'Bridging them could create $sizeProduct new conceptual paths.',
             severity: severity,
             bridgePotential: bridgePotential,
-            involvedConceptIds: [
-              ...a.conceptIds,
-              ...b.conceptIds,
-            ],
+            involvedConceptIds: [...a.conceptIds, ...b.conceptIds],
             involvedClusterLabels: [a.label, b.label],
             suggestedSearchTerms: searchTerms,
           ),
@@ -262,12 +256,7 @@ class GapAnalyzer {
       final dependents = analyzer.dependentsOf(concept.id);
       if (dependents.length < 2) continue;
 
-      final state = masteryStateOf(
-        concept.id,
-        _graph,
-        analyzer,
-        now: _now,
-      );
+      final state = masteryStateOf(concept.id, _graph, analyzer, now: _now);
 
       // Only flag concepts that are not yet mastered.
       if (state == MasteryState.mastered || state == MasteryState.fading) {
@@ -275,8 +264,10 @@ class GapAnalyzer {
       }
 
       // Severity scales with the number of blocked dependents.
-      final severity =
-          (dependents.length / _graph.concepts.length).clamp(0.0, 1.0);
+      final severity = (dependents.length / _graph.concepts.length).clamp(
+        0.0,
+        1.0,
+      );
 
       gaps.add(
         KnowledgeGap(

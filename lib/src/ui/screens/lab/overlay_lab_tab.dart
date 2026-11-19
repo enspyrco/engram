@@ -41,13 +41,14 @@ class _OverlayLabTabState extends State<OverlayLabTab> {
       children: [
         Expanded(
           child: LayoutBuilder(
-            builder: (context, constraints) => ForceDirectedGraphWidget(
-              graph: _graph,
-              layoutWidth: constraints.maxWidth,
-              layoutHeight: constraints.maxHeight,
-              healthTier: _tier,
-              isStormActive: _stormActive,
-            ),
+            builder:
+                (context, constraints) => ForceDirectedGraphWidget(
+                  graph: _graph,
+                  layoutWidth: constraints.maxWidth,
+                  layoutHeight: constraints.maxHeight,
+                  healthTier: _tier,
+                  isStormActive: _stormActive,
+                ),
           ),
         ),
         _buildControls(context),
@@ -70,17 +71,18 @@ class _OverlayLabTabState extends State<OverlayLabTab> {
           DropdownButton<HealthTier>(
             value: _tier,
             isDense: true,
-            items: HealthTier.values
-                .map(
-                  (tier) => DropdownMenuItem(
-                    value: tier,
-                    child: Text(
-                      tier.name[0].toUpperCase() + tier.name.substring(1),
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                )
-                .toList(),
+            items:
+                HealthTier.values
+                    .map(
+                      (tier) => DropdownMenuItem(
+                        value: tier,
+                        child: Text(
+                          tier.name[0].toUpperCase() + tier.name.substring(1),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    )
+                    .toList(),
             onChanged: (tier) {
               if (tier != null) setState(() => _tier = tier);
             },

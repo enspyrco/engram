@@ -19,8 +19,18 @@ void main() {
     test('single connected cluster returns no cluster isolation gap', () {
       final graph = KnowledgeGraph(
         concepts: [
-          Concept(id: 'a', name: 'A', description: 'desc', sourceDocumentId: 'd'),
-          Concept(id: 'b', name: 'B', description: 'desc', sourceDocumentId: 'd'),
+          Concept(
+            id: 'a',
+            name: 'A',
+            description: 'desc',
+            sourceDocumentId: 'd',
+          ),
+          Concept(
+            id: 'b',
+            name: 'B',
+            description: 'desc',
+            sourceDocumentId: 'd',
+          ),
         ],
         relationships: [
           const Relationship(
@@ -33,8 +43,9 @@ void main() {
         ],
       );
       final gaps = GapAnalyzer(graph).analyze();
-      final isolationGaps =
-          gaps.where((g) => g.type == GapType.clusterIsolation);
+      final isolationGaps = gaps.where(
+        (g) => g.type == GapType.clusterIsolation,
+      );
       expect(isolationGaps, isEmpty);
     });
 
@@ -42,10 +53,30 @@ void main() {
       test('two disconnected clusters produce a cluster isolation gap', () {
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Alpha', description: 'desc', sourceDocumentId: 'd'),
-            Concept(id: 'b', name: 'Beta', description: 'desc', sourceDocumentId: 'd'),
-            Concept(id: 'c', name: 'Gamma', description: 'desc', sourceDocumentId: 'd'),
-            Concept(id: 'd', name: 'Delta', description: 'desc', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Alpha',
+              description: 'desc',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'b',
+              name: 'Beta',
+              description: 'desc',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'c',
+              name: 'Gamma',
+              description: 'desc',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'd',
+              name: 'Delta',
+              description: 'desc',
+              sourceDocumentId: 'd',
+            ),
           ],
           relationships: [
             const Relationship(
@@ -137,10 +168,12 @@ void main() {
         final smallGaps = GapAnalyzer(smallGraph).analyze();
         final largeGaps = GapAnalyzer(largeGraph).analyze();
 
-        final smallIsolation = smallGaps
-            .firstWhere((g) => g.type == GapType.clusterIsolation);
-        final largeIsolation = largeGaps
-            .firstWhere((g) => g.type == GapType.clusterIsolation);
+        final smallIsolation = smallGaps.firstWhere(
+          (g) => g.type == GapType.clusterIsolation,
+        );
+        final largeIsolation = largeGaps.firstWhere(
+          (g) => g.type == GapType.clusterIsolation,
+        );
 
         expect(largeIsolation.severity, greaterThan(smallIsolation.severity));
       });
@@ -148,10 +181,30 @@ void main() {
       test('search terms combine concept names from both clusters', () {
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Machine Learning', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'b', name: 'Neural Networks', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'c', name: 'Database Design', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'd', name: 'SQL Joins', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Machine Learning',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'b',
+              name: 'Neural Networks',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'c',
+              name: 'Database Design',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'd',
+              name: 'SQL Joins',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
           relationships: [
             const Relationship(
@@ -172,8 +225,9 @@ void main() {
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final isolation =
-            gaps.firstWhere((g) => g.type == GapType.clusterIsolation);
+        final isolation = gaps.firstWhere(
+          (g) => g.type == GapType.clusterIsolation,
+        );
 
         expect(isolation.suggestedSearchTerms, isNotEmpty);
       });
@@ -183,16 +237,20 @@ void main() {
       test('concept with degree 0 and quiz items is flagged', () {
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Isolated', description: 'important', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Isolated',
+              description: 'important',
+              sourceDocumentId: 'd',
+            ),
           ],
-          quizItems: [
-            testQuizItem(id: 'q1', conceptId: 'a'),
-          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'a')],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final thinGaps =
-            gaps.where((g) => g.type == GapType.structuralThinness);
+        final thinGaps = gaps.where(
+          (g) => g.type == GapType.structuralThinness,
+        );
 
         expect(thinGaps, hasLength(1));
         expect(thinGaps.first.involvedConceptIds, contains('a'));
@@ -201,8 +259,18 @@ void main() {
       test('concept with degree 1 and quiz items is flagged', () {
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Hub', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'b', name: 'Thin', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Hub',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'b',
+              name: 'Thin',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
           relationships: [
             const Relationship(
@@ -213,9 +281,7 @@ void main() {
               type: RelationshipType.relatedTo,
             ),
           ],
-          quizItems: [
-            testQuizItem(id: 'q1', conceptId: 'b'),
-          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'b')],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
@@ -229,13 +295,19 @@ void main() {
         // Informational nodes without quiz items are leaf-like by design.
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Info', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Info',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final thinGaps =
-            gaps.where((g) => g.type == GapType.structuralThinness);
+        final thinGaps = gaps.where(
+          (g) => g.type == GapType.structuralThinness,
+        );
 
         expect(thinGaps, isEmpty);
       });
@@ -263,14 +335,13 @@ void main() {
               type: RelationshipType.relatedTo,
             ),
           ],
-          quizItems: [
-            testQuizItem(id: 'q1', conceptId: 'a'),
-          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'a')],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final thinGaps =
-            gaps.where((g) => g.type == GapType.structuralThinness);
+        final thinGaps = gaps.where(
+          (g) => g.type == GapType.structuralThinness,
+        );
 
         // a has degree 2, should not be flagged
         expect(
@@ -307,8 +378,9 @@ void main() {
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final typeGaps =
-            gaps.where((g) => g.type == GapType.relationshipTypeGap);
+        final typeGaps = gaps.where(
+          (g) => g.type == GapType.relationshipTypeGap,
+        );
 
         expect(typeGaps, isNotEmpty);
       });
@@ -339,8 +411,9 @@ void main() {
         );
 
         final gaps = GapAnalyzer(graph).analyze();
-        final typeGaps =
-            gaps.where((g) => g.type == GapType.relationshipTypeGap);
+        final typeGaps = gaps.where(
+          (g) => g.type == GapType.relationshipTypeGap,
+        );
 
         expect(typeGaps, isEmpty);
       });
@@ -352,10 +425,30 @@ void main() {
         // Concept 'hub' has many dependents but low mastery (unreviewed).
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'hub', name: 'Hub', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep1', name: 'Dep1', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep2', name: 'Dep2', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep3', name: 'Dep3', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'hub',
+              name: 'Hub',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep1',
+              name: 'Dep1',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep2',
+              name: 'Dep2',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep3',
+              name: 'Dep3',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
           relationships: [
             const Relationship(
@@ -387,24 +480,42 @@ void main() {
         );
 
         final gaps = GapAnalyzer(graph, now: now).analyze();
-        final bottlenecks =
-            gaps.where((g) => g.type == GapType.criticalBottleneck);
+        final bottlenecks = gaps.where(
+          (g) => g.type == GapType.criticalBottleneck,
+        );
 
         expect(bottlenecks, isNotEmpty);
-        expect(
-          bottlenecks.first.involvedConceptIds,
-          contains('hub'),
-        );
+        expect(bottlenecks.first.involvedConceptIds, contains('hub'));
       });
 
       test('high out-degree mastered concept is not flagged', () {
         final now = DateTime.utc(2026, 2, 20);
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'hub', name: 'Hub', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep1', name: 'Dep1', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep2', name: 'Dep2', description: '', sourceDocumentId: 'd'),
-            Concept(id: 'dep3', name: 'Dep3', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'hub',
+              name: 'Hub',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep1',
+              name: 'Dep1',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep2',
+              name: 'Dep2',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
+            Concept(
+              id: 'dep3',
+              name: 'Dep3',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
           relationships: [
             const Relationship(
@@ -439,8 +550,9 @@ void main() {
         );
 
         final gaps = GapAnalyzer(graph, now: now).analyze();
-        final bottlenecks =
-            gaps.where((g) => g.type == GapType.criticalBottleneck);
+        final bottlenecks = gaps.where(
+          (g) => g.type == GapType.criticalBottleneck,
+        );
 
         expect(bottlenecks, isEmpty);
       });
@@ -473,9 +585,7 @@ void main() {
               type: RelationshipType.prerequisite,
             ),
           ],
-          quizItems: [
-            testQuizItem(id: 'q1', conceptId: 'a'),
-          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'a')],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
@@ -485,7 +595,8 @@ void main() {
           expect(
             gaps[i - 1].severity,
             greaterThanOrEqualTo(gaps[i].severity),
-            reason: 'Gap at index ${i - 1} should have >= severity than gap at $i',
+            reason:
+                'Gap at index ${i - 1} should have >= severity than gap at $i',
           );
         }
       });
@@ -493,22 +604,23 @@ void main() {
       test('search terms are derived from concept names', () {
         final graph = KnowledgeGraph(
           concepts: [
-            Concept(id: 'a', name: 'Neural Networks', description: '', sourceDocumentId: 'd'),
+            Concept(
+              id: 'a',
+              name: 'Neural Networks',
+              description: '',
+              sourceDocumentId: 'd',
+            ),
           ],
-          quizItems: [
-            testQuizItem(id: 'q1', conceptId: 'a'),
-          ],
+          quizItems: [testQuizItem(id: 'q1', conceptId: 'a')],
         );
 
         final gaps = GapAnalyzer(graph).analyze();
         // Structural thinness gap for isolated concept with quiz items
-        final thinGap =
-            gaps.firstWhere((g) => g.type == GapType.structuralThinness);
-
-        expect(
-          thinGap.suggestedSearchTerms,
-          contains('Neural Networks'),
+        final thinGap = gaps.firstWhere(
+          (g) => g.type == GapType.structuralThinness,
         );
+
+        expect(thinGap.suggestedSearchTerms, contains('Neural Networks'));
       });
     });
 
@@ -538,8 +650,7 @@ void main() {
         ];
 
         final gaps = GapAnalyzer(graph, clusters: clusters).analyze();
-        final isolation =
-            gaps.where((g) => g.type == GapType.clusterIsolation);
+        final isolation = gaps.where((g) => g.type == GapType.clusterIsolation);
 
         expect(isolation, isNotEmpty);
         expect(

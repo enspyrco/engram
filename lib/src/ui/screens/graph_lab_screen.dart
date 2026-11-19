@@ -253,12 +253,14 @@ class _GraphLabScreenState extends State<GraphLabScreen> {
             icon: Icons.add_circle_outline,
             label:
                 'Add Node (${labInitialConcepts.length + _batch2Count}/${labInitialConcepts.length + labBatch2Concepts.length})',
-            onPressed: _batch2Count < labBatch2Concepts.length ? _addNode : null,
+            onPressed:
+                _batch2Count < labBatch2Concepts.length ? _addNode : null,
           ),
           _ToolbarButton(
             icon: Icons.library_add,
             label: 'Ingest Batch',
-            onPressed: _batch2Count < labBatch2Concepts.length ? _addBatch : null,
+            onPressed:
+                _batch2Count < labBatch2Concepts.length ? _addBatch : null,
           ),
           _ToolbarButton(
             icon: Icons.restart_alt,
@@ -539,4 +541,3 @@ class _MasteryLegend extends StatelessWidget {
     );
   }
 }
-

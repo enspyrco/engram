@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -258,7 +259,8 @@ class _RevealedView extends ConsumerWidget {
     if (item == null) return const SizedBox.shrink();
 
     final graph = ref.watch(graphStructureProvider);
-    final isMobile = defaultTargetPlatform == TargetPlatform.iOS ||
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.android;
 
     final quizCard = QuizCard(
@@ -277,18 +279,16 @@ class _RevealedView extends ConsumerWidget {
         children: [
           Expanded(
             child: Center(
-              child: isMobile
-                  ? SwipeableQuizCard(onRate: onRate, child: quizCard)
-                  : quizCard,
+              child:
+                  isMobile
+                      ? SwipeableQuizCard(onRate: onRate, child: quizCard)
+                      : quizCard,
             ),
           ),
           const SizedBox(height: 16),
           if (graph != null)
             Flexible(
-              child: NeighborhoodGraph(
-                conceptId: item.conceptId,
-                graph: graph,
-              ),
+              child: NeighborhoodGraph(conceptId: item.conceptId, graph: graph),
             ),
           const SizedBox(height: 8),
           FsrsRatingBar(onRate: onRate),

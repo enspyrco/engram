@@ -369,11 +369,16 @@ class ExtractionService {
     if (evaluation == null || evaluation.evaluatedCount == 0) return '';
 
     final mae = evaluation.meanAbsoluteError;
-    final buf = StringBuffer()
-      ..writeln()
-      ..writeln()
-      ..writeln('Difficulty calibration from your past predictions on this graph:')
-      ..writeln('- Evaluated ${evaluation.evaluatedCount} cards with 5+ reviews');
+    final buf =
+        StringBuffer()
+          ..writeln()
+          ..writeln()
+          ..writeln(
+            'Difficulty calibration from your past predictions on this graph:',
+          )
+          ..writeln(
+            '- Evaluated ${evaluation.evaluatedCount} cards with 5+ reviews',
+          );
     if (mae != null) {
       buf.writeln('- Mean absolute error: ${mae.toStringAsFixed(1)}/10');
     }

@@ -122,10 +122,7 @@ void main() {
       expect(recs[0].documentId, 'doc-1');
       expect(recs[0].score, 0.9);
       expect(recs[0].predictedNewEdges, hasLength(1));
-      expect(
-        recs[0].predictedNewEdges.first.type,
-        RelationshipType.enables,
-      );
+      expect(recs[0].predictedNewEdges.first.type, RelationshipType.enables);
       expect(recs[1].documentId, 'doc-2');
       expect(recs[1].score, 0.3);
     });
@@ -147,11 +144,7 @@ void main() {
       ).thenAnswer(
         (_) async => _evaluationMessage({
           'evaluations': [
-            {
-              'documentId': 'new-doc',
-              'score': 0.7,
-              'reasoning': 'Good fit',
-            },
+            {'documentId': 'new-doc', 'score': 0.7, 'reasoning': 'Good fit'},
           ],
         }),
       );
@@ -260,10 +253,7 @@ void main() {
       );
 
       expect(
-        () => service.recommend(
-          gap: testGap,
-          existingConceptNames: [],
-        ),
+        () => service.recommend(gap: testGap, existingConceptNames: []),
         throwsA(isA<RecommendationException>()),
       );
     });

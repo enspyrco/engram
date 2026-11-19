@@ -60,9 +60,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          narrationProvider.overrideWith(
-            () => _FakeNarrationNotifier(session),
-          ),
+          narrationProvider.overrideWith(() => _FakeNarrationNotifier(session)),
           graphStructureProvider.overrideWithValue(testGraph),
         ],
       );
@@ -86,9 +84,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          narrationProvider.overrideWith(
-            () => _FakeNarrationNotifier(session),
-          ),
+          narrationProvider.overrideWith(() => _FakeNarrationNotifier(session)),
           graphStructureProvider.overrideWithValue(null),
         ],
       );
@@ -106,9 +102,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          narrationProvider.overrideWith(
-            () => _FakeNarrationNotifier(session),
-          ),
+          narrationProvider.overrideWith(() => _FakeNarrationNotifier(session)),
           graphStructureProvider.overrideWithValue(testGraph),
         ],
       );
@@ -127,9 +121,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          narrationProvider.overrideWith(
-            () => _FakeNarrationNotifier(session),
-          ),
+          narrationProvider.overrideWith(() => _FakeNarrationNotifier(session)),
           graphStructureProvider.overrideWithValue(testGraph),
         ],
       );

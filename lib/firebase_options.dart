@@ -66,8 +66,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '593793808284',
     projectId: 'engram-26a3a',
     storageBucket: 'engram-26a3a.firebasestorage.app',
-    androidClientId: '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
-    iosClientId: '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
+    androidClientId:
+        '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
+    iosClientId:
+        '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
     iosBundleId: 'co.enspyr.engram',
   );
 
@@ -77,8 +79,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '593793808284',
     projectId: 'engram-26a3a',
     storageBucket: 'engram-26a3a.firebasestorage.app',
-    androidClientId: '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
-    iosClientId: '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
+    androidClientId:
+        '593793808284-p1ijmejeqep15lburbkgfirsh1r63dje.apps.googleusercontent.com',
+    iosClientId:
+        '593793808284-3lici2b3q9a9aakq5deullkh94a23b87.apps.googleusercontent.com',
     iosBundleId: 'co.enspyr.engram',
   );
 }

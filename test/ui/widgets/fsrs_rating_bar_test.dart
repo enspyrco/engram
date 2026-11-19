@@ -7,11 +7,7 @@ void main() {
   group('FsrsRatingBar', () {
     testWidgets('renders 4 rating buttons', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: FsrsRatingBar(onRate: (_) {}),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: FsrsRatingBar(onRate: (_) {}))),
       );
 
       expect(find.text('Again'), findsOneWidget);
@@ -25,9 +21,7 @@ void main() {
       FsrsRating? received;
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: FsrsRatingBar(onRate: (r) => received = r),
-          ),
+          home: Scaffold(body: FsrsRatingBar(onRate: (r) => received = r)),
         ),
       );
 
@@ -39,9 +33,7 @@ void main() {
       FsrsRating? received;
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: FsrsRatingBar(onRate: (r) => received = r),
-          ),
+          home: Scaffold(body: FsrsRatingBar(onRate: (r) => received = r)),
         ),
       );
 
@@ -53,9 +45,7 @@ void main() {
       FsrsRating? received;
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: FsrsRatingBar(onRate: (r) => received = r),
-          ),
+          home: Scaffold(body: FsrsRatingBar(onRate: (r) => received = r)),
         ),
       );
 
@@ -67,9 +57,7 @@ void main() {
       FsrsRating? received;
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: FsrsRatingBar(onRate: (r) => received = r),
-          ),
+          home: Scaffold(body: FsrsRatingBar(onRate: (r) => received = r)),
         ),
       );
 

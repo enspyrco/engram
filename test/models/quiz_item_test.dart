@@ -175,23 +175,25 @@ void main() {
   });
 
   group('predictedDifficulty and reviewCount', () {
-    test('newCard stores predictedDifficulty separately from FSRS difficulty',
-        () {
-      final item = QuizItem.newCard(
-        id: 'q1',
-        conceptId: 'c1',
-        question: 'Q?',
-        answer: 'A.',
-        predictedDifficulty: 7.0,
-        now: now,
-      );
+    test(
+      'newCard stores predictedDifficulty separately from FSRS difficulty',
+      () {
+        final item = QuizItem.newCard(
+          id: 'q1',
+          conceptId: 'c1',
+          question: 'Q?',
+          answer: 'A.',
+          predictedDifficulty: 7.0,
+          now: now,
+        );
 
-      // FSRS difficulty is processed (clamped, used for init)
-      expect(item.difficulty, closeTo(7.0, 0.01));
-      // predictedDifficulty preserves the raw extraction value
-      expect(item.predictedDifficulty, 7.0);
-      expect(item.reviewCount, 0);
-    });
+        // FSRS difficulty is processed (clamped, used for init)
+        expect(item.difficulty, closeTo(7.0, 0.01));
+        // predictedDifficulty preserves the raw extraction value
+        expect(item.predictedDifficulty, 7.0);
+        expect(item.reviewCount, 0);
+      },
+    );
 
     test('newCard without predictedDifficulty leaves field null', () {
       final item = QuizItem.newCard(

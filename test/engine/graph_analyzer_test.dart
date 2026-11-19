@@ -42,23 +42,20 @@ QuizItem _quiz(String id, String conceptId, {int fsrsState = 1}) => QuizItem(
 );
 
 /// FSRS quiz item with configurable state.
-QuizItem _fsrsQuiz(
-  String id,
-  String conceptId, {
-  int fsrsState = 1,
-}) => QuizItem(
-  id: id,
-  conceptId: conceptId,
-  question: 'Q?',
-  answer: 'A.',
-  interval: 1,
-  nextReview: DateTime.utc(2025, 6, 15),
-  lastReview: null,
-  difficulty: 5.0,
-  stability: 3.26,
-  fsrsState: fsrsState,
-  lapses: 0,
-);
+QuizItem _fsrsQuiz(String id, String conceptId, {int fsrsState = 1}) =>
+    QuizItem(
+      id: id,
+      conceptId: conceptId,
+      question: 'Q?',
+      answer: 'A.',
+      interval: 1,
+      nextReview: DateTime.utc(2025, 6, 15),
+      lastReview: null,
+      difficulty: 5.0,
+      stability: 3.26,
+      fsrsState: fsrsState,
+      lapses: 0,
+    );
 
 void main() {
   group('isDependencyEdge', () {

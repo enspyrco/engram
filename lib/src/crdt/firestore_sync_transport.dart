@@ -25,9 +25,9 @@ class FirestoreSyncTransport {
     required FirebaseFirestore firestore,
     required String userId,
   }) : _syncLog = firestore
-            .collection('users')
-            .doc(userId)
-            .collection('sync_log');
+           .collection('users')
+           .doc(userId)
+           .collection('sync_log');
 
   final CollectionReference _syncLog;
 
@@ -79,10 +79,12 @@ class FirestoreSyncTransport {
       if (data['nodeId'] == localNodeId) continue;
 
       final changesetJson = data['changeset'] as Map<String, dynamic>;
-      results.add(PulledChangeset(
-        changeset: GraphChangeset.fromJson(changesetJson),
-        maxHlc: data['maxHlc'] as String,
-      ));
+      results.add(
+        PulledChangeset(
+          changeset: GraphChangeset.fromJson(changesetJson),
+          maxHlc: data['maxHlc'] as String,
+        ),
+      );
     }
 
     return results;
@@ -94,9 +96,8 @@ class FirestoreSyncTransport {
   /// Safe to call at any time — only affects entries that all devices
   /// have already processed (confirmed by their sync metadata).
   Future<int> cleanup({required String beforeHlc}) async {
-    final snapshot = await _syncLog
-        .where('maxHlc', isLessThanOrEqualTo: beforeHlc)
-        .get();
+    final snapshot =
+        await _syncLog.where('maxHlc', isLessThanOrEqualTo: beforeHlc).get();
 
     if (snapshot.docs.isEmpty) return 0;
 
@@ -112,10 +113,7 @@ class FirestoreSyncTransport {
 
 /// A changeset pulled from the sync_log, paired with its `maxHlc` bookmark.
 class PulledChangeset {
-  const PulledChangeset({
-    required this.changeset,
-    required this.maxHlc,
-  });
+  const PulledChangeset({required this.changeset, required this.maxHlc});
 
   final GraphChangeset changeset;
   final String maxHlc;

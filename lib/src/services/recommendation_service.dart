@@ -67,11 +67,13 @@ const _evaluationTool = Tool.custom(
                 'properties': {
                   'fromConceptName': {
                     'type': 'string',
-                    'description': 'Source concept name (may be new or existing)',
+                    'description':
+                        'Source concept name (may be new or existing)',
                   },
                   'toConceptName': {
                     'type': 'string',
-                    'description': 'Target concept name (may be new or existing)',
+                    'description':
+                        'Target concept name (may be new or existing)',
                   },
                   'type': {
                     'type': 'string',
@@ -88,8 +90,7 @@ const _evaluationTool = Tool.custom(
                   },
                   'confidence': {
                     'type': 'number',
-                    'description':
-                        'Confidence in this prediction (0.0–1.0)',
+                    'description': 'Confidence in this prediction (0.0–1.0)',
                   },
                 },
               },
@@ -162,10 +163,7 @@ class RecommendationService {
     for (final term in gap.suggestedSearchTerms) {
       if (candidates.length >= maxCandidates) break;
 
-      final results = await outlineClient.search(
-        term,
-        limit: maxCandidates,
-      );
+      final results = await outlineClient.search(term, limit: maxCandidates);
 
       for (final result in results) {
         final doc = result['document'] as Map<String, dynamic>;
@@ -197,17 +195,16 @@ class RecommendationService {
     required List<String> existingConceptNames,
   }) async {
     final candidateList = candidates
-        .map(
-          (c) => '- [${c.documentId}] "${c.title}": ${c.snippet}',
-        )
+        .map((c) => '- [${c.documentId}] "${c.title}": ${c.snippet}')
         .join('\n');
 
     // Truncate to 50 concepts to keep prompt size manageable.
     final truncated = existingConceptNames.take(50).toList();
     final conceptList = truncated.join(', ');
-    final truncationNote = existingConceptNames.length > 50
-        ? ' (showing 50 of ${existingConceptNames.length})'
-        : '';
+    final truncationNote =
+        existingConceptNames.length > 50
+            ? ' (showing 50 of ${existingConceptNames.length})'
+            : '';
 
     final response = await retryWithBackoff(
       () => _client.createMessage(

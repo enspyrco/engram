@@ -7,7 +7,9 @@ import 'knowledge_graph_provider.dart';
 ///
 /// Watches [knowledgeGraphProvider] and recomputes on graph changes.
 /// Returns [DifficultyEvaluationResult.empty] when the graph is not loaded.
-final difficultyEvaluationProvider = Provider<DifficultyEvaluationResult>((ref) {
+final difficultyEvaluationProvider = Provider<DifficultyEvaluationResult>((
+  ref,
+) {
   final graph = ref.watch(knowledgeGraphProvider).valueOrNull;
   if (graph == null) return DifficultyEvaluationResult.empty();
   return evaluatePredictions(graph.quizItems.toList());
