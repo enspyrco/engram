@@ -626,6 +626,36 @@ void main() {
       expect(withBool.concepts.first.isDeleted, isTrue);
     });
 
+    test('an invalid rubric from a peer arrives as null', () {
+      Map<String, Object?> quizItem(String id, String? rubric) => {
+        'id': id,
+        'concept_id': 'c1',
+        'question': 'Q?',
+        'answer': 'A.',
+        'interval': 0,
+        'next_review': '2026-01-01T00:00:00.000Z',
+        'review_count': 0,
+        'rubric': rubric,
+        'hlc': 'hlc-$id',
+        'is_deleted': 0,
+      };
+
+      final changeset = GraphChangeset.fromJson({
+        'drift_quiz_items': [
+          quizItem('valid', '["names both terms","explains why"]'),
+          quizItem('one-criterion', '["only one"]'),
+          quizItem('blank', '["names both terms","  "]'),
+          quizItem('absent', null),
+        ],
+      });
+
+      final byId = {for (final q in changeset.quizItems) q.id: q.rubric};
+      expect(byId['valid']?.toList(), ['names both terms', 'explains why']);
+      expect(byId['one-criterion'], isNull);
+      expect(byId['blank'], isNull);
+      expect(byId['absent'], isNull);
+    });
+
     test('composite key handling for topic-documents', () async {
       // Save a topic with multiple documents
       await repoA.save(

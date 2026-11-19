@@ -131,7 +131,8 @@ const _extractionTool = Tool.custom(
             },
             'question': {
               'type': 'string',
-              'description': 'The question to ask',
+              'description':
+                  'A free-recall probe. Must not contain or leak the answer; never yes/no or multiple-choice.',
             },
             'answer': {
               'type': 'string',
@@ -214,7 +215,8 @@ const _splitTool = Tool.custom(
                   },
                   'question': {
                     'type': 'string',
-                    'description': 'The question to ask',
+                    'description':
+                        'A free-recall probe. Must not contain or leak the answer; never yes/no or multiple-choice.',
                   },
                   'answer': {
                     'type': 'string',

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/rubric.dart';
 import '../storage/drift/engram_database.dart';
 import '../storage/drift/type_converters.dart';
 
@@ -261,8 +262,10 @@ class GraphChangeset {
       lapses: m['lapses'] as int?,
       predictedDifficulty: (m['predicted_difficulty'] as num?)?.toDouble(),
       reviewCount: m['review_count'] as int,
+      // A peer's rubric is validated here, so the column only ever holds a
+      // canonical Rubric or NULL.
       rubric: switch (m['rubric']) {
-        final String sql => _rubricConverter.fromSql(sql),
+        final String sql => Rubric.parse(jsonDecode(sql))?.criteria,
         _ => null,
       },
       hlc: m['hlc'] as String,
