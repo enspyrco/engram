@@ -749,8 +749,11 @@ void main() {
                 .firstWhere((r) => r.documentId == 'doc1')
                 .hlc;
 
-        // Another device, since this caller took its copy of t1, added
-        // doc4 to it and removed doc3 from it.
+        // Another device, since this caller took its copy of t1, renamed it,
+        // added doc4 to it and removed doc3 from it.
+        await db.customStatement(
+          "UPDATE drift_topics SET name = 'Renamed elsewhere' WHERE id = 't1'",
+        );
         await db.customStatement(
           "INSERT INTO drift_topic_documents (topic_id, document_id, hlc) "
           "VALUES ('t1', 'doc4', 'peer-hlc')",
@@ -767,10 +770,10 @@ void main() {
         );
 
         final loaded = await hlcRepo.load();
-        expect(loaded.topics.firstWhere((t) => t.id == 't1').documentIds, {
-          'doc1',
-          'doc4',
-        });
+        final t1 = loaded.topics.firstWhere((t) => t.id == 't1');
+        expect(t1.documentIds, {'doc1', 'doc4'});
+        // The caller changed only links, so the rename stands.
+        expect(t1.name, 'Renamed elsewhere');
         expect(loaded.topics.firstWhere((t) => t.id == 't2').documentIds, {
           'doc2',
         });

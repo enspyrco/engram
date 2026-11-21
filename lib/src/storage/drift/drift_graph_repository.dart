@@ -230,13 +230,32 @@ class DriftGraphRepository extends GraphRepository {
 
     await _db.transaction(() async {
       final hlc = _stampHlc();
-      await _db.batch((batch) {
-        batch.insert(
-          _db.driftTopics,
-          topic.toCompanion(hlc: hlc),
-          mode: InsertMode.insertOrReplace,
+      if (previous == null) {
+        await _db
+            .into(_db.driftTopics)
+            .insert(
+              topic.toCompanion(hlc: hlc),
+              mode: InsertMode.insertOrReplace,
+            );
+      } else if (topic.name != previous.name ||
+          topic.description != previous.description) {
+        // Only the fields the caller changed, so a stale copy can't put back
+        // a rename or ingest time made elsewhere.
+        await (_db.update(_db.driftTopics)
+          ..where((t) => t.id.equals(topic.id))).write(
+          DriftTopicsCompanion(
+            name:
+                topic.name != previous.name
+                    ? Value(topic.name)
+                    : const Value.absent(),
+            description:
+                topic.description != previous.description
+                    ? Value(topic.description)
+                    : const Value.absent(),
+            hlc: Value(hlc),
+          ),
         );
-      });
+      }
       await _db.batch((batch) {
         batch.insertAll(_db.driftTopicDocuments, [
           for (final docId in added)

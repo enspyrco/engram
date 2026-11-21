@@ -36,10 +36,11 @@ abstract class GraphRepository {
     required List<QuizItem> quizItems,
   });
 
-  /// Upserts [topic], and adds or removes exactly the document links that
-  /// differ from [previous], the caller's own prior copy of it. With no
-  /// [previous] (a new topic), every link is added. Links the caller never
-  /// saw, such as one another device added, are left alone.
+  /// Writes the changes from [previous], the caller's own prior copy of
+  /// [topic]: its name and description if they differ, and exactly the
+  /// document links added or removed. With no [previous] (a new topic) the
+  /// whole topic is written. Anything the caller didn't change, such as a
+  /// link or rename made on another device, is left alone.
   Future<void> upsertTopic(Topic topic, {Topic? previous});
 
   /// Records that [topicId] finished ingesting at [at], writing only that

@@ -276,10 +276,9 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   /// document links that differ between the two are written.
   void upsertTopic(Topic topic, {required Topic? previous}) {
     final current = state.valueOrNull;
-    if (current == null) return;
+    if (current != null) state = AsyncData(current.withTopic(topic));
 
-    state = AsyncData(current.withTopic(topic));
-
+    // Storage is written whether or not the graph has loaded into memory.
     final repo = ref.read(graphRepositoryProvider);
     repo.upsertTopic(topic, previous: previous).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in upsertTopic: $e');
@@ -289,14 +288,14 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   /// Record that [topicId] finished ingesting now, persisting only that
   /// column.
   void markTopicIngested(String topicId) {
-    final current = state.valueOrNull;
-    if (current == null) return;
-    final topic = current.topics.where((t) => t.id == topicId).firstOrNull;
-    if (topic == null) return;
-
     final now = ref.read(clockProvider)();
-    state = AsyncData(current.withTopic(topic.withLastIngestedAt(now)));
+    final current = state.valueOrNull;
+    final topic = current?.topics.where((t) => t.id == topicId).firstOrNull;
+    if (current != null && topic != null) {
+      state = AsyncData(current.withTopic(topic.withLastIngestedAt(now)));
+    }
 
+    // Storage is written whether or not the graph has loaded into memory.
     final repo = ref.read(graphRepositoryProvider);
     repo.markTopicIngested(topicId, now).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in markTopicIngested: $e');

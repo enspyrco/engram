@@ -217,7 +217,9 @@ class IngestNotifier extends Notifier<IngestState> {
 
     // Persist the user's edit now, diffed against the copy they edited
     // from, so a link another device adds during the ingest is not undone.
-    graphNotifier.upsertTopic(topic, previous: state.selectedTopic);
+    final editedFrom = state.selectedTopic;
+    await ref.read(knowledgeGraphProvider.future);
+    graphNotifier.upsertTopic(topic, previous: editedFrom);
 
     state = state.copyWith(
       phase: IngestPhase.ingesting,
@@ -385,12 +387,16 @@ class IngestNotifier extends Notifier<IngestState> {
               );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
+          // No later write picks an extraction up again. If it never
+          // committed, its document row wasn't written either, so the next
+          // ingest re-extracts it instead of skipping it as unchanged.
           debugPrint(
-            '[Ingest] Storage save timed out — '
-            'data is in memory, will retry on next save',
+            '[Ingest] Ingest of "$docTitle" timed out; '
+            're-run ingest if its concepts are missing',
           );
           state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
+            statusMessage:
+                'Timed out; re-run ingest if this document is missing',
           );
         }
 
@@ -609,12 +615,16 @@ class IngestNotifier extends Notifier<IngestState> {
               );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
+          // No later write picks an extraction up again. If it never
+          // committed, its document row wasn't written either, so the next
+          // ingest re-extracts it instead of skipping it as unchanged.
           debugPrint(
-            '[Ingest] Storage save timed out — '
-            'data is in memory, will retry on next save',
+            '[Ingest] Ingest of "$docTitle" timed out; '
+            're-run ingest if its concepts are missing',
           );
           state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
+            statusMessage:
+                'Timed out; re-run ingest if this document is missing',
           );
         }
 

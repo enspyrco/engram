@@ -110,6 +110,14 @@ This fixes a different harm from issue 171: concurrent review of the *same* card
 4. Then the rubric backfill, as content-row writes.
 5. Option B only if concurrent same-card review loss is observed.
 
+## 5a. What the code cage-match found: the clock is still per row (escalation)
+
+PR https://github.com/enspyrco/engram/pull/174 hit the 3-round cap without a clean round. Rounds 2 and 3 found one class four times: a write carrying more than it changed (the whole topic at the end of ingest, the whole document row on backfill, the topic row on a link-only edit). Each was fixed by making the write column-scoped. Carnot's round-3 finding names why that can't be the end of it:
+
+**The producer is the per-row clock itself.** A column-scoped write leaves the other columns as storage has them, which protects edits already merged. But it still advances the row's single clock, so an edit to a *different* field of the same row on another device, not yet synced, loses the whole row to it. Example: B renames topic t1; A, before syncing, marks t1 ingested; A's later clock wins t1's row, and B's rename is gone everywhere.
+
+That is the same shape as issue 171 (content vs schedule on a quiz row), on topics and document rows too. Layer 2 as written fixes it for quiz items only, by splitting the table so each row has one writer. Before layer 2 is built, its temper should answer the general question: **per-field clocks (an LWW register per column) for every table, or a table split per writer where writers are few?** A per-field register makes "a write changes only its fields" true at merge time as well as at write time, and dissolves the column-scoping as a special case. Its cost is the wire format: each field travels with its own clock.
+
 ## 6. Card identity across re-extraction (decided 2026-11-21: middle path)
 
 Today quiz ids are not stable: the extraction prompt reuses concept ids but invents quiz ids, and `withNewExtraction` drops every card on a re-extracted document's concepts, so any edit to a wiki page resets the review history of every card from that page.
