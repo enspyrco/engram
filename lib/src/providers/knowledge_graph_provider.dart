@@ -119,10 +119,12 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       collectionName: collectionName,
       documentText: documentText,
     );
-    state = AsyncData(change.graph);
 
+    // Commit before publishing, so memory never shows a graph storage
+    // rejected.
     final repo = ref.read(graphRepositoryProvider);
     await repo.applyExtraction(change.patch);
+    state = AsyncData(change.graph);
   }
 
   /// Like [ingestExtraction] but reveals concepts in small batches with
@@ -237,7 +239,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   }
 
   /// Update a document's metadata with its collection info and persist
-  /// that one row.
+  /// only its collection columns.
   void backfillCollectionInfo(
     String documentId, {
     required String collectionId,
@@ -257,10 +259,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     // Fire-and-forget — in-memory state is already correct.
     final repo = ref.read(graphRepositoryProvider);
     repo
-        .upsertDocumentMetadata(
-          newGraph.documentMetadata
-              .where((d) => d.documentId == documentId)
-              .toList(),
+        .setDocumentCollection(
+          documentId,
+          collectionId: collectionId,
+          collectionName: collectionName,
         )
         .catchError((e) {
           debugPrint(
@@ -269,18 +271,35 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
         });
   }
 
-  /// Upsert a topic into the graph and persist.
-  void upsertTopic(Topic topic) {
+  /// Upsert [topic] into the graph and persist it. [previous] is the copy
+  /// the caller edited [topic] from (null for a new topic); only the
+  /// document links that differ between the two are written.
+  void upsertTopic(Topic topic, {required Topic? previous}) {
     final current = state.valueOrNull;
     if (current == null) return;
 
-    final previous = current.topics.where((t) => t.id == topic.id).firstOrNull;
-    final newGraph = current.withTopic(topic);
-    state = AsyncData(newGraph);
+    state = AsyncData(current.withTopic(topic));
 
     final repo = ref.read(graphRepositoryProvider);
     repo.upsertTopic(topic, previous: previous).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in upsertTopic: $e');
+    });
+  }
+
+  /// Record that [topicId] finished ingesting now, persisting only that
+  /// column.
+  void markTopicIngested(String topicId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final topic = current.topics.where((t) => t.id == topicId).firstOrNull;
+    if (topic == null) return;
+
+    final now = ref.read(clockProvider)();
+    state = AsyncData(current.withTopic(topic.withLastIngestedAt(now)));
+
+    final repo = ref.read(graphRepositoryProvider);
+    repo.markTopicIngested(topicId, now).catchError((e) {
+      debugPrint('[KnowledgeGraph] Storage error in markTopicIngested: $e');
     });
   }
 

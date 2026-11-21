@@ -4,7 +4,6 @@ import 'package:drift/drift.dart';
 import '../../crdt/graph_changeset.dart';
 import '../../crdt/hlc_manager.dart';
 import '../../models/concept.dart';
-import '../../models/document_metadata.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/quiz_item.dart';
 import '../../models/relationship.dart';
@@ -219,7 +218,7 @@ class DriftGraphRepository extends GraphRepository {
   }
 
   // -------------------------------------------------------------------------
-  // upsertTopics / upsertDocumentMetadata
+  // topics and document metadata
   // -------------------------------------------------------------------------
 
   @override
@@ -260,16 +259,30 @@ class DriftGraphRepository extends GraphRepository {
   }
 
   @override
-  Future<void> upsertDocumentMetadata(List<DocumentMetadata> documents) async {
-    if (documents.isEmpty) return;
-    final hlc = _stampHlc();
-    await _db.batch((batch) {
-      batch.insertAll(
-        _db.driftDocuments,
-        documents.map((d) => d.toCompanion(hlc: hlc)).toList(),
-        mode: InsertMode.insertOrReplace,
-      );
-    });
+  Future<void> markTopicIngested(String topicId, DateTime at) async {
+    await (_db.update(_db.driftTopics)
+      ..where((t) => t.id.equals(topicId))).write(
+      DriftTopicsCompanion(
+        lastIngestedAt: Value(at.toIso8601String()),
+        hlc: Value(_stampHlc()),
+      ),
+    );
+  }
+
+  @override
+  Future<void> setDocumentCollection(
+    String documentId, {
+    required String collectionId,
+    required String collectionName,
+  }) async {
+    await (_db.update(_db.driftDocuments)
+      ..where((t) => t.documentId.equals(documentId))).write(
+      DriftDocumentsCompanion(
+        collectionId: Value(collectionId),
+        collectionName: Value(collectionName),
+        hlc: Value(_stampHlc()),
+      ),
+    );
   }
 
   // -------------------------------------------------------------------------

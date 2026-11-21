@@ -1,5 +1,4 @@
 import '../models/concept.dart';
-import '../models/document_metadata.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
@@ -43,8 +42,17 @@ abstract class GraphRepository {
   /// saw, such as one another device added, are left alone.
   Future<void> upsertTopic(Topic topic, {Topic? previous});
 
-  /// Upserts document metadata rows, such as backfilled collection info.
-  Future<void> upsertDocumentMetadata(List<DocumentMetadata> documents);
+  /// Records that [topicId] finished ingesting at [at], writing only that
+  /// column of the topic row.
+  Future<void> markTopicIngested(String topicId, DateTime at);
+
+  /// Sets a document's collection, writing only the two collection columns
+  /// of its row.
+  Future<void> setDocumentCollection(
+    String documentId, {
+    required String collectionId,
+    required String collectionName,
+  });
 
   /// Reactive stream of graph changes.
   Stream<KnowledgeGraph> watch();

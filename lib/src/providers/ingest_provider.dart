@@ -215,6 +215,10 @@ class IngestNotifier extends Notifier<IngestState> {
               documentIds: state.selectedDocumentIds,
             );
 
+    // Persist the user's edit now, diffed against the copy they edited
+    // from, so a link another device adds during the ingest is not undone.
+    graphNotifier.upsertTopic(topic, previous: state.selectedTopic);
+
     state = state.copyWith(
       phase: IngestPhase.ingesting,
       selectedTopic: () => topic,
@@ -399,9 +403,15 @@ class IngestNotifier extends Notifier<IngestState> {
         );
       }
 
-      // Save the topic to the graph
-      final finishedTopic = topic.withLastIngestedAt(ref.read(clockProvider)());
-      graphNotifier.upsertTopic(finishedTopic);
+      graphNotifier.markTopicIngested(topic.id);
+      final finishedTopic =
+          ref
+              .read(knowledgeGraphProvider)
+              .valueOrNull
+              ?.topics
+              .where((t) => t.id == topic.id)
+              .firstOrNull ??
+          topic;
 
       // Record collection IDs for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);

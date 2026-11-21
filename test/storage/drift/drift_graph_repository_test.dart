@@ -243,8 +243,8 @@ void main() {
       },
     );
 
-    test('handles empty graph', () async {
-      await repo.seedEmpty(KnowledgeGraph());
+    test('seeds an empty graph into an empty store', () async {
+      expect(await repo.seedEmpty(KnowledgeGraph()), isTrue);
 
       final loaded = await repo.load();
       expect(loaded.concepts, isEmpty);
@@ -629,14 +629,11 @@ void main() {
       final before = await clocks();
 
       await reExtractDoc1(hlcRepo, keepOnlyC1());
-      await hlcRepo.upsertDocumentMetadata([
-        DocumentMetadata(
-          documentId: 'doc2',
-          title: 'Infrastructure',
-          updatedAt: '2026-02-20T10:00:00.000Z',
-          ingestedAt: DateTime.utc(2026, 2, 24),
-        ),
-      ]);
+      await hlcRepo.setDocumentCollection(
+        'doc1',
+        collectionId: 'col2',
+        collectionName: 'Ops',
+      );
 
       final after = await clocks();
       for (final untouched in ['c3', 'q3', 't1', 't1|doc1']) {
@@ -645,6 +642,37 @@ void main() {
       for (final touched in ['c1', 'c2', 'q1', 'q2']) {
         expect(after[touched], isNot(before[touched]), reason: touched);
       }
+    });
+
+    test('column writes leave the rest of the row as storage has it', () async {
+      await repo.seedEmpty(fullGraph());
+
+      // Another device's newer title, text and topic name are already merged.
+      await db.customStatement(
+        "UPDATE drift_documents SET title = 'Containers, revised', "
+        "ingested_text = 'revised text' WHERE document_id = 'doc1'",
+      );
+      await db.customStatement(
+        "UPDATE drift_topics SET name = 'Renamed elsewhere' WHERE id = 't1'",
+      );
+
+      await repo.setDocumentCollection(
+        'doc1',
+        collectionId: 'col2',
+        collectionName: 'Ops',
+      );
+      await repo.markTopicIngested('t1', DateTime.utc(2026, 3, 1));
+
+      final loaded = await repo.load();
+      final doc = loaded.documentMetadata.single;
+      expect(doc.collectionId, 'col2');
+      expect(doc.collectionName, 'Ops');
+      expect(doc.title, 'Containers, revised');
+      expect(doc.ingestedText, 'revised text');
+      final topic = loaded.topics.single;
+      expect(topic.lastIngestedAt, DateTime.utc(2026, 3, 1));
+      expect(topic.name, 'Renamed elsewhere');
+      expect(topic.documentIds, {'doc1'});
     });
 
     test('re-extracting a tombstoned concept resurrects it', () async {
