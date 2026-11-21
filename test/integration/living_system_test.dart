@@ -165,7 +165,7 @@ void main() {
       http.Client? httpClient,
       ExtractionService? extraction,
     }) async {
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
 
       final container = ProviderContainer(
         overrides: [

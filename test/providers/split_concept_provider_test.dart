@@ -26,7 +26,7 @@ void main() {
 
   Future<ProviderContainer> createContainer({KnowledgeGraph? initial}) async {
     if (initial != null) {
-      await repo.save(initial);
+      await repo.seedEmpty(initial);
     }
 
     final container = ProviderContainer(

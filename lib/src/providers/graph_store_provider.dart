@@ -69,8 +69,9 @@ Future<void> seedFromFirestoreIfNeeded(Ref ref) async {
         remoteGraph.quizItems.isEmpty &&
         remoteGraph.documentMetadata.isEmpty;
 
-    if (!remoteIsEmpty) {
-      await driftRepo.save(remoteGraph);
+    // The check above only spares a Firestore read; seedEmpty decides, in
+    // its own transaction, because a sync may have written rows since.
+    if (!remoteIsEmpty && await driftRepo.seedEmpty(remoteGraph)) {
       debugPrint(
         '[GraphStore] Seeded Drift from Firestore '
         '(${remoteGraph.concepts.length} concepts)',

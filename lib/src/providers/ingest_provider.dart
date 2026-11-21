@@ -15,7 +15,6 @@ import '../models/topic.dart';
 import '../services/extraction_service.dart';
 import 'clock_provider.dart';
 import 'difficulty_evaluation_provider.dart';
-import 'graph_store_provider.dart';
 import 'knowledge_graph_provider.dart';
 import 'service_providers.dart';
 import 'settings_provider.dart';
@@ -216,6 +215,12 @@ class IngestNotifier extends Notifier<IngestState> {
               documentIds: state.selectedDocumentIds,
             );
 
+    // Persist the user's edit now, diffed against the copy they edited
+    // from, so a link another device adds during the ingest is not undone.
+    final editedFrom = state.selectedTopic;
+    await ref.read(knowledgeGraphProvider.future);
+    graphNotifier.upsertTopic(topic, previous: editedFrom);
+
     state = state.copyWith(
       phase: IngestPhase.ingesting,
       selectedTopic: () => topic,
@@ -281,7 +286,6 @@ class IngestNotifier extends Notifier<IngestState> {
               docId,
               collectionId: collectionId,
               collectionName: collectionName,
-              skipPersist: true,
             );
           }
           debugPrint('[Ingest] Skipping "$docTitle" (unchanged)');
@@ -383,12 +387,16 @@ class IngestNotifier extends Notifier<IngestState> {
               );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
+          // No later write picks an extraction up again. If it never
+          // committed, its document row wasn't written either, so the next
+          // ingest re-extracts it instead of skipping it as unchanged.
           debugPrint(
-            '[Ingest] Storage save timed out — '
-            'data is in memory, will retry on next save',
+            '[Ingest] Ingest of "$docTitle" timed out; '
+            're-run ingest if its concepts are missing',
           );
           state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
+            statusMessage:
+                'Timed out; re-run ingest if this document is missing',
           );
         }
 
@@ -401,20 +409,15 @@ class IngestNotifier extends Notifier<IngestState> {
         );
       }
 
-      // Batch-persist any backfilled collection info
-      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
-      if (currentGraph != null && skipped > 0) {
-        final repo = ref.read(graphRepositoryProvider);
-        unawaited(
-          repo.save(currentGraph).catchError((e) {
-            debugPrint('[Ingest] Backfill batch save failed: $e');
-          }),
-        );
-      }
-
-      // Save the topic to the graph
-      final finishedTopic = topic.withLastIngestedAt(ref.read(clockProvider)());
-      graphNotifier.upsertTopic(finishedTopic);
+      graphNotifier.markTopicIngested(topic.id);
+      final finishedTopic =
+          ref
+              .read(knowledgeGraphProvider)
+              .valueOrNull
+              ?.topics
+              .where((t) => t.id == topic.id)
+              .firstOrNull ??
+          topic;
 
       // Record collection IDs for sync checks
       final settingsRepo = ref.read(settingsRepositoryProvider);
@@ -510,7 +513,6 @@ class IngestNotifier extends Notifier<IngestState> {
               docId,
               collectionId: collectionId,
               collectionName: collectionName ?? '',
-              skipPersist: true,
             );
           }
           debugPrint('[Ingest] Skipping "$docTitle" (unchanged)');
@@ -613,12 +615,16 @@ class IngestNotifier extends Notifier<IngestState> {
               );
           debugPrint('[Ingest] Saved successfully');
         } on TimeoutException {
+          // No later write picks an extraction up again. If it never
+          // committed, its document row wasn't written either, so the next
+          // ingest re-extracts it instead of skipping it as unchanged.
           debugPrint(
-            '[Ingest] Storage save timed out — '
-            'data is in memory, will retry on next save',
+            '[Ingest] Ingest of "$docTitle" timed out; '
+            're-run ingest if its concepts are missing',
           );
           state = state.copyWith(
-            statusMessage: 'Save timed out (data kept in memory)',
+            statusMessage:
+                'Timed out; re-run ingest if this document is missing',
           );
         }
 
@@ -628,18 +634,6 @@ class IngestNotifier extends Notifier<IngestState> {
           processedDocuments: extracted + skipped,
           extractedCount: extracted,
           statusMessage: '${augmented.concepts.length} concepts extracted',
-        );
-      }
-
-      // Batch-persist any backfilled collection info (single save instead
-      // of N individual writes).
-      final currentGraph = ref.read(knowledgeGraphProvider).valueOrNull;
-      if (currentGraph != null && skipped > 0) {
-        final repo = ref.read(graphRepositoryProvider);
-        unawaited(
-          repo.save(currentGraph).catchError((e) {
-            debugPrint('[Ingest] Backfill batch save failed: $e');
-          }),
         );
       }
 

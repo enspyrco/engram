@@ -27,7 +27,7 @@ void main() {
 
   Future<ProviderContainer> createContainer({KnowledgeGraph? initial}) async {
     if (initial != null) {
-      await repo.save(initial);
+      await repo.seedEmpty(initial);
     }
 
     final container = ProviderContainer(
@@ -270,5 +270,30 @@ void main() {
       final reloaded = await repo.load();
       expect(reloaded.concepts, hasLength(1));
     });
+
+    test(
+      'topic writes reach storage while the graph is still loading',
+      () async {
+        final container = await createContainer();
+        final notifier = container.read(knowledgeGraphProvider.notifier);
+        expect(container.read(knowledgeGraphProvider).valueOrNull, isNull);
+
+        final topic = Topic(
+          id: 't1',
+          name: 'Containers',
+          documentIds: const {'doc1'},
+          createdAt: DateTime.utc(2026, 1, 1),
+        );
+        notifier.upsertTopic(topic, previous: null);
+        notifier.markTopicIngested('t1');
+        await container.read(knowledgeGraphProvider.future);
+        await Future<void>.delayed(Duration.zero);
+
+        final stored = (await repo.load()).topics.single;
+        expect(stored.id, 't1');
+        expect(stored.documentIds, {'doc1'});
+        expect(stored.lastIngestedAt, isNotNull);
+      },
+    );
   });
 }
