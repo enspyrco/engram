@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
@@ -71,6 +72,10 @@ class SplitConceptNotifier extends Notifier<SplitState> {
         quizQuestion: quizQuestion,
         quizAnswer: quizAnswer,
         sourceDocumentId: sourceDocumentId,
+      );
+      debugPrint(
+        '[Split] "$conceptName" into ${suggestion.entries.length} '
+        'sub-concepts (${suggestion.rejectedRubricCount} rubrics rejected)',
       );
 
       // Default: all sub-concepts selected

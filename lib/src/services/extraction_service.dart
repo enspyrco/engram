@@ -5,6 +5,7 @@ import '../models/concept.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
+import '../models/rubric.dart';
 import '../models/sub_concept_suggestion.dart';
 import 'retry.dart';
 
@@ -29,6 +30,8 @@ Guidelines:
 - The `label` field should be a natural-language description (e.g. "depends on", "is a type of"), while `type` is the canonical enum value.
 - Create 1-3 quiz items per concept. Questions should test understanding, not just recall.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- The `question` is a free-recall PROBE: it must NOT contain or leak the answer, and must never be yes/no or multiple-choice.
+- For each quiz item, provide a `rubric`: 2-4 short, checkable grading criteria an independent grader uses to score a learner's free-text answer (e.g. "names both terms", "explains WHY normalization is needed"). Write them as an exam grader would — concrete enough to test mechanism, not vibes. Omit the rubric only when the item is pure single-token recall of an arbitrary fact.
 - For each quiz item, predict its difficulty on a 1-10 scale:
   1-3 = pure fact recall, single prerequisite or none
   4-6 = explain a mechanism or process, 2-3 prerequisites
@@ -128,7 +131,8 @@ const _extractionTool = Tool.custom(
             },
             'question': {
               'type': 'string',
-              'description': 'The question to ask',
+              'description':
+                  'A free-recall probe. Must not contain or leak the answer; never yes/no or multiple-choice.',
             },
             'answer': {
               'type': 'string',
@@ -138,6 +142,14 @@ const _extractionTool = Tool.custom(
               'type': 'number',
               'description':
                   'Predicted difficulty (1-10). 1=single fact recall, 5=mechanism, 10=synthesis across concepts. Used as FSRS initial D₀.',
+            },
+            'rubric': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'minItems': Rubric.minCriteria,
+              'maxItems': Rubric.maxCriteria,
+              'description':
+                  '2-4 short grading criteria an independent grader checks a free-text answer against (e.g. "names both terms", "explains why X is needed"). Omit only for pure single-token recall.',
             },
           },
         },
@@ -155,6 +167,8 @@ Guidelines:
 - Sub-concept IDs must extend the parent ID (e.g. parent "docker-compose" → children "docker-compose-services", "docker-compose-volumes").
 - Create 1-2 quiz items per sub-concept that test understanding of that specific aspect.
 - Use clear, concise language. Answers should be 1-3 sentences.
+- The `question` is a free-recall PROBE: it must NOT contain or leak the answer, and must never be yes/no or multiple-choice.
+- For each quiz item, provide a `rubric`: 2-4 short, checkable grading criteria an independent grader uses to score a learner's free-text answer. Concrete enough to test mechanism, not vibes.
 - Sub-concept items should have difficulty in the 4-6 range, as they decompose complex concepts into manageable pieces.
 ''';
 
@@ -201,7 +215,8 @@ const _splitTool = Tool.custom(
                   },
                   'question': {
                     'type': 'string',
-                    'description': 'The question to ask',
+                    'description':
+                        'A free-recall probe. Must not contain or leak the answer; never yes/no or multiple-choice.',
                   },
                   'answer': {
                     'type': 'string',
@@ -211,6 +226,14 @@ const _splitTool = Tool.custom(
                     'type': 'number',
                     'description':
                         'Predicted difficulty (1-10). Sub-concept items should target 4-6.',
+                  },
+                  'rubric': {
+                    'type': 'array',
+                    'items': {'type': 'string'},
+                    'minItems': Rubric.minCriteria,
+                    'maxItems': Rubric.maxCriteria,
+                    'description':
+                        '2-4 short grading criteria an independent grader checks a free-text answer against. Omit only for pure single-token recall.',
                   },
                 },
               },
@@ -403,6 +426,7 @@ class ExtractionService {
     final subConcepts = input['subConcepts'] as List<dynamic>? ?? [];
 
     final entries = <SubConceptEntry>[];
+    var rejectedRubricCount = 0;
     for (final sc in subConcepts) {
       final map = sc as Map<String, dynamic>;
       final conceptId = map['id'] as String;
@@ -419,6 +443,8 @@ class ExtractionService {
       final quizItems =
           quizItemsList.map((q) {
             final qMap = q as Map<String, dynamic>;
+            final rubric = Rubric.parse(qMap['rubric']);
+            if (rubric == null && qMap['rubric'] != null) rejectedRubricCount++;
             return QuizItem.newCard(
               id: qMap['id'] as String,
               conceptId: conceptId,
@@ -426,13 +452,17 @@ class ExtractionService {
               answer: qMap['answer'] as String,
               predictedDifficulty:
                   (qMap['predictedDifficulty'] as num?)?.toDouble(),
+              rubric: rubric,
             );
           }).toList();
 
       entries.add(SubConceptEntry(concept: concept, quizItems: quizItems));
     }
 
-    return SubConceptSuggestion(entries: entries);
+    return SubConceptSuggestion(
+      entries: entries,
+      rejectedRubricCount: rejectedRubricCount,
+    );
   }
 
   ExtractionResult _parseResult(
@@ -494,6 +524,7 @@ class ExtractionService {
     }
 
     final quizItems = <QuizItem>[];
+    var rejectedRubricCount = 0;
     for (final q in quizItemsList) {
       final map = q as Map<String, dynamic>;
       final conceptId = map['conceptId'] as String;
@@ -502,6 +533,9 @@ class ExtractionService {
         continue;
       }
 
+      final rubric = Rubric.parse(map['rubric']);
+      if (rubric == null && map['rubric'] != null) rejectedRubricCount++;
+
       quizItems.add(
         QuizItem.newCard(
           id: map['id'] as String,
@@ -509,6 +543,7 @@ class ExtractionService {
           question: map['question'] as String,
           answer: map['answer'] as String,
           predictedDifficulty: (map['predictedDifficulty'] as num?)?.toDouble(),
+          rubric: rubric,
         ),
       );
     }
@@ -517,6 +552,7 @@ class ExtractionService {
       concepts: concepts,
       relationships: relationships,
       quizItems: quizItems,
+      rejectedRubricCount: rejectedRubricCount,
     );
   }
 }

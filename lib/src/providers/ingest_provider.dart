@@ -342,7 +342,9 @@ class IngestNotifier extends Notifier<IngestState> {
           '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
           '${result.concepts.length} concepts, '
           '${result.relationships.length} relationships, '
-          '${result.quizItems.length} quiz items',
+          '${result.quizItems.length} quiz items '
+          '(${result.quizItems.where((q) => q.rubric != null).length} '
+          'with a rubric, ${result.rejectedRubricCount} rubrics rejected)',
         );
 
         // Auto-split high-difficulty items into sub-concepts
@@ -568,7 +570,9 @@ class IngestNotifier extends Notifier<IngestState> {
           '[Ingest] Extraction complete in ${stopwatch.elapsed}: '
           '${result.concepts.length} concepts, '
           '${result.relationships.length} relationships, '
-          '${result.quizItems.length} quiz items',
+          '${result.quizItems.length} quiz items '
+          '(${result.quizItems.where((q) => q.rubric != null).length} '
+          'with a rubric, ${result.rejectedRubricCount} rubrics rejected)',
         );
 
         // Auto-split high-difficulty items into sub-concepts
@@ -713,6 +717,11 @@ class IngestNotifier extends Notifier<IngestState> {
           quizQuestion: item.question,
           quizAnswer: item.answer,
           sourceDocumentId: documentId,
+        );
+        debugPrint(
+          '[Ingest] Split "${parentConcept.name}" into '
+          '${suggestion.entries.length} sub-concepts '
+          '(${suggestion.rejectedRubricCount} rubrics rejected)',
         );
 
         for (final entry in suggestion.entries) {

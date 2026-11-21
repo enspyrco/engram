@@ -3,6 +3,7 @@ import 'package:engram/src/models/concept.dart';
 import 'package:engram/src/models/document_metadata.dart';
 import 'package:engram/src/models/quiz_item.dart';
 import 'package:engram/src/models/relationship.dart';
+import 'package:engram/src/models/rubric.dart';
 import 'package:engram/src/models/topic.dart';
 import 'package:engram/src/storage/drift/drift_mappers.dart';
 import 'package:engram/src/storage/drift/engram_database.dart';
@@ -237,6 +238,31 @@ void main() {
 
       expect(result.nextReview, now);
       expect(result.lastReview, now.subtract(const Duration(days: 3)));
+    });
+
+    test('round-trips rubric through the Drift column', () async {
+      final item = testQuizItem(
+        rubric: Rubric.parse(['names both terms', 'explains the mechanism'])!,
+      );
+
+      await db.into(db.driftQuizItems).insert(item.toCompanion());
+      final row = await db.select(db.driftQuizItems).getSingle();
+      final result = row.toDomain();
+
+      expect(result.rubric?.criteria, [
+        'names both terms',
+        'explains the mechanism',
+      ]);
+    });
+
+    test('null rubric round-trips as null', () async {
+      final item = testQuizItem();
+
+      await db.into(db.driftQuizItems).insert(item.toCompanion());
+      final row = await db.select(db.driftQuizItems).getSingle();
+      final result = row.toDomain();
+
+      expect(result.rubric, isNull);
     });
   });
 

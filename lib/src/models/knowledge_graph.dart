@@ -13,11 +13,17 @@ class ExtractionResult {
     required this.concepts,
     required this.relationships,
     required this.quizItems,
+    this.rejectedRubricCount = 0,
   });
 
   final List<Concept> concepts;
   final List<Relationship> relationships;
   final List<QuizItem> quizItems;
+
+  /// Quiz items Claude gave a rubric that `Rubric.parse` rejected. Those
+  /// cards have no rubric, the same as cards Claude gave none, so this count
+  /// is what tells a malformed rubric from an omitted one.
+  final int rejectedRubricCount;
 }
 
 @immutable

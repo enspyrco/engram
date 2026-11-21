@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/rubric.dart';
 import '../storage/drift/engram_database.dart';
 import '../storage/drift/type_converters.dart';
 
@@ -102,7 +103,7 @@ class GraphChangeset {
 
   /// Serializes to wire format using SQL column names.
   ///
-  /// TypeConverter columns (`tags`, `type`) are serialized through their
+  /// TypeConverter columns (`tags`, `type`, `rubric`) are serialized through their
   /// `toSql()` methods so the wire format uses raw SQL values.
   Map<String, List<Map<String, Object?>>> toJson() {
     return {
@@ -126,6 +127,7 @@ class GraphChangeset {
   // ---------------------------------------------------------------------------
 
   static const _tagsConverter = IListStringConverter();
+  static const _rubricConverter = IListStringConverter();
   static const _typeConverter = RelationshipTypeConverter();
 
   static Map<String, Object?> _conceptToJson(DriftConcept c) => {
@@ -165,6 +167,10 @@ class GraphChangeset {
     'lapses': q.lapses,
     'predicted_difficulty': q.predictedDifficulty,
     'review_count': q.reviewCount,
+    'rubric': switch (q.rubric) {
+      final rubric? => _rubricConverter.toSql(rubric),
+      null => null,
+    },
     'hlc': q.hlc,
     'is_deleted': q.isDeleted ? 1 : 0,
   };
@@ -256,6 +262,12 @@ class GraphChangeset {
       lapses: m['lapses'] as int?,
       predictedDifficulty: (m['predicted_difficulty'] as num?)?.toDouble(),
       reviewCount: m['review_count'] as int,
+      // A peer's rubric is validated here, so the column only ever holds a
+      // canonical Rubric or NULL.
+      rubric: switch (m['rubric']) {
+        final String sql => Rubric.parseJsonText(sql)?.criteria,
+        _ => null,
+      },
       hlc: m['hlc'] as String,
       isDeleted: _parseBool(m['is_deleted']),
     );

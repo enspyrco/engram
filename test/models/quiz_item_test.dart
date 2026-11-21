@@ -1,5 +1,8 @@
 import 'package:engram/src/models/quiz_item.dart';
+import 'package:engram/src/models/rubric.dart';
 import 'package:test/test.dart';
+
+import '../helpers/quiz_item_helpers.dart';
 
 void main() {
   final now = DateTime.utc(2025, 6, 15);
@@ -353,6 +356,63 @@ void main() {
       final restored = QuizItem.fromJson(json);
       expect(restored.predictedDifficulty, 7.0);
       expect(restored.reviewCount, 5);
+    });
+
+    test('round-trips rubric through toJson/fromJson', () {
+      final original = QuizItem(
+        id: 'q1',
+        conceptId: 'c1',
+        question: 'Q?',
+        answer: 'A.',
+        interval: 0,
+        nextReview: now,
+        lastReview: null,
+        difficulty: 5.0,
+        stability: 3.26,
+        fsrsState: 1,
+        lapses: 0,
+        rubric: Rubric.parse(['names both terms', 'explains why X is needed'])!,
+      );
+
+      final json = original.toJson();
+      expect(json['rubric'], ['names both terms', 'explains why X is needed']);
+
+      final restored = QuizItem.fromJson(json);
+      expect(restored.rubric?.criteria, [
+        'names both terms',
+        'explains why X is needed',
+      ]);
+    });
+
+    test('toJson omits rubric when null', () {
+      final item = testQuizItem();
+      expect(item.rubric, isNull);
+      expect(item.toJson().containsKey('rubric'), isFalse);
+    });
+
+    test('rubric is preserved across withFsrsReview', () {
+      final item = testQuizItem(
+        rubric: Rubric.parse(['criterion one', 'criterion two'])!,
+      );
+      final reviewed = item.withFsrsReview(
+        difficulty: 6.0,
+        stability: 10.0,
+        fsrsState: 2,
+        lapses: 0,
+        interval: 10,
+        nextReview: now.add(const Duration(days: 10)),
+      );
+      expect(reviewed.rubric, item.rubric);
+    });
+
+    test('toContentSnapshot includes rubric when present (for challenges)', () {
+      final item = testQuizItem(
+        rubric: Rubric.parse(['criterion one', 'criterion two'])!,
+      );
+      expect(item.toContentSnapshot()['rubric'], [
+        'criterion one',
+        'criterion two',
+      ]);
     });
 
     test('fromJson defaults reviewCount to 0 for legacy JSON', () {

@@ -1,4 +1,5 @@
 import 'package:engram/src/models/quiz_item.dart';
+import 'package:engram/src/models/rubric.dart';
 
 /// Creates a test [QuizItem] with FSRS state and sensible defaults.
 ///
@@ -17,6 +18,7 @@ QuizItem testQuizItem({
   int lapses = 0,
   double? predictedDifficulty,
   int reviewCount = 0,
+  Rubric? rubric,
 }) {
   return QuizItem(
     id: id,
@@ -32,6 +34,7 @@ QuizItem testQuizItem({
     lapses: lapses,
     predictedDifficulty: predictedDifficulty,
     reviewCount: reviewCount,
+    rubric: rubric,
   );
 }
 
