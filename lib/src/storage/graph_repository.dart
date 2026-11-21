@@ -18,8 +18,10 @@ abstract class GraphRepository {
   Future<KnowledgeGraph> load();
 
   /// Writes [graph] into a store that has no rows yet, such as the first
-  /// seed from Firestore. Throws [StateError] if the store has any rows.
-  Future<void> seedEmpty(KnowledgeGraph graph);
+  /// seed from Firestore, and returns true. If the store has any row,
+  /// tombstones included, writes nothing and returns false; the check and
+  /// the write share one transaction.
+  Future<bool> seedEmpty(KnowledgeGraph graph);
 
   /// Writes one document's extraction: upserts its rows and tombstones the
   /// ids it dropped.
@@ -35,8 +37,11 @@ abstract class GraphRepository {
     required List<QuizItem> quizItems,
   });
 
-  /// Upserts [topics], each with exactly its `documentIds`.
-  Future<void> upsertTopics(List<Topic> topics);
+  /// Upserts [topic], and adds or removes exactly the document links that
+  /// differ from [previous], the caller's own prior copy of it. With no
+  /// [previous] (a new topic), every link is added. Links the caller never
+  /// saw, such as one another device added, are left alone.
+  Future<void> upsertTopic(Topic topic, {Topic? previous});
 
   /// Upserts document metadata rows, such as backfilled collection info.
   Future<void> upsertDocumentMetadata(List<DocumentMetadata> documents);

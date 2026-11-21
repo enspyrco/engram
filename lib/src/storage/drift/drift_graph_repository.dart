@@ -102,11 +102,9 @@ class DriftGraphRepository extends GraphRepository {
   // -------------------------------------------------------------------------
 
   @override
-  Future<void> seedEmpty(KnowledgeGraph graph) async {
-    await _db.transaction(() async {
-      if (await _hasAnyRow()) {
-        throw StateError('seedEmpty called on a store that already has rows');
-      }
+  Future<bool> seedEmpty(KnowledgeGraph graph) {
+    return _db.transaction(() async {
+      if (await _hasAnyRow()) return false;
       final hlc = _stampHlc();
       await _db.batch((batch) {
         batch.insertAll(
@@ -139,6 +137,7 @@ class DriftGraphRepository extends GraphRepository {
               ),
         ]);
       });
+      return true;
     });
   }
 
@@ -224,51 +223,40 @@ class DriftGraphRepository extends GraphRepository {
   // -------------------------------------------------------------------------
 
   @override
-  Future<void> upsertTopics(List<Topic> topics) async {
-    if (topics.isEmpty) return;
+  Future<void> upsertTopic(Topic topic, {Topic? previous}) async {
+    final before = previous?.documentIds.toSet() ?? const <String>{};
+    final after = topic.documentIds.toSet();
+    final added = after.difference(before);
+    final removed = before.difference(after);
+
     await _db.transaction(() async {
       final hlc = _stampHlc();
       await _db.batch((batch) {
-        batch.insertAll(
+        batch.insert(
           _db.driftTopics,
-          topics.map((t) => t.toCompanion(hlc: hlc)).toList(),
+          topic.toCompanion(hlc: hlc),
           mode: InsertMode.insertOrReplace,
         );
       });
-      for (final topic in topics) {
-        await _writeTopicDocuments(topic, hlc);
-      }
+      await _db.batch((batch) {
+        batch.insertAll(_db.driftTopicDocuments, [
+          for (final docId in added)
+            DriftTopicDocumentsCompanion.insert(
+              topicId: topic.id,
+              documentId: docId,
+              hlc: Value(hlc),
+            ),
+        ], mode: InsertMode.insertOrReplace);
+      });
+      await (_db.update(_db.driftTopicDocuments)..where(
+        (t) => t.topicId.equals(topic.id) & t.documentId.isIn(removed),
+      )).write(
+        DriftTopicDocumentsCompanion(
+          isDeleted: const Value(true),
+          hlc: Value(hlc),
+        ),
+      );
     });
-  }
-
-  /// Makes [topic]'s active join rows exactly its `documentIds`, stamping
-  /// only the pairs that are added or removed.
-  Future<void> _writeTopicDocuments(Topic topic, String hlc) async {
-    final active =
-        await (_db.select(_db.driftTopicDocuments)..where(
-          (t) => t.topicId.equals(topic.id) & t.isDeleted.equals(false),
-        )).map((r) => r.documentId).get();
-    final added = topic.documentIds.difference(active.toSet());
-    final removed = active.toSet().difference(topic.documentIds.toSet());
-
-    await _db.batch((batch) {
-      batch.insertAll(_db.driftTopicDocuments, [
-        for (final docId in added)
-          DriftTopicDocumentsCompanion.insert(
-            topicId: topic.id,
-            documentId: docId,
-            hlc: Value(hlc),
-          ),
-      ], mode: InsertMode.insertOrReplace);
-    });
-    await (_db.update(_db.driftTopicDocuments)..where(
-      (t) => t.topicId.equals(topic.id) & t.documentId.isIn(removed),
-    )).write(
-      DriftTopicDocumentsCompanion(
-        isDeleted: const Value(true),
-        hlc: Value(hlc),
-      ),
-    );
   }
 
   @override

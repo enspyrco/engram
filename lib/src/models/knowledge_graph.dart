@@ -261,6 +261,7 @@ class KnowledgeGraph {
       ingestedAt: existing.ingestedAt,
       collectionId: collectionId,
       collectionName: collectionName,
+      ingestedText: existing.ingestedText,
     );
     return KnowledgeGraph._raw(
       concepts: concepts,

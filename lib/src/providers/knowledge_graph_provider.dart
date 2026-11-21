@@ -31,8 +31,9 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       graph = _autoMigrateTopics(graph);
       // Persist the migration
       unawaited(
-        repo.upsertTopics(graph.topics.toList()).catchError((e) {
+        Future.wait(graph.topics.map(repo.upsertTopic)).catchError((e) {
           debugPrint('[KnowledgeGraph] Failed to persist topic migration: $e');
+          return const <void>[];
         }),
       );
     }
@@ -140,8 +141,8 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   }) async {
     final current = await future;
 
-    // What gets persisted is the extraction itself; the frames below only
-    // animate it into the in-memory graph.
+    // Persist the extraction the moment it is decided, so its clock is not
+    // later than an edit made while the frames below animate it in.
     final change = current.withExtraction(
       result,
       documentId: documentId,
@@ -151,6 +152,8 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       collectionName: collectionName,
       documentText: documentText,
     );
+    final repo = ref.read(graphRepositoryProvider);
+    await repo.applyExtraction(change.patch);
 
     // Step 1: Clear old concepts from this document (graph shrinks)
     final cleared = current.withNewExtraction(
@@ -206,10 +209,9 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       await Future.delayed(delay);
     }
 
-    // Step 3: Settle on the complete extraction and persist it
-    state = AsyncData(change.graph);
-    final repo = ref.read(graphRepositoryProvider);
-    await repo.applyExtraction(change.patch);
+    // Step 3: Settle on what storage holds, which includes any review, merge
+    // or edit persisted while the frames were showing.
+    state = AsyncData(await repo.load());
   }
 
   Future<void> splitConcept({
@@ -272,11 +274,12 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     final current = state.valueOrNull;
     if (current == null) return;
 
+    final previous = current.topics.where((t) => t.id == topic.id).firstOrNull;
     final newGraph = current.withTopic(topic);
     state = AsyncData(newGraph);
 
     final repo = ref.read(graphRepositoryProvider);
-    repo.upsertTopics([topic]).catchError((e) {
+    repo.upsertTopic(topic, previous: previous).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in upsertTopic: $e');
     });
   }

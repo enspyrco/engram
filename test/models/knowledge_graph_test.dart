@@ -317,6 +317,33 @@ void main() {
   });
 
   group('KnowledgeGraph', () {
+    test('withDocumentCollectionInfo keeps the ingested text', () {
+      final graph = KnowledgeGraph(
+        documentMetadata: [
+          DocumentMetadata(
+            documentId: 'doc1',
+            title: 'Container Basics',
+            updatedAt: '2026-02-20T10:00:00.000Z',
+            ingestedAt: DateTime.utc(2026, 2, 24),
+            ingestedText: 'Docker is a container runtime...',
+          ),
+        ],
+      );
+
+      final doc =
+          graph
+              .withDocumentCollectionInfo(
+                'doc1',
+                collectionId: 'col1',
+                collectionName: 'DevOps',
+              )
+              .documentMetadata
+              .single;
+
+      expect(doc.collectionId, 'col1');
+      expect(doc.ingestedText, 'Docker is a container runtime...');
+    });
+
     test('empty graph serializes to empty lists', () {
       final graph = KnowledgeGraph();
       final json = graph.toJson();

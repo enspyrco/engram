@@ -842,9 +842,10 @@ void main() {
         // delay puts A's clock strictly after B's review.
         await Future<void>.delayed(const Duration(milliseconds: 5));
         final onA = await repoA.load();
-        await repoA.upsertTopics([
+        await repoA.upsertTopic(
           onA.topics.single.copyWith(name: 'Containers 101'),
-        ]);
+          previous: onA.topics.single,
+        );
 
         final fromA = overTheWire(
           await repoA.getChangeset(modifiedAfter: sinceA),

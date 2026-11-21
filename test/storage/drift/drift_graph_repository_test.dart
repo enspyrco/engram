@@ -200,28 +200,48 @@ void main() {
       expect(topic.lastIngestedAt, DateTime.utc(2026, 2, 20));
     });
 
-    test('seedEmpty refuses a store that already has rows', () async {
-      await repo.seedEmpty(fullGraph());
+    test(
+      'seedEmpty writes nothing into a store that already has rows',
+      () async {
+        expect(await repo.seedEmpty(fullGraph()), isTrue);
 
-      await expectLater(
-        repo.seedEmpty(
-          KnowledgeGraph(
-            concepts: [
-              Concept(
-                id: 'cx',
-                name: 'Rust',
-                description: 'Systems language',
-                sourceDocumentId: 'docX',
-              ),
-            ],
-          ),
-        ),
-        throwsA(isA<StateError>()),
-      );
+        final rust = KnowledgeGraph(
+          concepts: [
+            Concept(
+              id: 'cx',
+              name: 'Rust',
+              description: 'Systems language',
+              sourceDocumentId: 'docX',
+            ),
+          ],
+        );
+        expect(await repo.seedEmpty(rust), isFalse);
 
-      final loaded = await repo.load();
-      expect(loaded.concepts.map((c) => c.id), unorderedEquals(['c1', 'c2']));
-    });
+        final loaded = await repo.load();
+        expect(loaded.concepts.map((c) => c.id), unorderedEquals(['c1', 'c2']));
+      },
+    );
+
+    test(
+      'seedEmpty counts a store holding only tombstones as not empty',
+      () async {
+        await repo.seedEmpty(fullGraph());
+        await db.customStatement('UPDATE drift_concepts SET is_deleted = 1');
+        await db.customStatement(
+          'UPDATE drift_relationships SET is_deleted = 1',
+        );
+        await db.customStatement('UPDATE drift_quiz_items SET is_deleted = 1');
+        await db.customStatement('UPDATE drift_documents SET is_deleted = 1');
+        await db.customStatement('UPDATE drift_topics SET is_deleted = 1');
+        await db.customStatement(
+          'UPDATE drift_topic_documents SET is_deleted = 1',
+        );
+        expect((await repo.load()).concepts, isEmpty);
+
+        expect(await repo.seedEmpty(fullGraph()), isFalse);
+        expect((await repo.load()).concepts, isEmpty);
+      },
+    );
 
     test('handles empty graph', () async {
       await repo.seedEmpty(KnowledgeGraph());
@@ -671,7 +691,7 @@ void main() {
     );
 
     test(
-      'upsertTopics tombstones only the pairs removed from that topic',
+      'upsertTopic writes only the links that differ from its previous copy',
       () async {
         final hlcRepo = DriftGraphRepository(
           db: db,
@@ -701,13 +721,27 @@ void main() {
                 .firstWhere((r) => r.documentId == 'doc1')
                 .hlc;
 
-        await hlcRepo.upsertTopics([
-          topicA.withDocumentIds(const {'doc1'}),
-        ]);
+        // Another device, since this caller took its copy of t1, added
+        // doc4 to it and removed doc3 from it.
+        await db.customStatement(
+          "INSERT INTO drift_topic_documents (topic_id, document_id, hlc) "
+          "VALUES ('t1', 'doc4', 'peer-hlc')",
+        );
+        await db.customStatement(
+          "UPDATE drift_topic_documents SET is_deleted = 1, hlc = 'peer-hlc' "
+          "WHERE topic_id = 't1' AND document_id = 'doc3'",
+        );
+
+        // The caller removes doc2 from its (stale) copy, which still has doc3.
+        await hlcRepo.upsertTopic(
+          topicA.withDocumentIds(const {'doc1', 'doc3'}),
+          previous: topicA,
+        );
 
         final loaded = await hlcRepo.load();
         expect(loaded.topics.firstWhere((t) => t.id == 't1').documentIds, {
           'doc1',
+          'doc4',
         });
         expect(loaded.topics.firstWhere((t) => t.id == 't2').documentIds, {
           'doc2',
@@ -720,6 +754,12 @@ void main() {
               .map((r) => '${r.topicId}|${r.documentId}')
               .toSet(),
           {'t1|doc2', 't1|doc3'},
+        );
+        expect(
+          rawPairs
+              .firstWhere((r) => r.topicId == 't1' && r.documentId == 'doc3')
+              .hlc,
+          'peer-hlc',
         );
         expect(
           rawPairs
