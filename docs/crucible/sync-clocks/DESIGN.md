@@ -110,6 +110,14 @@ This fixes a different harm from issue 171: concurrent review of the *same* card
 4. Then the rubric backfill, as content-row writes.
 5. Option B only if concurrent same-card review loss is observed.
 
-## 6. Open question for Nick
+## 6. Card identity across re-extraction (decided 2026-11-21: middle path)
 
-When re-extraction changes a card's question or answer under the same id, is it **the same card** (keep its review history, which may now describe a different retrieval task) or **a new card** (fresh schedule)? Until decided, layer 2 keeps the existing schedule. Either answer is cheap to implement; it's a learning-science call, not a sync one.
+Today quiz ids are not stable: the extraction prompt reuses concept ids but invents quiz ids, and `withNewExtraction` drops every card on a re-extracted document's concepts, so any edit to a wiki page resets the review history of every card from that page.
+
+Decision: the extraction prompt receives the document's existing cards (as it already receives concept ids) and reuses a card's id when the new card tests the same fact, flagging whether the answer's meaning changed.
+
+- **Reworded, same fact:** keep the schedule. Only the content row changes.
+- **Answer's meaning changed:** record a lapse, an FSRS "Again" at re-extraction time, which keeps difficulty, shrinks stability by FSRS's post-lapse rule, and brings the card due soon.
+- **No match:** a new card with a fresh schedule; the unmatched old card is dropped.
+
+Under layer 2, a reword is a content-row write only; a changed answer is a content-row write plus a schedule-row write. The open risk is whether Claude judges "same fact" reliably; text comparison can't, because Claude rephrases every time.
