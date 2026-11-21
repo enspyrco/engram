@@ -70,7 +70,7 @@ Future<void> seedFromFirestoreIfNeeded(Ref ref) async {
         remoteGraph.documentMetadata.isEmpty;
 
     if (!remoteIsEmpty) {
-      await driftRepo.save(remoteGraph);
+      await driftRepo.seedEmpty(remoteGraph);
       debugPrint(
         '[GraphStore] Seeded Drift from Firestore '
         '(${remoteGraph.concepts.length} concepts)',

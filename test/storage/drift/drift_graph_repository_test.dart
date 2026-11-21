@@ -103,6 +103,39 @@ void main() {
     );
   }
 
+  /// A re-extraction of doc1 that keeps only c1 (renamed) and q1, so c2, r1
+  /// and q2 are dropped.
+  ExtractionResult keepOnlyC1() => ExtractionResult(
+    concepts: [
+      Concept(
+        id: 'c1',
+        name: 'Docker Updated',
+        description: 'Updated description',
+        sourceDocumentId: 'doc1',
+      ),
+    ],
+    relationships: const [],
+    quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
+  );
+
+  /// Re-extracts doc1 as [result] on [target], the way ingest does.
+  Future<void> reExtractDoc1(
+    DriftGraphRepository target,
+    ExtractionResult result,
+  ) async {
+    final current = await target.load();
+    await target.applyExtraction(
+      current
+          .withExtraction(
+            result,
+            documentId: 'doc1',
+            documentTitle: 'Container Basics',
+            updatedAt: '2026-02-21T10:00:00.000Z',
+          )
+          .patch,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // load
   // ---------------------------------------------------------------------------
@@ -127,7 +160,7 @@ void main() {
     test('round-trips full KnowledgeGraph', () async {
       final original = fullGraph();
 
-      await repo.save(original);
+      await repo.seedEmpty(original);
       final loaded = await repo.load();
 
       expect(loaded.concepts.length, original.concepts.length);
@@ -167,43 +200,31 @@ void main() {
       expect(topic.lastIngestedAt, DateTime.utc(2026, 2, 20));
     });
 
-    test(
-      'replaces all data atomically (save A, save B, only B exists)',
-      () async {
-        final graphA = fullGraph();
-        await repo.save(graphA);
+    test('seedEmpty refuses a store that already has rows', () async {
+      await repo.seedEmpty(fullGraph());
 
-        // Save a completely different graph
-        final graphB = KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'cx',
-              name: 'Rust',
-              description: 'Systems language',
-              sourceDocumentId: 'docX',
-            ),
-          ],
-        );
-        await repo.save(graphB);
+      await expectLater(
+        repo.seedEmpty(
+          KnowledgeGraph(
+            concepts: [
+              Concept(
+                id: 'cx',
+                name: 'Rust',
+                description: 'Systems language',
+                sourceDocumentId: 'docX',
+              ),
+            ],
+          ),
+        ),
+        throwsA(isA<StateError>()),
+      );
 
-        final loaded = await repo.load();
-
-        // Only graph B data should exist
-        expect(loaded.concepts.length, 1);
-        expect(loaded.concepts.first.id, 'cx');
-        expect(loaded.relationships, isEmpty);
-        expect(loaded.quizItems, isEmpty);
-        expect(loaded.documentMetadata, isEmpty);
-        expect(loaded.topics, isEmpty);
-      },
-    );
+      final loaded = await repo.load();
+      expect(loaded.concepts.map((c) => c.id), unorderedEquals(['c1', 'c2']));
+    });
 
     test('handles empty graph', () async {
-      // Save non-empty first
-      await repo.save(fullGraph());
-
-      // Overwrite with empty
-      await repo.save(KnowledgeGraph());
+      await repo.seedEmpty(KnowledgeGraph());
 
       final loaded = await repo.load();
       expect(loaded.concepts, isEmpty);
@@ -225,7 +246,7 @@ void main() {
         ],
       );
 
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
       final loaded = await repo.load();
 
       final topic = loaded.topics.first;
@@ -241,7 +262,7 @@ void main() {
   group('updateQuizItem', () {
     test('writes single row, others unchanged', () async {
       final graph = fullGraph();
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
 
       // Update q1 with new FSRS state
       final updatedItem = testQuizItem(
@@ -258,7 +279,7 @@ void main() {
         lastReview: DateTime.utc(2026, 2, 24),
       );
 
-      await repo.updateQuizItem(graph, updatedItem);
+      await repo.updateQuizItem(updatedItem);
       final loaded = await repo.load();
 
       // Updated item should have new values
@@ -285,7 +306,7 @@ void main() {
   group('saveSplitData', () {
     test('is additive — originals and new coexist', () async {
       final graph = fullGraph();
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
 
       // Split c1 into sub-concepts
       final newConcepts = [
@@ -338,7 +359,6 @@ void main() {
       ];
 
       await repo.saveSplitData(
-        graph: graph,
         concepts: newConcepts,
         relationships: newRelationships,
         quizItems: newQuizItems,
@@ -366,7 +386,7 @@ void main() {
 
   group('watch', () {
     test('emits initial state then reacts to changes', () async {
-      await repo.save(fullGraph());
+      await repo.seedEmpty(fullGraph());
 
       final emissions = <KnowledgeGraph>[];
       final completer = Completer<void>();
@@ -385,18 +405,7 @@ void main() {
       expect(emissions.first.concepts.length, 2);
 
       // Trigger a change
-      await repo.save(
-        KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'cx',
-              name: 'Rust',
-              description: 'Systems language',
-              sourceDocumentId: 'docX',
-            ),
-          ],
-        ),
-      );
+      await reExtractDoc1(repo, keepOnlyC1());
 
       // Wait for the second emission
       await completer.future.timeout(const Duration(seconds: 5));
@@ -404,7 +413,7 @@ void main() {
       expect(emissions.length, greaterThanOrEqualTo(2));
       final last = emissions.last;
       expect(last.concepts.length, 1);
-      expect(last.concepts.first.id, 'cx');
+      expect(last.concepts.first.id, 'c1');
 
       await subscription.cancel();
     });
@@ -435,7 +444,7 @@ void main() {
         quizItems: [mastered],
       );
 
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
       final loaded = await repo.load();
 
       final item = loaded.quizItems.first;
@@ -494,7 +503,7 @@ void main() {
         ],
       );
 
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
       final loaded = await repo.load();
 
       final topicA = loaded.topics.firstWhere((t) => t.id == 't1');
@@ -514,25 +523,14 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // Upsert + orphan tombstoning (#41)
+  // applyExtraction / upsertTopics — explicit writes
   // ---------------------------------------------------------------------------
 
-  group('upsert + orphan tombstoning', () {
-    test('orphan concepts are tombstoned, not deleted', () async {
-      await repo.save(fullGraph()); // c1, c2
+  group('explicit writes', () {
+    test('a concept the extraction drops is tombstoned, not deleted', () async {
+      await repo.seedEmpty(fullGraph()); // c1, c2
 
-      // Save a graph that keeps c1 but drops c2
-      final graphB = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker Updated',
-            description: 'Updated description',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      );
-      await repo.save(graphB);
+      await reExtractDoc1(repo, keepOnlyC1());
 
       // load() should return only c1
       final loaded = await repo.load();
@@ -549,51 +547,90 @@ void main() {
       expect(alive.isDeleted, isFalse);
     });
 
-    test('all entity types are tombstoned when saving empty graph', () async {
-      await repo.save(fullGraph());
+    test('an extraction that drops everything tombstones its rows and keeps '
+        'the document', () async {
+      await repo.seedEmpty(fullGraph());
 
-      // Save empty graph
-      await repo.save(KnowledgeGraph());
+      await reExtractDoc1(
+        repo,
+        const ExtractionResult(concepts: [], relationships: [], quizItems: []),
+      );
 
-      // load() should return empty
       final loaded = await repo.load();
       expect(loaded.concepts, isEmpty);
       expect(loaded.relationships, isEmpty);
       expect(loaded.quizItems, isEmpty);
-      expect(loaded.documentMetadata, isEmpty);
-      expect(loaded.topics, isEmpty);
+      expect(loaded.documentMetadata.single.documentId, 'doc1');
+      expect(loaded.topics.single.documentIds, {'doc1'});
 
-      // Raw DB should have tombstoned rows
       final rawConcepts = await db.select(db.driftConcepts).get();
       expect(rawConcepts.length, 2);
       expect(rawConcepts.every((c) => c.isDeleted), isTrue);
-
       final rawRels = await db.select(db.driftRelationships).get();
-      expect(rawRels.length, 1);
-      expect(rawRels.every((r) => r.isDeleted), isTrue);
-
+      expect(rawRels.single.isDeleted, isTrue);
       final rawQuiz = await db.select(db.driftQuizItems).get();
       expect(rawQuiz.length, 2);
       expect(rawQuiz.every((q) => q.isDeleted), isTrue);
-
-      final rawDocs = await db.select(db.driftDocuments).get();
-      expect(rawDocs.length, 1);
-      expect(rawDocs.every((d) => d.isDeleted), isTrue);
-
-      final rawTopics = await db.select(db.driftTopics).get();
-      expect(rawTopics.length, 1);
-      expect(rawTopics.every((t) => t.isDeleted), isTrue);
-
-      final rawTopicDocs = await db.select(db.driftTopicDocuments).get();
-      expect(rawTopicDocs.length, 1);
-      expect(rawTopicDocs.every((td) => td.isDeleted), isTrue);
     });
 
-    test('re-inserting a tombstoned entity resurrects it', () async {
+    test('rows a write does not name keep their clock', () async {
+      final hlcRepo = DriftGraphRepository(
+        db: db,
+        hlcManager: HlcManager(nodeId: 'test-device-001'),
+      );
       final graph = fullGraph();
-      await repo.save(graph);
+      await hlcRepo.seedEmpty(
+        KnowledgeGraph(
+          concepts: [
+            ...graph.concepts,
+            Concept(
+              id: 'c3',
+              name: 'Terraform',
+              description: 'IaC tool',
+              sourceDocumentId: 'doc2',
+            ),
+          ],
+          relationships: graph.relationships.toList(),
+          quizItems: [
+            ...graph.quizItems,
+            testQuizItem(id: 'q3', conceptId: 'c3'),
+          ],
+          documentMetadata: graph.documentMetadata.toList(),
+          topics: graph.topics.toList(),
+        ),
+      );
+      Future<Map<String, String>> clocks() async => {
+        for (final c in await db.select(db.driftConcepts).get()) c.id: c.hlc,
+        for (final q in await db.select(db.driftQuizItems).get()) q.id: q.hlc,
+        for (final t in await db.select(db.driftTopics).get()) t.id: t.hlc,
+        for (final td in await db.select(db.driftTopicDocuments).get())
+          '${td.topicId}|${td.documentId}': td.hlc,
+      };
+      final before = await clocks();
 
-      // Tombstone c1 via raw SQL (simulating a prior save that removed it)
+      await reExtractDoc1(hlcRepo, keepOnlyC1());
+      await hlcRepo.upsertDocumentMetadata([
+        DocumentMetadata(
+          documentId: 'doc2',
+          title: 'Infrastructure',
+          updatedAt: '2026-02-20T10:00:00.000Z',
+          ingestedAt: DateTime.utc(2026, 2, 24),
+        ),
+      ]);
+
+      final after = await clocks();
+      for (final untouched in ['c3', 'q3', 't1', 't1|doc1']) {
+        expect(after[untouched], before[untouched], reason: untouched);
+      }
+      for (final touched in ['c1', 'c2', 'q1', 'q2']) {
+        expect(after[touched], isNot(before[touched]), reason: touched);
+      }
+    });
+
+    test('re-extracting a tombstoned concept resurrects it', () async {
+      await repo.seedEmpty(fullGraph());
+
+      // Tombstone c1 via raw SQL (simulating a merge from another device)
       await db.customStatement(
         "UPDATE drift_concepts SET is_deleted = 1 WHERE id = 'c1'",
       );
@@ -602,8 +639,7 @@ void main() {
       var loaded = await repo.load();
       expect(loaded.concepts.any((c) => c.id == 'c1'), isFalse);
 
-      // Save a graph that includes c1 — should resurrect it
-      await repo.save(graph);
+      await reExtractDoc1(repo, keepOnlyC1());
       loaded = await repo.load();
       expect(loaded.concepts.any((c) => c.id == 'c1'), isTrue);
 
@@ -614,97 +650,95 @@ void main() {
       expect(rawRow.isDeleted, isFalse);
     });
 
-    test('pre-existing tombstones are preserved across saves', () async {
-      await repo.save(fullGraph());
+    test(
+      'an existing tombstone keeps its clock through a re-extraction',
+      () async {
+        await repo.seedEmpty(fullGraph());
 
-      // Tombstone c2 via raw SQL (simulating a CRDT merge from another device)
-      await db.customStatement(
-        "UPDATE drift_concepts SET is_deleted = 1, "
-        "hlc = 'old-tombstone-hlc' WHERE id = 'c2'",
-      );
+        // Tombstone c2 via raw SQL (simulating a CRDT merge from another device)
+        await db.customStatement(
+          "UPDATE drift_concepts SET is_deleted = 1, "
+          "hlc = 'old-tombstone-hlc' WHERE id = 'c2'",
+        );
 
-      // Save a graph with only c1 — c2 should remain tombstoned
-      final graphB = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
+        await reExtractDoc1(repo, keepOnlyC1());
+
+        final rawConcepts = await db.select(db.driftConcepts).get();
+        final c2 = rawConcepts.firstWhere((c) => c.id == 'c2');
+        expect(c2.isDeleted, isTrue);
+        expect(c2.hlc, 'old-tombstone-hlc');
+      },
+    );
+
+    test(
+      'upsertTopics tombstones only the pairs removed from that topic',
+      () async {
+        final hlcRepo = DriftGraphRepository(
+          db: db,
+          hlcManager: HlcManager(nodeId: 'test-device-001'),
+        );
+        final topicA = Topic(
+          id: 't1',
+          name: 'Topic A',
+          documentIds: const {'doc1', 'doc2', 'doc3'},
+          createdAt: DateTime.utc(2026, 1, 1),
+        );
+        await hlcRepo.seedEmpty(
+          KnowledgeGraph(
+            topics: [
+              topicA,
+              Topic(
+                id: 't2',
+                name: 'Topic B',
+                documentIds: const {'doc2'},
+                createdAt: DateTime.utc(2026, 1, 1),
+              ),
+            ],
           ),
-        ],
-      );
-      await repo.save(graphB);
+        );
+        final doc1Pair =
+            (await db.select(db.driftTopicDocuments).get())
+                .firstWhere((r) => r.documentId == 'doc1')
+                .hlc;
 
-      // c2 should still exist in raw DB as tombstoned
-      final rawConcepts = await db.select(db.driftConcepts).get();
-      final c2 = rawConcepts.firstWhere((c) => c.id == 'c2');
-      expect(c2.isDeleted, isTrue);
-    });
+        await hlcRepo.upsertTopics([
+          topicA.withDocumentIds(const {'doc1'}),
+        ]);
 
-    test('orphan topic-document pairs are tombstoned', () async {
-      final graph = KnowledgeGraph(
-        topics: [
-          Topic(
-            id: 't1',
-            name: 'Topic A',
-            documentIds: const {'doc1', 'doc2', 'doc3'},
-            createdAt: DateTime.utc(2026, 1, 1),
-          ),
-        ],
-      );
-      await repo.save(graph);
+        final loaded = await hlcRepo.load();
+        expect(loaded.topics.firstWhere((t) => t.id == 't1').documentIds, {
+          'doc1',
+        });
+        expect(loaded.topics.firstWhere((t) => t.id == 't2').documentIds, {
+          'doc2',
+        });
 
-      // Save with fewer documents
-      final graphB = KnowledgeGraph(
-        topics: [
-          Topic(
-            id: 't1',
-            name: 'Topic A',
-            documentIds: const {'doc1'},
-            createdAt: DateTime.utc(2026, 1, 1),
-          ),
-        ],
-      );
-      await repo.save(graphB);
+        final rawPairs = await db.select(db.driftTopicDocuments).get();
+        expect(
+          rawPairs
+              .where((r) => r.isDeleted)
+              .map((r) => '${r.topicId}|${r.documentId}')
+              .toSet(),
+          {'t1|doc2', 't1|doc3'},
+        );
+        expect(
+          rawPairs
+              .firstWhere((r) => r.topicId == 't1' && r.documentId == 'doc1')
+              .hlc,
+          doc1Pair,
+        );
+      },
+    );
 
-      // load() should show only doc1
-      final loaded = await repo.load();
-      expect(loaded.topics.first.documentIds, {'doc1'});
-
-      // Raw DB should have 3 rows: doc1 alive, doc2 + doc3 tombstoned
-      final rawPairs = await db.select(db.driftTopicDocuments).get();
-      expect(rawPairs.length, 3);
-
-      final alive = rawPairs.where((r) => !r.isDeleted).toList();
-      expect(alive.length, 1);
-      expect(alive.first.documentId, 'doc1');
-
-      final tombstoned = rawPairs.where((r) => r.isDeleted).toList();
-      expect(tombstoned.length, 2);
-      expect(tombstoned.map((r) => r.documentId).toSet(), {'doc2', 'doc3'});
-    });
-
-    test('HLC is stamped on tombstoned orphan rows', () async {
+    test('HLC is stamped on rows an extraction drops', () async {
       final hlcManager = HlcManager(nodeId: 'test-device-001');
       final hlcRepo = DriftGraphRepository(db: db, hlcManager: hlcManager);
 
-      await hlcRepo.save(fullGraph()); // c1, c2
+      await hlcRepo.seedEmpty(fullGraph()); // c1, c2
 
-      // Save with only c1 — c2 becomes an orphan
-      final graphB = KnowledgeGraph(
-        concepts: [
-          Concept(
-            id: 'c1',
-            name: 'Docker',
-            description: 'Container runtime',
-            sourceDocumentId: 'doc1',
-          ),
-        ],
-      );
-      await hlcRepo.save(graphB);
+      await reExtractDoc1(hlcRepo, keepOnlyC1());
 
-      // Tombstoned c2 should have an HLC from the second save
+      // Tombstoned c2 should have an HLC from the re-extraction
       final rawConcepts = await db.select(db.driftConcepts).get();
       final c2 = rawConcepts.firstWhere((c) => c.id == 'c2');
       expect(c2.isDeleted, isTrue);
@@ -731,22 +765,8 @@ void main() {
     });
 
     test('physically deletes tombstoned rows older than threshold', () async {
-      // Save and tombstone: save full graph, then save without c2/r1/q2
-      await hlcRepo.save(fullGraph());
-
-      await hlcRepo.save(
-        KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Container runtime',
-              sourceDocumentId: 'doc1',
-            ),
-          ],
-          quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
-        ),
-      );
+      await hlcRepo.seedEmpty(fullGraph());
+      await reExtractDoc1(hlcRepo, keepOnlyC1());
 
       // c2, r1, q2 are tombstoned. Purge tombstones older than "now".
       final purgeThreshold = hlcManager.now().toString();
@@ -762,24 +782,13 @@ void main() {
     });
 
     test('tombstones newer than threshold survive purge', () async {
-      await hlcRepo.save(fullGraph());
+      await hlcRepo.seedEmpty(fullGraph());
 
       // Record threshold BEFORE tombstoning
       final purgeThreshold = hlcManager.now().toString();
 
       // Now tombstone c2 (its HLC will be after purgeThreshold)
-      await hlcRepo.save(
-        KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Container runtime',
-              sourceDocumentId: 'doc1',
-            ),
-          ],
-        ),
-      );
+      await reExtractDoc1(hlcRepo, keepOnlyC1());
 
       final purged = await hlcRepo.purgeTombstones(before: purgeThreshold);
 
@@ -792,7 +801,7 @@ void main() {
     });
 
     test('non-deleted rows are never purged', () async {
-      await hlcRepo.save(fullGraph());
+      await hlcRepo.seedEmpty(fullGraph());
 
       // Purge with a threshold far in the future
       const farFuture = '9999-12-31T23:59:59.999Z-ffff-future';
@@ -805,10 +814,22 @@ void main() {
     });
 
     test('purges tombstones across all entity types', () async {
-      await hlcRepo.save(fullGraph());
+      await hlcRepo.seedEmpty(fullGraph());
 
-      // Tombstone everything
-      await hlcRepo.save(KnowledgeGraph());
+      // Tombstone everything: the extraction drops doc1's concepts,
+      // relationship and cards; nothing in the app deletes documents or
+      // topics, so those come from another device's tombstones.
+      await reExtractDoc1(
+        hlcRepo,
+        const ExtractionResult(concepts: [], relationships: [], quizItems: []),
+      );
+      for (final table in [
+        'drift_documents',
+        'drift_topics',
+        'drift_topic_documents',
+      ]) {
+        await db.customStatement('UPDATE $table SET is_deleted = 1');
+      }
 
       // Purge all
       const farFuture = '9999-12-31T23:59:59.999Z-ffff-future';
@@ -854,7 +875,7 @@ void main() {
         quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
       );
 
-      await hlcRepo.save(graph);
+      await hlcRepo.seedEmpty(graph);
 
       // Read raw rows to verify HLC was stamped
       final concepts = await db.select(db.driftConcepts).get();
@@ -879,12 +900,12 @@ void main() {
         quizItems: [testQuizItem(id: 'q1', conceptId: 'c1')],
       );
 
-      await hlcRepo.save(graph);
+      await hlcRepo.seedEmpty(graph);
       final hlcAfterSave = (await db.select(db.driftQuizItems).get()).first.hlc;
 
       // Update the quiz item
       final updated = testQuizItem(id: 'q1', conceptId: 'c1', difficulty: 5.0);
-      await hlcRepo.updateQuizItem(graph, updated);
+      await hlcRepo.updateQuizItem(updated);
 
       final hlcAfterUpdate =
           (await db.select(db.driftQuizItems).get()).first.hlc;
@@ -905,10 +926,9 @@ void main() {
           ),
         ],
       );
-      await hlcRepo.save(graph);
+      await hlcRepo.seedEmpty(graph);
 
       await hlcRepo.saveSplitData(
-        graph: graph,
         concepts: [
           Concept(
             id: 'c1-sub',
@@ -940,7 +960,7 @@ void main() {
           ),
         ],
       );
-      await repo.save(graph);
+      await repo.seedEmpty(graph);
 
       final concepts = await db.select(db.driftConcepts).get();
       expect(concepts.first.hlc, isEmpty);
@@ -954,7 +974,7 @@ void main() {
   group('isDeleted filtering', () {
     test('load excludes rows with isDeleted = true', () async {
       // Insert a concept normally
-      await repo.save(
+      await repo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -981,7 +1001,7 @@ void main() {
     });
 
     test('tombstoned rows still exist in raw DB', () async {
-      await repo.save(
+      await repo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -1009,7 +1029,7 @@ void main() {
     });
 
     test('isDeleted filtering works across all entity types', () async {
-      await repo.save(
+      await repo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(

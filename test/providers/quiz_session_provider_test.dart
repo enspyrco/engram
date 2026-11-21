@@ -57,7 +57,7 @@ void main() {
     KnowledgeGraph graph, {
     Map<String, Object> prefsValues = const {},
   }) async {
-    await repo.save(graph);
+    await repo.seedEmpty(graph);
 
     SharedPreferences.setMockInitialValues(prefsValues);
     final prefs = await SharedPreferences.getInstance();

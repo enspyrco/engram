@@ -70,7 +70,7 @@ void main() {
       hlcManager: remoteHlcManager,
     );
 
-    await remoteRepo.save(
+    await remoteRepo.seedEmpty(
       KnowledgeGraph(
         concepts: [
           Concept(
@@ -102,7 +102,7 @@ void main() {
 
     test('sync pushes local changeset to Firestore', () async {
       // Save local data
-      await driftRepo.save(
+      await driftRepo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -154,7 +154,7 @@ void main() {
 
     test('sync updates push and pull bookmarks', () async {
       // Save local data and push from remote
-      await driftRepo.save(
+      await driftRepo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -191,7 +191,7 @@ void main() {
     test(
       'sync is idempotent — second sync with no changes is a no-op',
       () async {
-        await driftRepo.save(
+        await driftRepo.seedEmpty(
           KnowledgeGraph(
             concepts: [
               Concept(
@@ -238,7 +238,7 @@ void main() {
     });
 
     test('overlapping syncs are guarded', () async {
-      await driftRepo.save(
+      await driftRepo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -313,7 +313,7 @@ void main() {
 
     test('sync purges tombstones after successful pull and merge', () async {
       // Create local data, tombstone it, then sync to get the pull bookmark
-      await driftRepo.save(
+      await driftRepo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(
@@ -325,8 +325,22 @@ void main() {
           ],
         ),
       );
-      // Save an empty graph to tombstone c-old
-      await driftRepo.save(KnowledgeGraph());
+      // Re-extract doc1 as empty to tombstone c-old
+      final seeded = await driftRepo.load();
+      await driftRepo.applyExtraction(
+        seeded
+            .withExtraction(
+              const ExtractionResult(
+                concepts: [],
+                relationships: [],
+                quizItems: [],
+              ),
+              documentId: 'doc1',
+              documentTitle: 'Doc 1',
+              updatedAt: '2026-01-02T00:00:00.000Z',
+            )
+            .patch,
+      );
 
       // Push a remote changeset so pull has something to merge
       await pushFromRemote(

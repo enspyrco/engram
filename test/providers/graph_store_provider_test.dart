@@ -87,7 +87,7 @@ void main() {
 
     test('non-empty local Drift — no Firestore read', () async {
       // Pre-populate local Drift
-      await driftRepo.save(
+      await driftRepo.seedEmpty(
         KnowledgeGraph(
           concepts: [
             Concept(

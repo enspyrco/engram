@@ -4,9 +4,11 @@ import 'package:drift/drift.dart';
 import '../../crdt/graph_changeset.dart';
 import '../../crdt/hlc_manager.dart';
 import '../../models/concept.dart';
+import '../../models/document_metadata.dart';
 import '../../models/knowledge_graph.dart';
 import '../../models/quiz_item.dart';
 import '../../models/relationship.dart';
+import '../../models/topic.dart';
 import '../graph_repository.dart';
 import 'drift_mappers.dart';
 import 'engram_database.dart';
@@ -18,19 +20,13 @@ import 'engram_database.dart';
 /// updates for quiz reviews.
 ///
 /// All write operations run inside transactions so [watch] listeners see
-/// atomic updates. The [save] method uses **upsert + orphan tombstoning**:
-/// incoming entities are upserted (INSERT OR REPLACE), and active rows
-/// not present in the incoming graph are soft-deleted (`isDeleted = true`)
-/// rather than physically removed. This preserves tombstones for CRDT
-/// changeset propagation (#41).
-///
-/// **Warning:** [save] tombstones every active row not in the incoming
-/// graph. The sync transport layer (Phase 5) should use [mergeChangeset]
-/// for incoming remote data — never [save] with a partial graph, or it
-/// will tombstone data from other devices.
+/// atomic updates. Each write touches only the rows it names and stamps
+/// them with one clock reading, so a row's clock means "when this row last
+/// changed". Deletion is a tombstone (`isDeleted = true`) on ids a write
+/// names explicitly, kept for CRDT changeset propagation.
 ///
 /// When an [HlcManager] is provided, every write is stamped with a
-/// Hybrid Logical Clock timestamp for CRDT sync (#41). Rows with
+/// Hybrid Logical Clock timestamp for CRDT sync. Rows with
 /// `isDeleted = true` are excluded from [load] results but preserved
 /// in the database for changeset propagation.
 class DriftGraphRepository extends GraphRepository {
@@ -102,178 +98,190 @@ class DriftGraphRepository extends GraphRepository {
   }
 
   // -------------------------------------------------------------------------
-  // save — upsert + orphan tombstoning inside a transaction
+  // seedEmpty — whole-graph write into a store with no rows
   // -------------------------------------------------------------------------
 
   @override
-  Future<void> save(KnowledgeGraph graph) async {
+  Future<void> seedEmpty(KnowledgeGraph graph) async {
     await _db.transaction(() async {
-      // A single HLC is used for the entire save — intentional. All rows
-      // in an atomic save share the same causal timestamp, which is correct
-      // for CRDT semantics (one logical event = one HLC).
+      if (await _hasAnyRow()) {
+        throw StateError('seedEmpty called on a store that already has rows');
+      }
       final hlc = _stampHlc();
-
-      // 1. Upsert all incoming entities. Uses insertOrReplace as a safety
-      //    net for duplicate IDs (e.g. cross-document concept reuse during
-      //    extraction). This also resurrects any previously tombstoned rows
-      //    because INSERT OR REPLACE resets isDeleted to its default (false).
       await _db.batch((batch) {
         batch.insertAll(
           _db.driftConcepts,
           graph.concepts.map((c) => c.toCompanion(hlc: hlc)).toList(),
-          mode: InsertMode.insertOrReplace,
         );
         batch.insertAll(
           _db.driftRelationships,
           graph.relationships.map((r) => r.toCompanion(hlc: hlc)).toList(),
-          mode: InsertMode.insertOrReplace,
         );
         batch.insertAll(
           _db.driftQuizItems,
           graph.quizItems.map((q) => q.toCompanion(hlc: hlc)).toList(),
-          mode: InsertMode.insertOrReplace,
         );
         batch.insertAll(
           _db.driftDocuments,
           graph.documentMetadata.map((d) => d.toCompanion(hlc: hlc)).toList(),
-          mode: InsertMode.insertOrReplace,
         );
         batch.insertAll(
           _db.driftTopics,
           graph.topics.map((t) => t.toCompanion(hlc: hlc)).toList(),
-          mode: InsertMode.insertOrReplace,
         );
-
-        // Flatten topic → document join rows.
-        for (final topic in graph.topics) {
-          for (final docId in topic.documentIds) {
-            batch.insert(
-              _db.driftTopicDocuments,
+        batch.insertAll(_db.driftTopicDocuments, [
+          for (final topic in graph.topics)
+            for (final docId in topic.documentIds)
               DriftTopicDocumentsCompanion.insert(
                 topicId: topic.id,
                 documentId: docId,
                 hlc: Value(hlc),
               ),
-              mode: InsertMode.insertOrReplace,
-            );
-          }
-        }
+        ]);
       });
-
-      // 2. Tombstone orphans — active rows not present in the incoming
-      //    graph. These rows are soft-deleted (isDeleted = true) rather
-      //    than physically removed, preserving them for CRDT changeset
-      //    propagation. Drift's isNotIn([]) returns Constant(true), so
-      //    when a table has no incoming entities all active rows are
-      //    tombstoned — matching the old DELETE ALL semantics from load()'s
-      //    perspective while keeping the rows for sync.
-      await _tombstoneOrphans(graph, hlc);
     });
   }
 
-  /// Tombstones active rows that are absent from [graph].
-  ///
-  /// For single-PK tables (concepts, relationships, quiz items, documents,
-  /// topics), uses `WHERE isDeleted = false AND id NOT IN (...)`. For the
-  /// composite-PK topic-document join table, queries existing pairs and
-  /// tombstones those not in the incoming set.
-  Future<void> _tombstoneOrphans(KnowledgeGraph graph, String hlc) async {
-    // -- Concepts --
-    await (_db.update(_db.driftConcepts)..where(
-      (t) =>
-          t.isDeleted.equals(false) &
-          t.id.isNotIn(graph.concepts.map((c) => c.id)),
-    )).write(
-      DriftConceptsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
-    );
-
-    // -- Relationships --
-    await (_db.update(_db.driftRelationships)..where(
-      (t) =>
-          t.isDeleted.equals(false) &
-          t.id.isNotIn(graph.relationships.map((r) => r.id)),
-    )).write(
-      DriftRelationshipsCompanion(
-        isDeleted: const Value(true),
-        hlc: Value(hlc),
-      ),
-    );
-
-    // -- Quiz items --
-    await (_db.update(_db.driftQuizItems)..where(
-      (t) =>
-          t.isDeleted.equals(false) &
-          t.id.isNotIn(graph.quizItems.map((q) => q.id)),
-    )).write(
-      DriftQuizItemsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
-    );
-
-    // -- Documents (PK is documentId, not id) --
-    await (_db.update(_db.driftDocuments)..where(
-      (t) =>
-          t.isDeleted.equals(false) &
-          t.documentId.isNotIn(graph.documentMetadata.map((d) => d.documentId)),
-    )).write(
-      DriftDocumentsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
-    );
-
-    // -- Topics --
-    await (_db.update(_db.driftTopics)..where(
-      (t) =>
-          t.isDeleted.equals(false) &
-          t.id.isNotIn(graph.topics.map((t) => t.id)),
-    )).write(
-      DriftTopicsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
-    );
-
-    // -- Topic documents (composite PK: topicId + documentId) --
-    await _tombstoneOrphanTopicDocuments(graph, hlc);
+  /// Whether any table has a row, tombstones included.
+  Future<bool> _hasAnyRow() async {
+    final tables = <TableInfo<Table, Object?>>[
+      _db.driftConcepts,
+      _db.driftRelationships,
+      _db.driftQuizItems,
+      _db.driftDocuments,
+      _db.driftTopics,
+      _db.driftTopicDocuments,
+    ];
+    for (final table in tables) {
+      final row =
+          await (_db.selectOnly(table)
+                ..addColumns([const CustomExpression<int>('1')])
+                ..limit(1))
+              .getSingleOrNull();
+      if (row != null) return true;
+    }
+    return false;
   }
 
-  /// Tombstones orphan topic-document join rows.
-  ///
-  /// The composite `(topicId, documentId)` primary key can't use a simple
-  /// Drift `isNotIn(...)` on a single column. Instead, we concatenate the
-  /// key columns with a `|` separator and use a single `NOT IN (...)` via
-  /// [customUpdate]. This is O(1) SQL round-trips regardless of the number
-  /// of orphan pairs — more efficient than per-row updates.
-  Future<void> _tombstoneOrphanTopicDocuments(
-    KnowledgeGraph graph,
-    String hlc,
-  ) async {
-    // Build set of incoming composite keys (pipe-delimited).
-    final incomingKeys = <String>[];
-    for (final topic in graph.topics) {
-      for (final docId in topic.documentIds) {
-        incomingKeys.add('${topic.id}|$docId');
-      }
-    }
+  // -------------------------------------------------------------------------
+  // applyExtraction — one document's rows, and the ids it drops
+  // -------------------------------------------------------------------------
 
-    if (incomingKeys.isEmpty) {
-      // No incoming pairs — tombstone all active rows.
-      await (_db.update(_db.driftTopicDocuments)
-        ..where((t) => t.isDeleted.equals(false))).write(
-        DriftTopicDocumentsCompanion(
+  @override
+  Future<void> applyExtraction(ExtractionPatch patch) async {
+    await _db.transaction(() async {
+      final hlc = _stampHlc();
+
+      // insertOrReplace also revives a tombstoned row the extraction
+      // brings back, because it resets isDeleted to its default (false).
+      await _db.batch((batch) {
+        batch.insertAll(
+          _db.driftConcepts,
+          patch.concepts.map((c) => c.toCompanion(hlc: hlc)).toList(),
+          mode: InsertMode.insertOrReplace,
+        );
+        batch.insertAll(
+          _db.driftRelationships,
+          patch.relationships.map((r) => r.toCompanion(hlc: hlc)).toList(),
+          mode: InsertMode.insertOrReplace,
+        );
+        batch.insertAll(
+          _db.driftQuizItems,
+          patch.quizItems.map((q) => q.toCompanion(hlc: hlc)).toList(),
+          mode: InsertMode.insertOrReplace,
+        );
+        batch.insert(
+          _db.driftDocuments,
+          patch.document.toCompanion(hlc: hlc),
+          mode: InsertMode.insertOrReplace,
+        );
+      });
+
+      await (_db.update(_db.driftConcepts)..where(
+        (t) => t.isDeleted.equals(false) & t.id.isIn(patch.removedConceptIds),
+      )).write(
+        DriftConceptsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+      );
+      await (_db.update(_db.driftRelationships)..where(
+        (t) =>
+            t.isDeleted.equals(false) & t.id.isIn(patch.removedRelationshipIds),
+      )).write(
+        DriftRelationshipsCompanion(
           isDeleted: const Value(true),
           hlc: Value(hlc),
         ),
       );
-      return;
-    }
+      await (_db.update(_db.driftQuizItems)..where(
+        (t) => t.isDeleted.equals(false) & t.id.isIn(patch.removedQuizItemIds),
+      )).write(
+        DriftQuizItemsCompanion(isDeleted: const Value(true), hlc: Value(hlc)),
+      );
+    });
+  }
 
-    // Single SQL statement: concatenate key columns and use NOT IN.
-    final placeholders = List.filled(incomingKeys.length, '?').join(', ');
-    await _db.customUpdate(
-      'UPDATE drift_topic_documents '
-      "SET is_deleted = 1, hlc = ? "
-      'WHERE is_deleted = 0 '
-      "AND (topic_id || '|' || document_id) NOT IN ($placeholders)",
-      variables: [
-        Variable<String>(hlc),
-        ...incomingKeys.map((k) => Variable<String>(k)),
-      ],
-      updates: {_db.driftTopicDocuments},
+  // -------------------------------------------------------------------------
+  // upsertTopics / upsertDocumentMetadata
+  // -------------------------------------------------------------------------
+
+  @override
+  Future<void> upsertTopics(List<Topic> topics) async {
+    if (topics.isEmpty) return;
+    await _db.transaction(() async {
+      final hlc = _stampHlc();
+      await _db.batch((batch) {
+        batch.insertAll(
+          _db.driftTopics,
+          topics.map((t) => t.toCompanion(hlc: hlc)).toList(),
+          mode: InsertMode.insertOrReplace,
+        );
+      });
+      for (final topic in topics) {
+        await _writeTopicDocuments(topic, hlc);
+      }
+    });
+  }
+
+  /// Makes [topic]'s active join rows exactly its `documentIds`, stamping
+  /// only the pairs that are added or removed.
+  Future<void> _writeTopicDocuments(Topic topic, String hlc) async {
+    final active =
+        await (_db.select(_db.driftTopicDocuments)..where(
+          (t) => t.topicId.equals(topic.id) & t.isDeleted.equals(false),
+        )).map((r) => r.documentId).get();
+    final added = topic.documentIds.difference(active.toSet());
+    final removed = active.toSet().difference(topic.documentIds.toSet());
+
+    await _db.batch((batch) {
+      batch.insertAll(_db.driftTopicDocuments, [
+        for (final docId in added)
+          DriftTopicDocumentsCompanion.insert(
+            topicId: topic.id,
+            documentId: docId,
+            hlc: Value(hlc),
+          ),
+      ], mode: InsertMode.insertOrReplace);
+    });
+    await (_db.update(_db.driftTopicDocuments)..where(
+      (t) => t.topicId.equals(topic.id) & t.documentId.isIn(removed),
+    )).write(
+      DriftTopicDocumentsCompanion(
+        isDeleted: const Value(true),
+        hlc: Value(hlc),
+      ),
     );
+  }
+
+  @override
+  Future<void> upsertDocumentMetadata(List<DocumentMetadata> documents) async {
+    if (documents.isEmpty) return;
+    final hlc = _stampHlc();
+    await _db.batch((batch) {
+      batch.insertAll(
+        _db.driftDocuments,
+        documents.map((d) => d.toCompanion(hlc: hlc)).toList(),
+        mode: InsertMode.insertOrReplace,
+      );
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -324,7 +332,7 @@ class DriftGraphRepository extends GraphRepository {
   // -------------------------------------------------------------------------
 
   @override
-  Future<void> updateQuizItem(KnowledgeGraph graph, QuizItem item) async {
+  Future<void> updateQuizItem(QuizItem item) async {
     await _db
         .into(_db.driftQuizItems)
         .insertOnConflictUpdate(item.toCompanion(hlc: _stampHlc()));
@@ -336,7 +344,6 @@ class DriftGraphRepository extends GraphRepository {
 
   @override
   Future<void> saveSplitData({
-    required KnowledgeGraph graph,
     required List<Concept> concepts,
     required List<Relationship> relationships,
     required List<QuizItem> quizItems,

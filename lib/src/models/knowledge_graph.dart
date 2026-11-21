@@ -26,6 +26,21 @@ class ExtractionResult {
   final int rejectedRubricCount;
 }
 
+/// The rows one document's extraction writes, and the ids it drops.
+///
+/// Storage writes exactly these rows, so a row the extraction didn't touch
+/// keeps its sync clock.
+typedef ExtractionPatch =
+    ({
+      List<Concept> concepts,
+      List<Relationship> relationships,
+      List<QuizItem> quizItems,
+      DocumentMetadata document,
+      Set<String> removedConceptIds,
+      Set<String> removedRelationshipIds,
+      Set<String> removedQuizItemIds,
+    });
+
 @immutable
 class KnowledgeGraph {
   KnowledgeGraph({
@@ -97,6 +112,30 @@ class KnowledgeGraph {
     String? collectionId,
     String? collectionName,
     String? documentText,
+  }) =>
+      withExtraction(
+        result,
+        documentId: documentId,
+        documentTitle: documentTitle,
+        updatedAt: updatedAt,
+        now: now,
+        collectionId: collectionId,
+        collectionName: collectionName,
+        documentText: documentText,
+      ).graph;
+
+  /// [withNewExtraction], plus the [ExtractionPatch] that persists it: the
+  /// rows the extraction adds or replaces, and the ids it drops from this
+  /// graph.
+  ({KnowledgeGraph graph, ExtractionPatch patch}) withExtraction(
+    ExtractionResult result, {
+    required String documentId,
+    required String documentTitle,
+    required String updatedAt,
+    DateTime? now,
+    String? collectionId,
+    String? collectionName,
+    String? documentText,
   }) {
     // Remove old data from the same document
     final oldConceptIds =
@@ -111,6 +150,8 @@ class KnowledgeGraph {
     final newRelationshipIds = result.relationships.map((r) => r.id).toSet();
     final newQuizItemIds = result.quizItems.map((q) => q.id).toSet();
 
+    final extractedConcepts =
+        result.concepts.map((c) => c.withSourceDocumentId(documentId)).toList();
     final newConcepts =
         [
           ...concepts.where(
@@ -118,7 +159,7 @@ class KnowledgeGraph {
                 c.sourceDocumentId != documentId &&
                 !newConceptIds.contains(c.id),
           ),
-          ...result.concepts.map((c) => c.withSourceDocumentId(documentId)),
+          ...extractedConcepts,
         ].lock;
 
     final newRelationships =
@@ -169,12 +210,35 @@ class KnowledgeGraph {
             ? documentMetadata.replace(existingIndex, meta)
             : documentMetadata.add(meta);
 
-    return KnowledgeGraph._raw(
-      concepts: newConcepts,
-      relationships: newRelationships,
-      quizItems: newQuizItems,
-      documentMetadata: newMetadata,
-      topics: topics,
+    Set<String> dropped(Iterable<String> before, Iterable<String> after) =>
+        before.toSet().difference(after.toSet());
+
+    return (
+      graph: KnowledgeGraph._raw(
+        concepts: newConcepts,
+        relationships: newRelationships,
+        quizItems: newQuizItems,
+        documentMetadata: newMetadata,
+        topics: topics,
+      ),
+      patch: (
+        concepts: extractedConcepts,
+        relationships: result.relationships,
+        quizItems: result.quizItems,
+        document: meta,
+        removedConceptIds: dropped(
+          concepts.map((c) => c.id),
+          newConcepts.map((c) => c.id),
+        ),
+        removedRelationshipIds: dropped(
+          relationships.map((r) => r.id),
+          newRelationships.map((r) => r.id),
+        ),
+        removedQuizItemIds: dropped(
+          quizItems.map((q) => q.id),
+          newQuizItems.map((q) => q.id),
+        ),
+      ),
     );
   }
 

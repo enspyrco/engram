@@ -1,37 +1,46 @@
 import '../models/concept.dart';
+import '../models/document_metadata.dart';
 import '../models/knowledge_graph.dart';
 import '../models/quiz_item.dart';
 import '../models/relationship.dart';
+import '../models/topic.dart';
 
-/// Abstract storage interface for the knowledge graph.
+/// Storage interface for the knowledge graph.
+///
+/// Every write names the rows it changes. A row a write doesn't name keeps
+/// its sync clock, so a change on another device to that row is never
+/// overwritten by an unrelated write here, and nothing is deleted for being
+/// absent from a caller's copy of the graph.
 ///
 /// Implementations:
 /// - [DriftGraphRepository] — local SQLite via Drift (primary store)
-/// - [FirestoreGraphLoader] — read-only cloud Firestore (one-time seed only)
 abstract class GraphRepository {
   Future<KnowledgeGraph> load();
 
-  /// Persist [graph], upserting all entities and removing orphans.
-  Future<void> save(KnowledgeGraph graph);
+  /// Writes [graph] into a store that has no rows yet, such as the first
+  /// seed from Firestore. Throws [StateError] if the store has any rows.
+  Future<void> seedEmpty(KnowledgeGraph graph);
 
-  /// Update a single quiz item. Local impl delegates to [save];
-  /// Firestore impl writes a single subcollection document.
-  Future<void> updateQuizItem(KnowledgeGraph graph, QuizItem item) async {
-    await save(graph);
-  }
+  /// Writes one document's extraction: upserts its rows and tombstones the
+  /// ids it dropped.
+  Future<void> applyExtraction(ExtractionPatch patch);
 
-  /// Additive save for split operations — writes only the new entities.
-  /// Local impl delegates to [save]; Firestore impl writes individual docs.
+  /// Writes a single quiz item, such as after a review.
+  Future<void> updateQuizItem(QuizItem item);
+
+  /// Writes the new entities from a concept split.
   Future<void> saveSplitData({
-    required KnowledgeGraph graph,
     required List<Concept> concepts,
     required List<Relationship> relationships,
     required List<QuizItem> quizItems,
-  }) async {
-    await save(graph);
-  }
+  });
 
-  /// Reactive stream of graph changes. Local impl emits once on load;
-  /// Firestore impl emits on every snapshot change.
+  /// Upserts [topics], each with exactly its `documentIds`.
+  Future<void> upsertTopics(List<Topic> topics);
+
+  /// Upserts document metadata rows, such as backfilled collection info.
+  Future<void> upsertDocumentMetadata(List<DocumentMetadata> documents);
+
+  /// Reactive stream of graph changes.
   Stream<KnowledgeGraph> watch();
 }

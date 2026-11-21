@@ -31,7 +31,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       graph = _autoMigrateTopics(graph);
       // Persist the migration
       unawaited(
-        repo.save(graph).catchError((e) {
+        repo.upsertTopics(graph.topics.toList()).catchError((e) {
           debugPrint('[KnowledgeGraph] Failed to persist topic migration: $e');
         }),
       );
@@ -90,7 +90,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     // Storage is best-effort — in-memory state is already correct.
     try {
       final repo = ref.read(graphRepositoryProvider);
-      await repo.updateQuizItem(newGraph, updated);
+      await repo.updateQuizItem(updated);
     } catch (e) {
       // Swallow storage errors so callers using unawaited() don't leak
       // uncaught futures. Log so failures are visible during debugging.
@@ -109,7 +109,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
   }) async {
     final current = await future;
 
-    final newGraph = current.withNewExtraction(
+    final change = current.withExtraction(
       result,
       documentId: documentId,
       documentTitle: documentTitle,
@@ -118,10 +118,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       collectionName: collectionName,
       documentText: documentText,
     );
-    state = AsyncData(newGraph);
+    state = AsyncData(change.graph);
 
     final repo = ref.read(graphRepositoryProvider);
-    await repo.save(newGraph);
+    await repo.applyExtraction(change.patch);
   }
 
   /// Like [ingestExtraction] but reveals concepts in small batches with
@@ -139,6 +139,18 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     int batchSize = 3,
   }) async {
     final current = await future;
+
+    // What gets persisted is the extraction itself; the frames below only
+    // animate it into the in-memory graph.
+    final change = current.withExtraction(
+      result,
+      documentId: documentId,
+      documentTitle: documentTitle,
+      updatedAt: updatedAt,
+      collectionId: collectionId,
+      collectionName: collectionName,
+      documentText: documentText,
+    );
 
     // Step 1: Clear old concepts from this document (graph shrinks)
     final cleared = current.withNewExtraction(
@@ -194,12 +206,10 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
       await Future.delayed(delay);
     }
 
-    // Step 3: Persist the final state
-    final finalGraph = state.valueOrNull;
-    if (finalGraph != null) {
-      final repo = ref.read(graphRepositoryProvider);
-      await repo.save(finalGraph);
-    }
+    // Step 3: Settle on the complete extraction and persist it
+    state = AsyncData(change.graph);
+    final repo = ref.read(graphRepositoryProvider);
+    await repo.applyExtraction(change.patch);
   }
 
   Future<void> splitConcept({
@@ -218,21 +228,18 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
 
     final repo = ref.read(graphRepositoryProvider);
     await repo.saveSplitData(
-      graph: newGraph,
       concepts: children,
       relationships: childRelationships,
       quizItems: childQuizItems,
     );
   }
 
-  /// Update in-memory metadata with collection info for a document.
-  /// When [skipPersist] is true, the caller is responsible for batching the
-  /// save (e.g. after a loop of backfills).
+  /// Update a document's metadata with its collection info and persist
+  /// that one row.
   void backfillCollectionInfo(
     String documentId, {
     required String collectionId,
     required String collectionName,
-    bool skipPersist = false,
   }) {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -245,15 +252,19 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     if (identical(newGraph, current)) return;
     state = AsyncData(newGraph);
 
-    if (skipPersist) return;
-
     // Fire-and-forget — in-memory state is already correct.
     final repo = ref.read(graphRepositoryProvider);
-    repo.save(newGraph).catchError((e) {
-      debugPrint(
-        '[KnowledgeGraph] Storage error in backfillCollectionInfo: $e',
-      );
-    });
+    repo
+        .upsertDocumentMetadata(
+          newGraph.documentMetadata
+              .where((d) => d.documentId == documentId)
+              .toList(),
+        )
+        .catchError((e) {
+          debugPrint(
+            '[KnowledgeGraph] Storage error in backfillCollectionInfo: $e',
+          );
+        });
   }
 
   /// Upsert a topic into the graph and persist.
@@ -265,7 +276,7 @@ class KnowledgeGraphNotifier extends AsyncNotifier<KnowledgeGraph> {
     state = AsyncData(newGraph);
 
     final repo = ref.read(graphRepositoryProvider);
-    repo.save(newGraph).catchError((e) {
+    repo.upsertTopics([topic]).catchError((e) {
       debugPrint('[KnowledgeGraph] Storage error in upsertTopic: $e');
     });
   }
