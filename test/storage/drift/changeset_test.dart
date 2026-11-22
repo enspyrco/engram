@@ -416,8 +416,9 @@ void main() {
       await reExtractDoc1(repoA, dropEverything);
 
       // Device B resurrects c1 with a newer HLC
-      await repoB.seedEmpty(
-        KnowledgeGraph(
+      await reExtractDoc1(
+        repoB,
+        ExtractionResult(
           concepts: [
             Concept(
               id: 'c1',
@@ -426,6 +427,8 @@ void main() {
               sourceDocumentId: 'doc1',
             ),
           ],
+          relationships: const [],
+          quizItems: const [],
         ),
       );
 
@@ -441,6 +444,7 @@ void main() {
 
     test('HLC advances on merge (causal ordering)', () async {
       await repoA.seedEmpty(fullGraph());
+      await reExtractDoc1(repoA, dropEverything);
       final hlcBeforeMerge = hlcB.canonicalTime.toString();
 
       final changeset = await repoA.getChangeset(modifiedAfter: '');
@@ -450,6 +454,37 @@ void main() {
 
       // B's clock should have advanced
       expect(hlcAfterMerge.compareTo(hlcBeforeMerge), greaterThan(0));
+    });
+
+    test('a seeded row loses to any real write of the same row', () async {
+      // B's fresh install seeds an old copy of the graph; A has edited c1.
+      await repoA.seedEmpty(fullGraph());
+      await reExtractDoc1(
+        repoA,
+        ExtractionResult(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker, edited',
+              description: 'Edited on A',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+          relationships: const [],
+          quizItems: const [],
+        ),
+      );
+      await repoB.seedEmpty(fullGraph());
+
+      await repoA.mergeChangeset(await repoB.getChangeset(modifiedAfter: ''));
+      await repoB.mergeChangeset(await repoA.getChangeset(modifiedAfter: ''));
+
+      for (final repo in [repoA, repoB]) {
+        final c1 = (await repo.load()).concepts.singleWhere(
+          (c) => c.id == 'c1',
+        );
+        expect(c1.name, 'Docker, edited');
+      }
     });
 
     test('merges all table types correctly', () async {
@@ -1023,95 +1058,51 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // purgeTombstones + merge interaction
+  // a device's own rows coming back
   // -------------------------------------------------------------------------
 
-  group('purgeTombstones + merge', () {
-    test('purged tombstones on A do not block modified rows from B', () async {
-      // Both devices start with c1
-      await repoA.seedEmpty(
-        KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'c1',
-              name: 'Docker',
-              description: 'Original',
-              sourceDocumentId: 'doc1',
-            ),
-          ],
-        ),
-      );
-      final seed = await repoA.getChangeset(modifiedAfter: '');
-      await repoB.mergeChangeset(seed);
+  group('own rows', () {
+    test('restore a row this device no longer has', () async {
+      await reExtractDoc1(repoA, onlyC1('Written on A'));
+      final pushed = await repoA.getChangeset(modifiedAfter: '');
 
-      // A tombstones c1 (re-extraction drops it)
-      await reExtractDoc1(repoA, dropEverything);
+      // A's database is lost; the same node id starts again.
+      final dbReset = EngramDatabase.forTesting(NativeDatabase.memory());
+      final repoReset = DriftGraphRepository(db: dbReset, hlcManager: hlcA);
+      expect(await repoReset.mergeChangeset(pushed), greaterThan(0));
 
-      // A purges tombstones (physically deletes them)
-      final purged = await repoA.purgeTombstones(
-        before: '9999-12-31T23:59:59.999Z-FFFF-future',
-      );
-      expect(purged, greaterThan(0));
-
-      // Verify c1 is physically gone from A's DB
-      final rawA = await dbA.select(dbA.driftConcepts).get();
-      expect(rawA.where((c) => c.id == 'c1'), isEmpty);
-
-      // B modifies c1 (stamps it with B's HLC — no longer A's echo)
-      await reExtractDoc1(repoB, onlyC1('Updated by B'));
-
-      // B syncs to A — B's modified c1 has B's HLC, passes same-node guard
-      final fromB = await repoB.getChangeset(modifiedAfter: '');
-      await repoA.mergeChangeset(fromB);
-
-      // A should have c1 again (B's version wins over absence)
-      final loadA = await repoA.load();
-      expect(loadA.concepts.any((c) => c.id == 'c1'), isTrue);
-      expect(
-        loadA.concepts.firstWhere((c) => c.id == 'c1').description,
-        'Updated by B',
-      );
+      final c1 = (await repoReset.load()).concepts.single;
+      expect(c1.description, 'Written on A');
+      await dbReset.close();
     });
 
-    test(
-      'unmodified rows with original HLC are skipped by same-node guard',
-      () async {
-        // This documents a known behavior: if B holds an unmodified copy
-        // of A's data (still carrying A's HLC), and A purges the tombstone,
-        // B's changeset is filtered by A's same-node guard. This is correct
-        // — purgeTombstones should only be called after all peers confirmed
-        // receipt of the tombstone.
-        await repoA.seedEmpty(
-          KnowledgeGraph(
-            concepts: [
-              Concept(
-                id: 'c1',
-                name: 'Docker',
-                description: 'Original',
-                sourceDocumentId: 'doc1',
-              ),
-            ],
-          ),
-        );
-        final seed = await repoA.getChangeset(modifiedAfter: '');
-        await repoB.mergeChangeset(seed);
+    test('lose to a newer local write of the same row', () async {
+      await reExtractDoc1(repoA, onlyC1('First'));
+      final older = await repoA.getChangeset(modifiedAfter: '');
+      await reExtractDoc1(repoA, onlyC1('Second'));
 
-        // A tombstones + purges c1
-        await reExtractDoc1(repoA, dropEverything);
-        await repoA.purgeTombstones(
-          before: '9999-12-31T23:59:59.999Z-FFFF-future',
-        );
+      expect(await repoA.mergeChangeset(older), 0);
+      expect((await repoA.load()).concepts.single.description, 'Second');
+    });
 
-        // B still has unmodified c1 (with A's original HLC)
-        final fromB = await repoB.getChangeset(modifiedAfter: '');
-        final written = await repoA.mergeChangeset(fromB);
+    test('never move this device\'s clock backwards', () async {
+      await reExtractDoc1(repoA, onlyC1('Written on A'));
+      final pushed = await repoA.getChangeset(modifiedAfter: '');
+      final freshClock = HlcManager(nodeId: hlcA.nodeId);
+      final dbReset = EngramDatabase.forTesting(NativeDatabase.memory());
+      final repoReset = DriftGraphRepository(
+        db: dbReset,
+        hlcManager: freshClock,
+      );
 
-        // Same-node guard skips B's copy — it still carries A's HLC
-        expect(written, 0);
-        final loadA = await repoA.load();
-        expect(loadA.concepts, isEmpty);
-      },
-    );
+      await repoReset.mergeChangeset(pushed);
+
+      expect(
+        freshClock.canonicalTime.toString().compareTo(pushed.maxHlc),
+        greaterThanOrEqualTo(0),
+      );
+      await dbReset.close();
+    });
   });
 
   // -------------------------------------------------------------------------

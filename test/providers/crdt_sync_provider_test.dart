@@ -17,6 +17,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../helpers/quiz_item_helpers.dart';
+
 class MockNodeIdRepository extends Mock implements NodeIdRepository {}
 
 void main() {
@@ -122,12 +124,12 @@ void main() {
       expect(state.pushedCount, greaterThan(0));
       expect(state.lastSyncedAt, fixedClock);
 
-      // Verify the sync_log has a document
+      // Verify the log has an entry
       final docs =
           await firestore
               .collection('users')
               .doc(userId)
-              .collection('sync_log')
+              .collection('sync_log_v2')
               .get();
       expect(docs.docs.length, 1);
       expect(docs.docs.first.data()['nodeId'], localNodeId);
@@ -175,17 +177,13 @@ void main() {
 
       // Push bookmark should be updated
       final pushHlc = await driftRepo.getLastSyncedHlc(
-        'firestore-sync-log:push',
+        'firestore-sync-log-v2:push',
       );
       expect(pushHlc, isNotNull);
       expect(pushHlc, isNotEmpty);
 
-      // Pull bookmark should be updated
-      final pullHlc = await driftRepo.getLastSyncedHlc(
-        'firestore-sync-log:pull',
-      );
-      expect(pullHlc, isNotNull);
-      expect(pullHlc, isNotEmpty);
+      // Pull bookmark is the highest entry read: the remote one, then ours.
+      expect(await driftRepo.getSyncedSeq('firestore-sync-log-v2:pull'), 2);
     });
 
     test(
@@ -258,12 +256,12 @@ void main() {
 
       await Future.wait([future1, future2]);
 
-      // Only one sync_log entry should exist (not two)
+      // Only one log entry should exist (not two)
       final docs =
           await firestore
               .collection('users')
               .doc(userId)
-              .collection('sync_log')
+              .collection('sync_log_v2')
               .get();
       expect(docs.docs.length, 1);
     });
@@ -311,21 +309,13 @@ void main() {
       expect(invalidated, isTrue);
     });
 
-    test('sync purges tombstones after successful pull and merge', () async {
-      // Create local data, tombstone it, then sync to get the pull bookmark
-      await driftRepo.seedEmpty(
-        KnowledgeGraph(
-          concepts: [
-            Concept(
-              id: 'c-old',
-              name: 'Old',
-              description: 'Will be tombstoned',
-              sourceDocumentId: 'doc1',
-            ),
-          ],
-        ),
-      );
-      // Re-extract doc1 as empty to tombstone c-old
+    test('a deletion survives a device that first syncs after it', () async {
+      // B holds an older live copy of c-old and hasn't run this protocol yet.
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('c-old'));
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      await driftRepo.seedEmpty(_graphWith('c-old'));
+      // Re-extract doc-c-old as empty to tombstone c-old.
       final seeded = await driftRepo.load();
       await driftRepo.applyExtraction(
         seeded
@@ -335,33 +325,213 @@ void main() {
                 relationships: [],
                 quizItems: [],
               ),
-              documentId: 'doc1',
-              documentTitle: 'Doc 1',
+              documentId: 'doc-c-old',
+              documentTitle: 'Old',
               updatedAt: '2026-01-02T00:00:00.000Z',
             )
             .patch,
       );
+      // A writes something newer and syncs alone, twice.
+      await driftRepo.updateQuizItem(testQuizItem(id: 'q-later'));
+      final notifier = container.read(crdtSyncProvider.notifier);
+      await notifier.sync();
+      await notifier.sync();
 
-      // Push a remote changeset so pull has something to merge
-      await pushFromRemote(
-        'c-remote',
-        '2026-01-01T00:00:00.000Z-0000-device-B',
-      );
+      // B makes a real write after the deletion, so its push carries a clock
+      // past the tombstone alongside its older live copy of c-old.
+      await b.repo.updateQuizItem(testQuizItem(id: 'q-B'));
+      await b.sync();
+      await notifier.sync();
+      await b.sync();
+
+      // The tombstone itself must still be there on both, not just the row
+      // hidden from load().
+      for (final database in [db, b.db]) {
+        final row = (await database.select(database.driftConcepts).get())
+            .singleWhere((c) => c.id == 'c-old');
+        expect(row.isDeleted, isTrue);
+      }
+      await b.close();
+    });
+
+    test('a device receives a write made before another device\'s later '
+        'write', () async {
+      // A writes, then B writes and syncs, then A syncs. A's sync used to
+      // delete its own entry before B had read it.
+      await driftRepo.seedEmpty(_graphWith('from-A'));
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('from-B'));
+      await b.sync();
 
       await container.read(crdtSyncProvider.notifier).sync();
+      await b.sync();
 
-      final state = container.read(crdtSyncProvider);
-      expect(state.phase, CrdtSyncPhase.idle);
-      expect(state.pulledCount, greaterThan(0));
+      expect(
+        (await b.repo.load()).concepts.map((c) => c.id),
+        containsAll(['from-A', 'from-B']),
+      );
+      await b.close();
+    });
 
-      // Tombstoned rows with HLCs older than the pull bookmark should be
-      // physically deleted. Verify that purgeTombstones ran by checking
-      // the changeset (which includes tombstoned rows).
-      final allRows = await driftRepo.getChangeset(modifiedAfter: '');
-      // The old concept should have been purged (its HLC < pull bookmark)
-      // while the merged remote concept persists
-      final conceptIds = allRows.concepts.map((c) => c.id).toSet();
-      expect(conceptIds, contains('c-remote'));
+    test('a new device restores the graph after the only other device is '
+        'gone', () async {
+      // A syncs alone, twice, then is lost.
+      final a = await _Device.open(firestore, userId, 'device-lost');
+      await a.repo.seedEmpty(_graphWith('from-A'));
+      await a.repo.updateQuizItem(testQuizItem(id: 'q-A'));
+      await a.sync();
+      await a.sync();
+      await a.close();
+
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.sync();
+
+      final restored = await b.repo.load();
+      expect(restored.concepts.map((c) => c.id), ['from-A']);
+      expect(restored.quizItems.map((q) => q.id), ['q-A']);
+      await b.close();
+    });
+
+    test('a deleted row stays deleted when an older edit of it arrives '
+        'late', () async {
+      final notifier = container.read(crdtSyncProvider.notifier);
+      await driftRepo.seedEmpty(_graphWith('c-old'));
+      await notifier.sync();
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('from-B'));
+      await b.sync();
+
+      // B edits c-old while offline...
+      final onB = await b.repo.load();
+      await b.repo.applyExtraction(
+        onB
+            .withExtraction(
+              ExtractionResult(
+                concepts: [
+                  Concept(
+                    id: 'c-old',
+                    name: 'c-old',
+                    description: 'edited on B',
+                    sourceDocumentId: 'doc-c-old',
+                  ),
+                ],
+                relationships: const [],
+                quizItems: const [],
+              ),
+              documentId: 'doc-c-old',
+              documentTitle: 'Old',
+              updatedAt: '2026-01-02T00:00:00.000Z',
+            )
+            .patch,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      // ...then A deletes it, later.
+      final onA = await driftRepo.load();
+      await driftRepo.applyExtraction(
+        onA
+            .withExtraction(
+              const ExtractionResult(
+                concepts: [],
+                relationships: [],
+                quizItems: [],
+              ),
+              documentId: 'doc-c-old',
+              documentTitle: 'Old',
+              updatedAt: '2026-01-03T00:00:00.000Z',
+            )
+            .patch,
+      );
+      // A third device's newer push used to let A purge the tombstone.
+      final c = await _Device.open(firestore, userId, 'device-C');
+      await c.repo.seedEmpty(_graphWith('from-C'));
+      await c.sync();
+      await notifier.sync();
+
+      await b.sync();
+      await notifier.sync();
+
+      expect(
+        (await driftRepo.load()).concepts.map((c) => c.id),
+        isNot(contains('c-old')),
+      );
+      await b.close();
+      await c.close();
+    });
+
+    test('a device that loses its database but keeps its node id restores '
+        'its own work', () async {
+      final before = await _Device.open(firestore, userId, 'device-reset');
+      await before.repo.seedEmpty(_graphWith('mine'));
+      await before.repo.updateQuizItem(testQuizItem(id: 'q-mine'));
+      await before.sync();
+      await before.close();
+
+      final after = await _Device.open(firestore, userId, 'device-reset');
+      await after.sync();
+
+      final restored = await after.repo.load();
+      expect(restored.concepts.map((c) => c.id), ['mine']);
+      expect(restored.quizItems.map((q) => q.id), ['q-mine']);
+      await after.close();
+    });
+
+    test('a device that joins later still receives the whole '
+        'graph', () async {
+      // A upgrades first and syncs alone, so nothing holds its full push in
+      // the log.
+      await driftRepo.seedEmpty(_graphWith('from-A'));
+      final notifier = container.read(crdtSyncProvider.notifier);
+      await notifier.sync();
+      await notifier.sync();
+
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.sync();
+      await notifier.sync();
+      await b.sync();
+
+      expect((await b.repo.load()).concepts.map((c) => c.id), ['from-A']);
+      await b.close();
+    });
+
+    test('a device\'s first sync pushes its graph once', () async {
+      await container.read(crdtSyncProvider.notifier).sync();
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('from-B'));
+      await b.sync();
+
+      final fromB =
+          (await firestore
+                  .collection('users')
+                  .doc(userId)
+                  .collection('sync_log_v2')
+                  .where('nodeId', isEqualTo: remoteNodeId)
+                  .get())
+              .docs;
+      expect(fromB, hasLength(1));
+      await b.close();
+    });
+
+    test('an entry pushed late with old clocks is still pulled', () async {
+      // C writes while offline, B and A sync past it, then C comes online.
+      final c = await _Device.open(firestore, userId, 'device-C');
+      await c.repo.seedEmpty(_graphWith('from-C'));
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('from-B'));
+      await b.sync();
+      final notifier = container.read(crdtSyncProvider.notifier);
+      await notifier.sync();
+
+      await c.sync();
+      await notifier.sync();
+
+      expect(
+        (await driftRepo.load()).concepts.map((c) => c.id),
+        containsAll(['from-B', 'from-C']),
+      );
+      await b.close();
+      await c.close();
     });
 
     test('sync errors use exponential backoff on periodic ticks', () async {
@@ -410,6 +580,62 @@ void main() {
       expect(hlc, 'some-hlc');
     });
   });
+}
+
+KnowledgeGraph _graphWith(String conceptId) => KnowledgeGraph(
+  concepts: [
+    Concept(
+      id: conceptId,
+      name: conceptId,
+      description: conceptId,
+      sourceDocumentId: 'doc-$conceptId',
+    ),
+  ],
+);
+
+/// Another device syncing through the same Firestore: its own database,
+/// clock and [CrdtSyncNotifier].
+class _Device {
+  _Device._(this.db, this.repo, this._container);
+
+  static Future<_Device> open(
+    FakeFirebaseFirestore firestore,
+    String userId,
+    String nodeId,
+  ) async {
+    final db = EngramDatabase.forTesting(NativeDatabase.memory());
+    final repo = DriftGraphRepository(
+      db: db,
+      hlcManager: HlcManager(nodeId: nodeId),
+    );
+    final nodeIdRepo = MockNodeIdRepository();
+    when(() => nodeIdRepo.nodeId).thenReturn(nodeId);
+    final container = ProviderContainer(
+      overrides: [
+        driftGraphRepositoryProvider.overrideWithValue(repo),
+        firestoreSyncTransportProvider.overrideWithValue(
+          FirestoreSyncTransport(firestore: firestore, userId: userId),
+        ),
+        nodeIdRepositoryProvider.overrideWithValue(nodeIdRepo),
+        clockProvider.overrideWithValue(() => DateTime.utc(2026, 2, 25)),
+      ],
+    );
+    return _Device._(db, repo, container);
+  }
+
+  final EngramDatabase db;
+  final DriftGraphRepository repo;
+  final ProviderContainer _container;
+
+  Future<void> sync() async {
+    await _container.read(crdtSyncProvider.notifier).sync();
+    expect(_container.read(crdtSyncProvider).phase, CrdtSyncPhase.idle);
+  }
+
+  Future<void> close() async {
+    _container.dispose();
+    await db.close();
+  }
 }
 
 /// A DriftGraphRepository that throws on getChangeset for testing error paths.

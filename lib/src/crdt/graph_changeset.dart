@@ -73,9 +73,9 @@ class GraphChangeset {
   /// The lexicographically highest HLC across all rows, or empty string if
   /// the changeset is empty.
   ///
-  /// Used by the sync transport layer as a bookmark — the Firestore sync_log
-  /// stores this alongside each changeset so pull queries can filter by
-  /// `maxHlc > sinceHlc` without deserializing the full changeset.
+  /// Becomes the push bookmark once pushed: every later local write carries
+  /// a higher clock. Not a log position, since a late push carries old
+  /// clocks.
   String get maxHlc {
     if (isEmpty) return '';
 

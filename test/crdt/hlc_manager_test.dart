@@ -96,5 +96,17 @@ void main() {
       final hlc2 = manager2.now();
       expect(hlc1.nodeId, isNot(equals(hlc2.nodeId)));
     });
+
+    test('receiving its own later clock advances without throwing', () {
+      final before = HlcManager(nodeId: 'same-node');
+      final pushed = before.now();
+
+      // The same node starting again, its earlier clock replayed to it.
+      final after = HlcManager(nodeId: 'same-node');
+      after.receive(pushed);
+
+      expect(after.canonicalTime, pushed);
+      expect(after.now() > pushed, isTrue);
+    });
   });
 }

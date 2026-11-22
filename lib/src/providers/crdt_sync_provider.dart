@@ -13,11 +13,15 @@ import 'graph_store_provider.dart';
 import 'hlc_provider.dart';
 import 'knowledge_graph_provider.dart';
 
-/// Peer ID prefix for the Firestore sync_log push bookmark.
-const _pushPeerId = 'firestore-sync-log:push';
+/// Bookmark key for the push position: the max HLC already pushed.
+///
+/// New with the numbered log, so a device upgrading from the old log has no
+/// push bookmark and pushes everything once: the new log starts with every
+/// device's whole graph.
+const _pushPeerId = 'firestore-sync-log-v2:push';
 
-/// Peer ID prefix for the Firestore sync_log pull bookmark.
-const _pullPeerId = 'firestore-sync-log:pull';
+/// Bookmark key for the pull position: the highest log entry read.
+const _pullPeerId = 'firestore-sync-log-v2:pull';
 
 // ---------------------------------------------------------------------------
 // Typed DriftGraphRepository provider
@@ -61,11 +65,10 @@ final crdtSyncProvider = NotifierProvider<CrdtSyncNotifier, CrdtSyncState>(
 /// the Firestore sync_log.
 ///
 /// **Sync lifecycle:**
-/// 1. Push: generate local changeset since last push → write to sync_log
-/// 2. Pull: read remote changesets since last pull → merge each into Drift
-/// 3. Update bookmarks in `drift_sync_metadata`
+/// 1. Push: generate local changeset since last push → write to the log
+/// 2. Pull: read entries after the pull bookmark → merge each into Drift
 ///
-/// Uses separate push/pull HLC bookmarks so a failed pull doesn't block
+/// Uses separate push/pull bookmarks so a failed pull doesn't block
 /// future pushes (and vice versa). Guards against overlapping syncs via
 /// [CrdtSyncState.isSyncing].
 class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
@@ -119,49 +122,38 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // -- Pull --
       state = state.copyWith(phase: CrdtSyncPhase.pulling);
 
-      final lastPullHlc = await driftRepo.getLastSyncedHlc(_pullPeerId) ?? '';
-      final pulled = await transport.pullChangesets(
-        sinceHlc: lastPullHlc,
-        localNodeId: nodeId,
-      );
-      pulledCount = pulled.length;
+      final pulledSeq = await driftRepo.getSyncedSeq(_pullPeerId);
+      final pulled = await transport.pullChangesets(afterSeq: pulledSeq);
+      pulledCount = pulled.changesets.length;
 
       // -- Merge --
-      if (pulled.isNotEmpty) {
+      if (pulled.changesets.isNotEmpty) {
         state = state.copyWith(phase: CrdtSyncPhase.merging);
-
-        var highestPullHlc = lastPullHlc;
-        for (final entry in pulled) {
-          mergedCount += await driftRepo.mergeChangeset(entry.changeset);
-          if (entry.maxHlc.compareTo(highestPullHlc) > 0) {
-            highestPullHlc = entry.maxHlc;
-          }
+        for (final changeset in pulled.changesets) {
+          mergedCount += await driftRepo.mergeChangeset(changeset);
         }
-
-        // Update pull bookmark to the highest maxHlc we merged.
-        if (highestPullHlc.isNotEmpty) {
-          await driftRepo.updateLastSyncedHlc(_pullPeerId, highestPullHlc);
-        }
-
         // Refresh the in-memory graph so merged remote data is visible.
         ref.invalidate(knowledgeGraphProvider);
-
-        // Purge tombstones and sync_log entries we've already consumed.
-        // Safe in star topology (Firestore hub). P2P sync would need
-        // per-peer tombstone tracking — see CRDT_SYNC_ARCHITECTURE.md.
-        // Wrapped in try/catch so cleanup failure doesn't fail the sync.
-        if (highestPullHlc.isNotEmpty) {
-          try {
-            await driftRepo.purgeTombstones(before: highestPullHlc);
-            await transport.cleanup(beforeHlc: highestPullHlc);
-          } catch (e) {
-            debugPrint('[CrdtSync] cleanup failed (non-fatal): $e');
-          }
-        }
       }
+
+      if (pulled.lastSeq > pulledSeq) {
+        await driftRepo.updateSyncedSeq(_pullPeerId, pulled.lastSeq);
+      }
+
+      // Nothing is cleaned up: the log is the cloud copy a new or restored
+      // device replays, and tombstones are what make a device's older live
+      // copy lose when it finally syncs.
 
       _consecutiveErrors = 0;
       _skipTicks = 0;
+
+      // Unreadable entries don't stop sync, but they hold the bookmark, so
+      // say so rather than look healthy.
+      final unreadable =
+          pulled.unreadable.isEmpty
+              ? ''
+              : 'unreadable sync log entries: ${pulled.unreadable.join(', ')}';
+      if (unreadable.isNotEmpty) debugPrint('[CrdtSync] $unreadable');
 
       state = CrdtSyncState(
         phase: CrdtSyncPhase.idle,
@@ -169,6 +161,7 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
         pushedCount: pushedCount,
         pulledCount: pulledCount,
         mergedCount: mergedCount,
+        errorMessage: unreadable,
       );
     } catch (e) {
       debugPrint('[CrdtSync] sync failed: $e');
