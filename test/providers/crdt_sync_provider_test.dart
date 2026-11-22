@@ -337,16 +337,19 @@ void main() {
       await notifier.sync();
       await notifier.sync();
 
-      // B's first sync pushes its older live copy.
+      // B makes a real write after the deletion, so its push carries a clock
+      // past the tombstone alongside its older live copy of c-old.
+      await b.repo.updateQuizItem(testQuizItem(id: 'q-B'));
       await b.sync();
       await notifier.sync();
       await b.sync();
 
-      for (final repo in [driftRepo, b.repo]) {
-        expect(
-          (await repo.load()).concepts.map((c) => c.id),
-          isNot(contains('c-old')),
-        );
+      // The tombstone itself must still be there on both, not just the row
+      // hidden from load().
+      for (final database in [db, b.db]) {
+        final row = (await database.select(database.driftConcepts).get())
+            .singleWhere((c) => c.id == 'c-old');
+        expect(row.isDeleted, isTrue);
       }
       await b.close();
     });
@@ -454,6 +457,23 @@ void main() {
       );
       await b.close();
       await c.close();
+    });
+
+    test('a device that loses its database but keeps its node id restores '
+        'its own work', () async {
+      final before = await _Device.open(firestore, userId, 'device-reset');
+      await before.repo.seedEmpty(_graphWith('mine'));
+      await before.repo.updateQuizItem(testQuizItem(id: 'q-mine'));
+      await before.sync();
+      await before.close();
+
+      final after = await _Device.open(firestore, userId, 'device-reset');
+      await after.sync();
+
+      final restored = await after.repo.load();
+      expect(restored.concepts.map((c) => c.id), ['mine']);
+      expect(restored.quizItems.map((q) => q.id), ['q-mine']);
+      await after.close();
     });
 
     test('a device that joins later still receives the whole '

@@ -115,10 +115,7 @@ void main() {
 
       final entries = await logEntries();
       expect(entries.length, greaterThan(1));
-      final pulled = await small.pullChangesets(
-        afterSeq: 0,
-        localNodeId: localNodeId,
-      );
+      final pulled = await small.pullChangesets(afterSeq: 0);
       expect(
         {
           for (final c in pulled.changesets)
@@ -136,17 +133,14 @@ void main() {
         nodeId: remoteNodeId,
       );
 
-      final results = await transport.pullChangesets(
-        afterSeq: 0,
-        localNodeId: localNodeId,
-      );
+      final results = await transport.pullChangesets(afterSeq: 0);
 
       expect(results.changesets.length, 1);
       expect(results.changesets.first.concepts.length, 1);
       expect(results.lastSeq, 1);
     });
 
-    test('excludes own changesets but reads past them', () async {
+    test('includes every device\'s entries, in log order', () async {
       await transport.pushChangeset(
         changeset: changesetWithHlc('2026-01-02T00:00:00.000Z-0000-device-B'),
         nodeId: remoteNodeId,
@@ -156,15 +150,14 @@ void main() {
         nodeId: localNodeId,
       );
 
-      final results = await transport.pullChangesets(
-        afterSeq: 0,
-        localNodeId: localNodeId,
-      );
+      final results = await transport.pullChangesets(afterSeq: 0);
 
-      expect(results.changesets.length, 1);
       expect(
-        results.changesets.first.maxHlc,
-        '2026-01-02T00:00:00.000Z-0000-device-B',
+        [for (final c in results.changesets) c.maxHlc],
+        [
+          '2026-01-02T00:00:00.000Z-0000-device-B',
+          '2026-01-01T00:00:00.000Z-0000-device-A',
+        ],
       );
       expect(results.lastSeq, 2);
     });
@@ -186,10 +179,7 @@ void main() {
         nodeId: 'device-C',
       );
 
-      final results = await transport.pullChangesets(
-        afterSeq: 1,
-        localNodeId: localNodeId,
-      );
+      final results = await transport.pullChangesets(afterSeq: 1);
 
       expect(results.changesets.single.concepts.single.id, 'c2');
       expect(results.lastSeq, 2);
@@ -198,32 +188,86 @@ void main() {
     test(
       'returns nothing and keeps the bookmark when the log is empty',
       () async {
-        final results = await transport.pullChangesets(
-          afterSeq: 7,
-          localNodeId: localNodeId,
-        );
+        final results = await transport.pullChangesets(afterSeq: 7);
         expect(results.changesets, isEmpty);
         expect(results.lastSeq, 7);
       },
     );
   });
 
-  group('unreadable entries', () {
-    test('an entry without a changeset stops the pull', () async {
+  group('the counter', () {
+    test('continues from a count stored as a whole double', () async {
+      await firestore
+          .collection('users')
+          .doc(userId)
+          .collection('sync_state')
+          .doc('log')
+          .set({'lastSeq': 4.0});
+
       await transport.pushChangeset(
-        changeset: changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-B'),
+        changeset: changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-A'),
+        nodeId: localNodeId,
+      );
+
+      expect((await logEntries()).single['seq'], 5);
+    });
+
+    test('refuses to push over a counter it cannot read', () async {
+      await firestore
+          .collection('users')
+          .doc(userId)
+          .collection('sync_state')
+          .doc('log')
+          .set({'lastSeq': 'garbled'});
+
+      await expectLater(
+        transport.pushChangeset(
+          changeset: changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-A'),
+          nodeId: localNodeId,
+        ),
+        throwsStateError,
+      );
+      expect(await logEntries(), isEmpty);
+    });
+  });
+
+  group('unreadable entries', () {
+    test('an unreadable entry holds the bookmark but not the entries after '
+        'it', () async {
+      await transport.pushChangeset(
+        changeset: changesetWithHlc(
+          '2026-01-01T00:00:00.000Z-0000-device-B',
+          conceptId: 'before',
+        ),
         nodeId: remoteNodeId,
       );
-      await firestore
+      final bad = await firestore
           .collection('users')
           .doc(userId)
           .collection('sync_log_v2')
           .add({'seq': 2, 'nodeId': remoteNodeId, 'changeset': 'garbled'});
+      await firestore
+          .collection('users')
+          .doc(userId)
+          .collection('sync_state')
+          .doc('log')
+          .set({'lastSeq': 2});
+      await transport.pushChangeset(
+        changeset: changesetWithHlc(
+          '2026-01-02T00:00:00.000Z-0000-device-B',
+          conceptId: 'after',
+        ),
+        nodeId: remoteNodeId,
+      );
+
+      final pulled = await transport.pullChangesets(afterSeq: 0);
 
       expect(
-        () => transport.pullChangesets(afterSeq: 0, localNodeId: localNodeId),
-        throwsFormatException,
+        [for (final c in pulled.changesets) c.concepts.single.id],
+        ['before', 'after'],
       );
+      expect(pulled.lastSeq, 1);
+      expect(pulled.unreadable, [bad.id]);
     });
 
     test('a changeset with loosely typed nested maps is read', () async {
@@ -251,10 +295,7 @@ void main() {
             },
           });
 
-      final pulled = await transport.pullChangesets(
-        afterSeq: 0,
-        localNodeId: localNodeId,
-      );
+      final pulled = await transport.pullChangesets(afterSeq: 0);
       expect(pulled.changesets.single.concepts.single.id, 'c1');
     });
   });
@@ -288,10 +329,7 @@ void main() {
 
       await transport.pushChangeset(changeset: original, nodeId: remoteNodeId);
 
-      final pulled = await transport.pullChangesets(
-        afterSeq: 0,
-        localNodeId: localNodeId,
-      );
+      final pulled = await transport.pullChangesets(afterSeq: 0);
 
       expect(pulled.changesets.length, 1);
       final restored = pulled.changesets.first;

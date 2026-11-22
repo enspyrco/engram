@@ -63,9 +63,13 @@ class FirestoreSyncTransport {
     for (final chunk in _chunks(changeset.toJson())) {
       await _firestore.runTransaction((tx) async {
         final counter = await tx.get(_counter);
+        // Only a missing counter starts the log; anything else that isn't a
+        // number aborts, since starting again would reissue a number every
+        // bookmark has already passed.
         final seq = switch (counter.data()?['lastSeq']) {
-          final int last => last + 1,
-          _ => 1,
+          null => 1,
+          final num last => last.toInt() + 1,
+          final other => throw StateError('sync log counter is $other'),
         };
         tx.set(_counter, {'lastSeq': seq});
         tx.set(_log.doc(), {
@@ -105,35 +109,61 @@ class FirestoreSyncTransport {
 
   /// Pulls entries after [afterSeq].
   ///
-  /// Returns the changesets other devices pushed, and the highest number
-  /// read, counting this device's own entries so they don't hold the
-  /// bookmark back.
-  Future<({List<GraphChangeset> changesets, int lastSeq})> pullChangesets({
-    required int afterSeq,
-    required String localNodeId,
-  }) async {
-    final snapshot =
-        await _log.where('seq', isGreaterThan: afterSeq).orderBy('seq').get();
+  /// Returns every readable entry's changeset, this device's own included;
+  /// the bookmark to store, which stops just before the first unreadable
+  /// entry so it never passes one that wasn't merged; and the ids of the
+  /// unreadable entries. Entries after an unreadable one are still returned,
+  /// so sync keeps flowing; they are read again next time and merge as
+  /// no-ops.
+  Future<
+    ({List<GraphChangeset> changesets, int lastSeq, List<String> unreadable})
+  >
+  pullChangesets({required int afterSeq}) async {
+    // Server only: numbering makes the server's log complete, not a cache's.
+    // Offline, a cached read could hold entry 12 without 11 and move the
+    // bookmark past 11 for good; failing the pull retries it later instead.
+    final snapshot = await _log
+        .where('seq', isGreaterThan: afterSeq)
+        .orderBy('seq')
+        .get(const GetOptions(source: Source.server));
 
     final changesets = <GraphChangeset>[];
+    final unreadable = <String>[];
     var lastSeq = afterSeq;
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      if (data['nodeId'] != localNodeId) {
-        // A platform may hand nested maps back with looser type arguments;
-        // the JSON round trip gives fromJson the shape it reads. An entry
-        // that can't be read stops the pull, so the bookmark never passes an
-        // entry that wasn't merged.
-        final raw = data['changeset'];
-        if (raw is! Map) {
-          throw FormatException('sync log entry ${doc.id} has no changeset');
-        }
-        // cast-ok: jsonDecode of an encoded Map is a Map<String, dynamic>.
-        final json = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>;
-        changesets.add(GraphChangeset.fromJson(json));
+      // This device's own entries too: they restore it after its database
+      // is lost, and merge as no-ops while it still has the rows.
+      final changeset = _readChangeset(data['changeset']);
+      if (changeset == null) {
+        unreadable.add(doc.id);
+        continue;
       }
-      if (data['seq'] case final int seq when seq > lastSeq) lastSeq = seq;
+      changesets.add(changeset);
+      if (unreadable.isEmpty) {
+        if (data['seq'] case final num seq when seq > lastSeq) {
+          lastSeq = seq.toInt();
+        }
+      }
     }
-    return (changesets: changesets, lastSeq: lastSeq);
+    return (changesets: changesets, lastSeq: lastSeq, unreadable: unreadable);
+  }
+
+  /// Reads one entry's changeset, or null if it can't be read.
+  ///
+  /// A platform may hand nested maps back with looser type arguments; the
+  /// JSON round trip gives fromJson the shape it reads.
+  static GraphChangeset? _readChangeset(Object? raw) {
+    if (raw is! Map) return null;
+    try {
+      // cast-ok: jsonDecode of an encoded Map is a Map<String, dynamic>.
+      final json = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>;
+      return GraphChangeset.fromJson(json);
+    } on FormatException {
+      return null;
+    } on TypeError {
+      // fromJson's reads of a row with a missing or mistyped column.
+      return null;
+    }
   }
 }

@@ -123,10 +123,7 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       state = state.copyWith(phase: CrdtSyncPhase.pulling);
 
       final pulledSeq = await driftRepo.getSyncedSeq(_pullPeerId);
-      final pulled = await transport.pullChangesets(
-        afterSeq: pulledSeq,
-        localNodeId: nodeId,
-      );
+      final pulled = await transport.pullChangesets(afterSeq: pulledSeq);
       pulledCount = pulled.changesets.length;
 
       // -- Merge --
@@ -150,12 +147,21 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       _consecutiveErrors = 0;
       _skipTicks = 0;
 
+      // Unreadable entries don't stop sync, but they hold the bookmark, so
+      // say so rather than look healthy.
+      final unreadable =
+          pulled.unreadable.isEmpty
+              ? ''
+              : 'unreadable sync log entries: ${pulled.unreadable.join(', ')}';
+      if (unreadable.isNotEmpty) debugPrint('[CrdtSync] $unreadable');
+
       state = CrdtSyncState(
         phase: CrdtSyncPhase.idle,
         lastSyncedAt: clock(),
         pushedCount: pushedCount,
         pulledCount: pulledCount,
         mergedCount: mergedCount,
+        errorMessage: unreadable,
       );
     } catch (e) {
       debugPrint('[CrdtSync] sync failed: $e');

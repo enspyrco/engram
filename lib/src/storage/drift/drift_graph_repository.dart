@@ -310,49 +310,6 @@ class DriftGraphRepository extends GraphRepository {
   }
 
   // -------------------------------------------------------------------------
-  // purgeTombstones — physical deletion for sync cleanup
-  // -------------------------------------------------------------------------
-
-  /// Physically removes tombstoned rows with `hlc < [before]`.
-  ///
-  /// Called by the sync layer after confirming all replicas have received
-  /// the tombstones. This prevents unbounded tombstone growth. Safe to call
-  /// at any time — only affects rows that are already soft-deleted and
-  /// whose HLC timestamp is strictly less than the threshold.
-  ///
-  /// Returns the total number of rows purged across all tables.
-  Future<int> purgeTombstones({required String before}) async {
-    var count = 0;
-    await _db.transaction(() async {
-      count +=
-          await (_db.delete(_db.driftTopicDocuments)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-      count +=
-          await (_db.delete(_db.driftTopics)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-      count +=
-          await (_db.delete(_db.driftDocuments)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-      count +=
-          await (_db.delete(_db.driftQuizItems)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-      count +=
-          await (_db.delete(_db.driftRelationships)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-      count +=
-          await (_db.delete(_db.driftConcepts)..where(
-            (t) => t.isDeleted.equals(true) & t.hlc.isSmallerThanValue(before),
-          )).go();
-    });
-    return count;
-  }
-
-  // -------------------------------------------------------------------------
   // updateQuizItem — O(1) single-row write
   // -------------------------------------------------------------------------
 
@@ -596,24 +553,21 @@ class DriftGraphRepository extends GraphRepository {
   }) async {
     if (incoming.isEmpty) return 0;
 
-    // 1. Filter out same-node rows and advance HLC for foreign rows.
-    final foreign = <T>[];
+    // 1. Advance the HLC past every incoming row. This device's own rows are
+    //    merged too: after its database is lost they are the only copy, and
+    //    when it still has them they lose the comparison below.
     for (final row in incoming) {
-      final hlc = hlcOf(row);
-      if (_isSameNode(hlc, hlcManager)) continue;
-      _receiveHlc(hlc, hlcManager);
-      foreign.add(row);
+      _receiveHlc(hlcOf(row), hlcManager);
     }
-    if (foreign.isEmpty) return 0;
 
     // 2. Batch SELECT existing rows by primary key.
-    final keys = foreign.map(keyOf).toSet();
+    final keys = incoming.map(keyOf).toSet();
     final existing = await selectByKeys(keys);
     final existingHlcByKey = {for (final e in existing) keyOf(e): hlcOf(e)};
 
     // 3. Determine winners — new rows or rows with a newer HLC.
     final winners = <T>[];
-    for (final row in foreign) {
+    for (final row in incoming) {
       final existingHlc = existingHlcByKey[keyOf(row)];
       if (existingHlc == null || hlcOf(row).compareTo(existingHlc) > 0) {
         winners.add(row);
@@ -632,21 +586,6 @@ class DriftGraphRepository extends GraphRepository {
       }
     });
     return winners.length;
-  }
-
-  /// Guards against merging our own HLCs back (would cause
-  /// `DuplicateNodeException` in `Hlc.merge()`).
-  ///
-  /// Uses `Hlc.parse()` for exact node ID extraction rather than
-  /// `endsWith()`, which could false-match if node IDs share a suffix.
-  bool _isSameNode(String hlcString, HlcManager hlcManager) {
-    if (hlcString.isEmpty) return false;
-    try {
-      return Hlc.parse(hlcString).nodeId == hlcManager.nodeId;
-    } on Object {
-      // Malformed HLC — treat as foreign node (safe fallback).
-      return false;
-    }
   }
 
   /// Advances the local HLC by receiving a remote HLC string.

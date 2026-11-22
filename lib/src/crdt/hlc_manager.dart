@@ -39,6 +39,13 @@ class HlcManager {
   ///
   /// Pass [wallTime] to override the system clock (useful in tests).
   Hlc receive(Hlc remote, {DateTime? wallTime}) {
+    // This device's own clock coming back, as when the log is replayed after
+    // the database was lost: Hlc.merge rejects its own node, but the clock
+    // must still not fall behind it.
+    if (remote.nodeId == nodeId) {
+      if (remote > _canonicalTime) _canonicalTime = remote;
+      return _canonicalTime;
+    }
     _canonicalTime = _canonicalTime.merge(remote, wallTime: wallTime);
     return _canonicalTime;
   }
