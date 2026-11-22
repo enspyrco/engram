@@ -147,17 +147,22 @@ class FirestoreSyncTransport {
   }
 
   /// The progress every device has reached: the lowest `pulledSeq` and the
-  /// lowest `pushedHlc` across all devices that have published, or null if
-  /// none has.
+  /// lowest `pushedHlc` across all devices that have published, and the
+  /// node ids of those devices; or null if none has.
   ///
   /// Entries at or below `pulledSeq` have been read by every device.
   /// Every device's unpushed changes carry clocks above `pushedHlc`, so a
   /// tombstone older than it can't be outvoted by a stale row still to come.
-  Future<({int pulledSeq, String pushedHlc})?> readHorizon() async {
+  /// A device that hasn't published yet holds nothing back, so a device that
+  /// sees a new one in `devices` must push its whole graph again.
+  Future<({int pulledSeq, String pushedHlc, Set<String> devices})?>
+  readHorizon() async {
     final snapshot = await _devices.get();
     int? pulledSeq;
     String? pushedHlc;
+    final devices = <String>{};
     for (final doc in snapshot.docs) {
+      devices.add(doc.id);
       final data = doc.data();
       final seq = switch (data['pulledSeq']) {
         final int s => s,
@@ -171,7 +176,7 @@ class FirestoreSyncTransport {
       if (pushedHlc == null || hlc.compareTo(pushedHlc) < 0) pushedHlc = hlc;
     }
     if (pulledSeq == null || pushedHlc == null) return null;
-    return (pulledSeq: pulledSeq, pushedHlc: pushedHlc);
+    return (pulledSeq: pulledSeq, pushedHlc: pushedHlc, devices: devices);
   }
 
   /// Deletes entries numbered at or below [throughSeq]. Pass the

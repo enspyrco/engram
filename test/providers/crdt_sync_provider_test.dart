@@ -309,8 +309,11 @@ void main() {
       expect(invalidated, isTrue);
     });
 
-    test('a tombstone is purged only once every device has pushed past '
-        'it', () async {
+    test('a deletion survives a device that first syncs after it', () async {
+      // B holds an older live copy of c-old and hasn't run this protocol yet.
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('c-old'));
+      await Future<void>.delayed(const Duration(milliseconds: 2));
       await driftRepo.seedEmpty(_graphWith('c-old'));
       // Re-extract doc-c-old as empty to tombstone c-old.
       final seeded = await driftRepo.load();
@@ -328,27 +331,23 @@ void main() {
             )
             .patch,
       );
-      Future<Set<String>> rowIds() async => {
-        for (final c
-            in (await driftRepo.getChangeset(modifiedAfter: '')).concepts)
-          c.id,
-      };
-
-      // B exists but has pushed nothing: a stale row could still come from
-      // it, so A keeps the tombstone.
-      final b = await _Device.open(firestore, userId, remoteNodeId);
-      await b.sync();
+      // A writes something newer and syncs alone, twice.
+      await driftRepo.updateQuizItem(testQuizItem(id: 'q-later'));
       final notifier = container.read(crdtSyncProvider.notifier);
       await notifier.sync();
-      expect(await rowIds(), contains('c-old'));
-
-      // Both devices push something newer, so both push bookmarks are past
-      // the tombstone.
-      await b.repo.seedEmpty(_graphWith('from-B'));
-      await b.sync();
-      await driftRepo.updateQuizItem(testQuizItem(id: 'q-later'));
       await notifier.sync();
-      expect(await rowIds(), isNot(contains('c-old')));
+
+      // B's first sync pushes its older live copy.
+      await b.sync();
+      await notifier.sync();
+      await b.sync();
+
+      for (final repo in [driftRepo, b.repo]) {
+        expect(
+          (await repo.load()).concepts.map((c) => c.id),
+          isNot(contains('c-old')),
+        );
+      }
       await b.close();
     });
 
@@ -473,6 +472,24 @@ void main() {
       );
       await b.close();
       await c.close();
+    });
+
+    test('a device that joins after cleanup still receives the whole '
+        'graph', () async {
+      // A upgrades first and syncs alone, so nothing holds its full push in
+      // the log.
+      await driftRepo.seedEmpty(_graphWith('from-A'));
+      final notifier = container.read(crdtSyncProvider.notifier);
+      await notifier.sync();
+      await notifier.sync();
+
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.sync();
+      await notifier.sync();
+      await b.sync();
+
+      expect((await b.repo.load()).concepts.map((c) => c.id), ['from-A']);
+      await b.close();
     });
 
     test('an entry pushed late with old clocks is still pulled', () async {

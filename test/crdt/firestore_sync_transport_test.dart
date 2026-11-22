@@ -242,10 +242,10 @@ void main() {
         pushedHlc: '2026-03-01T00:00:00.000Z-0000-device-B',
       );
 
-      expect(await transport.readHorizon(), (
-        pulledSeq: 4,
-        pushedHlc: '2026-03-01T00:00:00.000Z-0000-device-B',
-      ));
+      final horizon = await transport.readHorizon();
+      expect(horizon?.pulledSeq, 4);
+      expect(horizon?.pushedHlc, '2026-03-01T00:00:00.000Z-0000-device-B');
+      expect(horizon?.devices, {remoteNodeId});
     });
   });
 

@@ -104,7 +104,12 @@ class DriftGraphRepository extends GraphRepository {
   Future<bool> seedEmpty(KnowledgeGraph graph) {
     return _db.transaction(() async {
       if (await _hasAnyRow()) return false;
-      final hlc = _stampHlc();
+      // The lowest clock, not the current one: a seed is a baseline copied
+      // from elsewhere, and any real write on any device must beat it.
+      final hlc = switch (_hlcManager) {
+        final manager? => Hlc.zero(manager.nodeId).toString(),
+        null => '',
+      };
       await _db.batch((batch) {
         batch.insertAll(
           _db.driftConcepts,
@@ -688,6 +693,26 @@ class DriftGraphRepository extends GraphRepository {
   /// Stores the sync-log position reached with [peerId].
   Future<void> updateSyncedSeq(String peerId, int seq) =>
       updateLastSyncedHlc(peerId, '$seq');
+
+  static const _knownDevicePrefix = 'sync-device:';
+
+  /// Node ids of the sync devices this device has already pushed its whole
+  /// graph for.
+  Future<Set<String>> getKnownSyncDevices() async {
+    final rows =
+        await (_db.select(_db.driftSyncMetadata)
+          ..where((t) => t.peerId.like('$_knownDevicePrefix%'))).get();
+    return {
+      for (final r in rows) r.peerId.substring(_knownDevicePrefix.length),
+    };
+  }
+
+  /// Records [nodeIds] as devices this device has pushed its whole graph for.
+  Future<void> addKnownSyncDevices(Set<String> nodeIds) async {
+    for (final id in nodeIds) {
+      await updateLastSyncedHlc('$_knownDevicePrefix$id', '');
+    }
+  }
 
   // -------------------------------------------------------------------------
   // getLastModified — highest HLC across all tables

@@ -133,6 +133,24 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // already in the log this pull reads.
       final horizon = await transport.readHorizon();
 
+      // A device that hadn't published yet held nothing back from cleanup,
+      // so it may have missed this device's earlier pushes: push everything
+      // again for it.
+      final known = await driftRepo.getKnownSyncDevices();
+      final joined = {...?horizon?.devices}.difference({...known, nodeId});
+      if (joined.isNotEmpty) {
+        final everything = await driftRepo.getChangeset(modifiedAfter: '');
+        if (!everything.isEmpty) {
+          await transport.pushChangeset(changeset: everything, nodeId: nodeId);
+          pushedCount += everything.recordCount;
+          if (everything.maxHlc.compareTo(pushedHlc) > 0) {
+            pushedHlc = everything.maxHlc;
+            await driftRepo.updateLastSyncedHlc(_pushPeerId, pushedHlc);
+          }
+        }
+        await driftRepo.addKnownSyncDevices(joined);
+      }
+
       final pulled = await transport.pullChangesets(
         afterSeq: pulledSeq,
         localNodeId: nodeId,
@@ -158,14 +176,12 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
         );
       }
 
-      // Remove only what every device is past: log entries all of them have
-      // read, and tombstones older than anything any of them can still push.
+      // Remove only log entries every published device has read. Tombstones
+      // are kept: a device that hasn't published yet can still push an older
+      // live copy, and only the tombstone makes that copy lose.
       // Cleanup failure doesn't fail the sync.
       if (horizon != null) {
         try {
-          if (horizon.pushedHlc.isNotEmpty) {
-            await driftRepo.purgeTombstones(before: horizon.pushedHlc);
-          }
           if (horizon.pulledSeq > 0) {
             await transport.cleanup(throughSeq: horizon.pulledSeq);
           }

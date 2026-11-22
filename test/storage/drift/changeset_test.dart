@@ -416,8 +416,9 @@ void main() {
       await reExtractDoc1(repoA, dropEverything);
 
       // Device B resurrects c1 with a newer HLC
-      await repoB.seedEmpty(
-        KnowledgeGraph(
+      await reExtractDoc1(
+        repoB,
+        ExtractionResult(
           concepts: [
             Concept(
               id: 'c1',
@@ -426,6 +427,8 @@ void main() {
               sourceDocumentId: 'doc1',
             ),
           ],
+          relationships: const [],
+          quizItems: const [],
         ),
       );
 
@@ -441,6 +444,7 @@ void main() {
 
     test('HLC advances on merge (causal ordering)', () async {
       await repoA.seedEmpty(fullGraph());
+      await reExtractDoc1(repoA, dropEverything);
       final hlcBeforeMerge = hlcB.canonicalTime.toString();
 
       final changeset = await repoA.getChangeset(modifiedAfter: '');
@@ -450,6 +454,37 @@ void main() {
 
       // B's clock should have advanced
       expect(hlcAfterMerge.compareTo(hlcBeforeMerge), greaterThan(0));
+    });
+
+    test('a seeded row loses to any real write of the same row', () async {
+      // B's fresh install seeds an old copy of the graph; A has edited c1.
+      await repoA.seedEmpty(fullGraph());
+      await reExtractDoc1(
+        repoA,
+        ExtractionResult(
+          concepts: [
+            Concept(
+              id: 'c1',
+              name: 'Docker, edited',
+              description: 'Edited on A',
+              sourceDocumentId: 'doc1',
+            ),
+          ],
+          relationships: const [],
+          quizItems: const [],
+        ),
+      );
+      await repoB.seedEmpty(fullGraph());
+
+      await repoA.mergeChangeset(await repoB.getChangeset(modifiedAfter: ''));
+      await repoB.mergeChangeset(await repoA.getChangeset(modifiedAfter: ''));
+
+      for (final repo in [repoA, repoB]) {
+        final c1 = (await repo.load()).concepts.singleWhere(
+          (c) => c.id == 'c1',
+        );
+        expect(c1.name, 'Docker, edited');
+      }
     });
 
     test('merges all table types correctly', () async {
