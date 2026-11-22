@@ -21,11 +21,6 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
-      // CRDT sync log (old builds): owner reads/writes
-      match /sync_log/{entryId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
       // CRDT sync: numbered log, its counter, and each device's progress
       match /sync_log_v2/{entryId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
