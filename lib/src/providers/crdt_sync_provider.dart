@@ -13,11 +13,15 @@ import 'graph_store_provider.dart';
 import 'hlc_provider.dart';
 import 'knowledge_graph_provider.dart';
 
-/// Peer ID prefix for the Firestore sync_log push bookmark.
-const _pushPeerId = 'firestore-sync-log:push';
+/// Bookmark key for the push position: the max HLC already pushed.
+///
+/// New with the numbered log, so a device upgrading from the old log has no
+/// push bookmark and pushes everything once, which re-sends any write the
+/// old cleanup deleted before another device read it.
+const _pushPeerId = 'firestore-sync-log-v2:push';
 
-/// Peer ID prefix for the Firestore sync_log pull bookmark.
-const _pullPeerId = 'firestore-sync-log:pull';
+/// Bookmark key for the pull position: the highest log entry read.
+const _pullPeerId = 'firestore-sync-log-v2:pull';
 
 // ---------------------------------------------------------------------------
 // Typed DriftGraphRepository provider
@@ -61,11 +65,12 @@ final crdtSyncProvider = NotifierProvider<CrdtSyncNotifier, CrdtSyncState>(
 /// the Firestore sync_log.
 ///
 /// **Sync lifecycle:**
-/// 1. Push: generate local changeset since last push → write to sync_log
-/// 2. Pull: read remote changesets since last pull → merge each into Drift
-/// 3. Update bookmarks in `drift_sync_metadata`
+/// 1. Push: generate local changeset since last push → write to the log
+/// 2. Publish progress, read every device's progress
+/// 3. Pull: read entries after the pull bookmark → merge each into Drift
+/// 4. Clean up only what every device is past
 ///
-/// Uses separate push/pull HLC bookmarks so a failed pull doesn't block
+/// Uses separate push/pull bookmarks so a failed pull doesn't block
 /// future pushes (and vice versa). Guards against overlapping syncs via
 /// [CrdtSyncState.isSyncing].
 class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
@@ -103,60 +108,69 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // -- Push --
       state = state.copyWith(phase: CrdtSyncPhase.pushing, errorMessage: '');
 
-      final lastPushHlc = await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
-      final changeset = await driftRepo.getChangeset(
-        modifiedAfter: lastPushHlc,
-      );
+      var pushedHlc = await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
+      final changeset = await driftRepo.getChangeset(modifiedAfter: pushedHlc);
 
       if (!changeset.isEmpty) {
         await transport.pushChangeset(changeset: changeset, nodeId: nodeId);
         pushedCount = changeset.recordCount;
 
         // Update push bookmark to the max HLC we just pushed.
-        await driftRepo.updateLastSyncedHlc(_pushPeerId, changeset.maxHlc);
+        pushedHlc = changeset.maxHlc;
+        await driftRepo.updateLastSyncedHlc(_pushPeerId, pushedHlc);
       }
 
       // -- Pull --
       state = state.copyWith(phase: CrdtSyncPhase.pulling);
 
-      final lastPullHlc = await driftRepo.getLastSyncedHlc(_pullPeerId) ?? '';
+      final pulledSeq = await driftRepo.getSyncedSeq(_pullPeerId);
+      await transport.publishProgress(
+        nodeId: nodeId,
+        pulledSeq: pulledSeq,
+        pushedHlc: pushedHlc,
+      );
+      // Read before pulling: every push the horizon vouches for is then
+      // already in the log this pull reads.
+      final horizon = await transport.readHorizon();
+
       final pulled = await transport.pullChangesets(
-        sinceHlc: lastPullHlc,
+        afterSeq: pulledSeq,
         localNodeId: nodeId,
       );
-      pulledCount = pulled.length;
+      pulledCount = pulled.changesets.length;
 
       // -- Merge --
-      if (pulled.isNotEmpty) {
+      if (pulled.changesets.isNotEmpty) {
         state = state.copyWith(phase: CrdtSyncPhase.merging);
-
-        var highestPullHlc = lastPullHlc;
-        for (final entry in pulled) {
-          mergedCount += await driftRepo.mergeChangeset(entry.changeset);
-          if (entry.maxHlc.compareTo(highestPullHlc) > 0) {
-            highestPullHlc = entry.maxHlc;
-          }
+        for (final changeset in pulled.changesets) {
+          mergedCount += await driftRepo.mergeChangeset(changeset);
         }
-
-        // Update pull bookmark to the highest maxHlc we merged.
-        if (highestPullHlc.isNotEmpty) {
-          await driftRepo.updateLastSyncedHlc(_pullPeerId, highestPullHlc);
-        }
-
         // Refresh the in-memory graph so merged remote data is visible.
         ref.invalidate(knowledgeGraphProvider);
+      }
 
-        // Purge tombstones and sync_log entries we've already consumed.
-        // Safe in star topology (Firestore hub). P2P sync would need
-        // per-peer tombstone tracking — see CRDT_SYNC_ARCHITECTURE.md.
-        // Wrapped in try/catch so cleanup failure doesn't fail the sync.
-        if (highestPullHlc.isNotEmpty) {
-          try {
-            await driftRepo.purgeTombstones(before: highestPullHlc);
-            await transport.cleanup(beforeHlc: highestPullHlc);
-          } catch (e) {
-            debugPrint('[CrdtSync] cleanup failed (non-fatal): $e');
+      if (pulled.lastSeq > pulledSeq) {
+        await driftRepo.updateSyncedSeq(_pullPeerId, pulled.lastSeq);
+        await transport.publishProgress(
+          nodeId: nodeId,
+          pulledSeq: pulled.lastSeq,
+          pushedHlc: pushedHlc,
+        );
+      }
+
+      // Remove only what every device is past: log entries all of them have
+      // read, and tombstones older than anything any of them can still push.
+      // Cleanup failure doesn't fail the sync.
+      if (horizon != null) {
+        try {
+          if (horizon.pushedHlc.isNotEmpty) {
+            await driftRepo.purgeTombstones(before: horizon.pushedHlc);
           }
+          if (horizon.pulledSeq > 0) {
+            await transport.cleanup(throughSeq: horizon.pulledSeq);
+          }
+        } catch (e) {
+          debugPrint('[CrdtSync] cleanup failed (non-fatal): $e');
         }
       }
 

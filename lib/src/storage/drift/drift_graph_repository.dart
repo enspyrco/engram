@@ -679,6 +679,16 @@ class DriftGraphRepository extends GraphRepository {
         );
   }
 
+  /// Returns the sync-log position stored for [peerId], or 0 if none.
+  ///
+  /// The bookmark column is text, so the number is stored in decimal.
+  Future<int> getSyncedSeq(String peerId) async =>
+      int.tryParse(await getLastSyncedHlc(peerId) ?? '') ?? 0;
+
+  /// Stores the sync-log position reached with [peerId].
+  Future<void> updateSyncedSeq(String peerId, int seq) =>
+      updateLastSyncedHlc(peerId, '$seq');
+
   // -------------------------------------------------------------------------
   // getLastModified — highest HLC across all tables
   // -------------------------------------------------------------------------
