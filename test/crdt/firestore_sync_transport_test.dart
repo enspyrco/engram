@@ -208,67 +208,54 @@ void main() {
     );
   });
 
-  group('readHorizon', () {
-    test('is null before any device has published', () async {
-      expect(await transport.readHorizon(), isNull);
-    });
-
-    test('is the lowest progress across devices', () async {
-      await transport.publishProgress(
-        nodeId: localNodeId,
-        pulledSeq: 5,
-        pushedHlc: '2026-02-01T00:00:00.000Z-0000-device-A',
-      );
-      await transport.publishProgress(
-        nodeId: remoteNodeId,
-        pulledSeq: 3,
-        pushedHlc: '2026-03-01T00:00:00.000Z-0000-device-B',
-      );
-
-      final horizon = await transport.readHorizon();
-      expect(horizon?.pulledSeq, 3);
-      expect(horizon?.pushedHlc, '2026-02-01T00:00:00.000Z-0000-device-A');
-    });
-
-    test('a device that republishes replaces its earlier progress', () async {
-      await transport.publishProgress(
-        nodeId: remoteNodeId,
-        pulledSeq: 1,
-        pushedHlc: '',
-      );
-      await transport.publishProgress(
-        nodeId: remoteNodeId,
-        pulledSeq: 4,
-        pushedHlc: '2026-03-01T00:00:00.000Z-0000-device-B',
-      );
-
-      final horizon = await transport.readHorizon();
-      expect(horizon?.pulledSeq, 4);
-      expect(horizon?.pushedHlc, '2026-03-01T00:00:00.000Z-0000-device-B');
-      expect(horizon?.devices, {remoteNodeId});
-    });
-  });
-
-  group('cleanup', () {
-    test('deletes entries numbered at or below the bound', () async {
+  group('unreadable entries', () {
+    test('an entry without a changeset stops the pull', () async {
       await transport.pushChangeset(
-        changeset: changesetWithHlc('2026-03-01T00:00:00.000Z-0000-device-B'),
+        changeset: changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-B'),
         nodeId: remoteNodeId,
       );
-      await transport.pushChangeset(
-        changeset: changesetWithHlc('2026-01-01T00:00:00.000Z-0000-device-A'),
-        nodeId: localNodeId,
+      await firestore
+          .collection('users')
+          .doc(userId)
+          .collection('sync_log_v2')
+          .add({'seq': 2, 'nodeId': remoteNodeId, 'changeset': 'garbled'});
+
+      expect(
+        () => transport.pullChangesets(afterSeq: 0, localNodeId: localNodeId),
+        throwsFormatException,
       );
-
-      final deleted = await transport.cleanup(throughSeq: 1);
-
-      expect(deleted, 1);
-      final remaining = await logEntries();
-      expect(remaining.single['seq'], 2);
     });
 
-    test('returns 0 when nothing to clean up', () async {
-      expect(await transport.cleanup(throughSeq: 3), 0);
+    test('a changeset with loosely typed nested maps is read', () async {
+      await firestore
+          .collection('users')
+          .doc(userId)
+          .collection('sync_log_v2')
+          .add({
+            'seq': 1,
+            'nodeId': remoteNodeId,
+            'changeset': <Object?, Object?>{
+              'drift_concepts': [
+                <Object?, Object?>{
+                  'id': 'c1',
+                  'name': 'n',
+                  'description': 'd',
+                  'source_document_id': 'doc1',
+                  'tags': '[]',
+                  'parent_concept_id': null,
+                  'embedding': null,
+                  'hlc': '2026-01-01T00:00:00.000Z-0000-device-B',
+                  'is_deleted': 0,
+                },
+              ],
+            },
+          });
+
+      final pulled = await transport.pullChangesets(
+        afterSeq: 0,
+        localNodeId: localNodeId,
+      );
+      expect(pulled.changesets.single.concepts.single.id, 'c1');
     });
   });
 

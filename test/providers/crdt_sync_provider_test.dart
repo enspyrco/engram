@@ -371,40 +371,22 @@ void main() {
       await b.close();
     });
 
-    test('the log keeps an entry until every device has read it', () async {
+    test('a new device restores the graph after the only other device is '
+        'gone', () async {
+      // A syncs alone, twice, then is lost.
+      final a = await _Device.open(firestore, userId, 'device-lost');
+      await a.repo.seedEmpty(_graphWith('from-A'));
+      await a.repo.updateQuizItem(testQuizItem(id: 'q-A'));
+      await a.sync();
+      await a.sync();
+      await a.close();
+
       final b = await _Device.open(firestore, userId, remoteNodeId);
       await b.sync();
-      Future<Set<String>> conceptsInLog() async => {
-        for (final d
-            in (await firestore
-                    .collection('users')
-                    .doc(userId)
-                    .collection('sync_log_v2')
-                    .get())
-                .docs)
-          if (d.data()['changeset'] case final Map<String, dynamic> json)
-            for (final c in GraphChangeset.fromJson(json).concepts) c.id,
-      };
 
-      await driftRepo.seedEmpty(_graphWith('from-A'));
-      await Future<void>.delayed(const Duration(milliseconds: 2));
-      await b.repo.seedEmpty(_graphWith('from-B'));
-      await b.sync();
-      // A pushes, then pulls B's newer entry, which gives it something to
-      // clean up.
-      final notifier = container.read(crdtSyncProvider.notifier);
-      await notifier.sync();
-      expect(
-        await conceptsInLog(),
-        contains('from-A'),
-        reason: 'B has not read it yet',
-      );
-
-      // Once both have read it, it goes. (A's re-push of B's merged row may
-      // remain until B reads that too.)
-      await b.sync();
-      await notifier.sync();
-      expect(await conceptsInLog(), isNot(contains('from-A')));
+      final restored = await b.repo.load();
+      expect(restored.concepts.map((c) => c.id), ['from-A']);
+      expect(restored.quizItems.map((q) => q.id), ['q-A']);
       await b.close();
     });
 
@@ -474,7 +456,7 @@ void main() {
       await c.close();
     });
 
-    test('a device that joins after cleanup still receives the whole '
+    test('a device that joins later still receives the whole '
         'graph', () async {
       // A upgrades first and syncs alone, so nothing holds its full push in
       // the log.
@@ -489,6 +471,24 @@ void main() {
       await b.sync();
 
       expect((await b.repo.load()).concepts.map((c) => c.id), ['from-A']);
+      await b.close();
+    });
+
+    test('a device\'s first sync pushes its graph once', () async {
+      await container.read(crdtSyncProvider.notifier).sync();
+      final b = await _Device.open(firestore, userId, remoteNodeId);
+      await b.repo.seedEmpty(_graphWith('from-B'));
+      await b.sync();
+
+      final fromB =
+          (await firestore
+                  .collection('users')
+                  .doc(userId)
+                  .collection('sync_log_v2')
+                  .where('nodeId', isEqualTo: remoteNodeId)
+                  .get())
+              .docs;
+      expect(fromB, hasLength(1));
       await b.close();
     });
 

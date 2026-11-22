@@ -2,15 +2,17 @@ import 'package:meta/meta.dart';
 
 @immutable
 class DocumentMetadata {
-  const DocumentMetadata({
+  /// [ingestedText] is capped here, so no document row can outgrow a sync
+  /// log entry, whichever path built it.
+  DocumentMetadata({
     required this.documentId,
     required this.title,
     required this.updatedAt,
     required this.ingestedAt,
     this.collectionId,
     this.collectionName,
-    this.ingestedText,
-  });
+    String? ingestedText,
+  }) : ingestedText = capText(ingestedText);
 
   factory DocumentMetadata.fromJson(Map<String, dynamic> json) {
     return DocumentMetadata(

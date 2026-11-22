@@ -13,8 +13,9 @@ import 'graph_changeset.dart';
 /// highest number it has read, which is exact however old the clocks inside
 /// a late-pushed entry are.
 ///
-/// Each device publishes how far it has read and pushed. An entry is deleted
-/// only once every device has read past it.
+/// Entries are never deleted: the log is the only copy of the graph outside
+/// the devices, so a new or restored device replays it from the start. It can
+/// shrink only once a snapshot holds what it would delete.
 ///
 /// ```
 /// users/{uid}/sync_log_v2/{auto-id}
@@ -25,10 +26,6 @@ import 'graph_changeset.dart';
 ///   createdAt: Timestamp (server)
 /// users/{uid}/sync_state/log
 ///   lastSeq: int
-/// users/{uid}/sync_devices/{nodeId}
-///   pulledSeq: int      // highest entry this device has read
-///   pushedHlc: String   // this device's push bookmark
-///   updatedAt: Timestamp (server)
 /// ```
 ///
 /// The log is per-user and typically has 1-3 devices, so filtering by
@@ -54,8 +51,6 @@ class FirestoreSyncTransport {
       _user.collection('sync_log_v2');
   DocumentReference<Map<String, dynamic>> get _counter =>
       _user.collection('sync_state').doc('log');
-  CollectionReference<Map<String, dynamic>> get _devices =>
-      _user.collection('sync_devices');
 
   /// Pushes a changeset as one or more numbered entries. Skips empty
   /// changesets.
@@ -124,77 +119,21 @@ class FirestoreSyncTransport {
     var lastSeq = afterSeq;
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      if (data['seq'] case final int seq when seq > lastSeq) lastSeq = seq;
-      if (data['nodeId'] == localNodeId) continue;
-      if (data['changeset'] case final Map<String, dynamic> changeset) {
-        changesets.add(GraphChangeset.fromJson(changeset));
+      if (data['nodeId'] != localNodeId) {
+        // A platform may hand nested maps back with looser type arguments;
+        // the JSON round trip gives fromJson the shape it reads. An entry
+        // that can't be read stops the pull, so the bookmark never passes an
+        // entry that wasn't merged.
+        final raw = data['changeset'];
+        if (raw is! Map) {
+          throw FormatException('sync log entry ${doc.id} has no changeset');
+        }
+        // cast-ok: jsonDecode of an encoded Map is a Map<String, dynamic>.
+        final json = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>;
+        changesets.add(GraphChangeset.fromJson(json));
       }
+      if (data['seq'] case final int seq when seq > lastSeq) lastSeq = seq;
     }
     return (changesets: changesets, lastSeq: lastSeq);
-  }
-
-  /// Publishes how far this device has read the log and pushed its changes.
-  Future<void> publishProgress({
-    required String nodeId,
-    required int pulledSeq,
-    required String pushedHlc,
-  }) async {
-    await _devices.doc(nodeId).set({
-      'pulledSeq': pulledSeq,
-      'pushedHlc': pushedHlc,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// The progress every device has reached: the lowest `pulledSeq` and the
-  /// lowest `pushedHlc` across all devices that have published, and the
-  /// node ids of those devices; or null if none has.
-  ///
-  /// Entries at or below `pulledSeq` have been read by every device.
-  /// Every device's unpushed changes carry clocks above `pushedHlc`, so a
-  /// tombstone older than it can't be outvoted by a stale row still to come.
-  /// A device that hasn't published yet holds nothing back, so a device that
-  /// sees a new one in `devices` must push its whole graph again.
-  Future<({int pulledSeq, String pushedHlc, Set<String> devices})?>
-  readHorizon() async {
-    final snapshot = await _devices.get();
-    int? pulledSeq;
-    String? pushedHlc;
-    final devices = <String>{};
-    for (final doc in snapshot.docs) {
-      devices.add(doc.id);
-      final data = doc.data();
-      final seq = switch (data['pulledSeq']) {
-        final int s => s,
-        _ => 0,
-      };
-      final hlc = switch (data['pushedHlc']) {
-        final String h => h,
-        _ => '',
-      };
-      if (pulledSeq == null || seq < pulledSeq) pulledSeq = seq;
-      if (pushedHlc == null || hlc.compareTo(pushedHlc) < 0) pushedHlc = hlc;
-    }
-    if (pulledSeq == null || pushedHlc == null) return null;
-    return (pulledSeq: pulledSeq, pushedHlc: pushedHlc, devices: devices);
-  }
-
-  /// Deletes entries numbered at or below [throughSeq]. Pass the
-  /// `pulledSeq` from [readHorizon], so only entries every device has read
-  /// are removed.
-  Future<int> cleanup({required int throughSeq}) async {
-    final snapshot =
-        await _log.where('seq', isLessThanOrEqualTo: throughSeq).get();
-
-    // Firestore allows at most 500 writes per batch.
-    final docs = snapshot.docs;
-    for (var start = 0; start < docs.length; start += 500) {
-      final batch = _firestore.batch();
-      for (final doc in docs.skip(start).take(500)) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-    }
-    return docs.length;
   }
 }

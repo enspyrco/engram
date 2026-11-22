@@ -16,8 +16,8 @@ import 'knowledge_graph_provider.dart';
 /// Bookmark key for the push position: the max HLC already pushed.
 ///
 /// New with the numbered log, so a device upgrading from the old log has no
-/// push bookmark and pushes everything once, which re-sends any write the
-/// old cleanup deleted before another device read it.
+/// push bookmark and pushes everything once: the new log starts with every
+/// device's whole graph.
 const _pushPeerId = 'firestore-sync-log-v2:push';
 
 /// Bookmark key for the pull position: the highest log entry read.
@@ -66,9 +66,7 @@ final crdtSyncProvider = NotifierProvider<CrdtSyncNotifier, CrdtSyncState>(
 ///
 /// **Sync lifecycle:**
 /// 1. Push: generate local changeset since last push → write to the log
-/// 2. Publish progress, read every device's progress
-/// 3. Pull: read entries after the pull bookmark → merge each into Drift
-/// 4. Clean up only what every device is past
+/// 2. Pull: read entries after the pull bookmark → merge each into Drift
 ///
 /// Uses separate push/pull bookmarks so a failed pull doesn't block
 /// future pushes (and vice versa). Guards against overlapping syncs via
@@ -108,49 +106,23 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
       // -- Push --
       state = state.copyWith(phase: CrdtSyncPhase.pushing, errorMessage: '');
 
-      var pushedHlc = await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
-      final changeset = await driftRepo.getChangeset(modifiedAfter: pushedHlc);
+      final lastPushHlc = await driftRepo.getLastSyncedHlc(_pushPeerId) ?? '';
+      final changeset = await driftRepo.getChangeset(
+        modifiedAfter: lastPushHlc,
+      );
 
       if (!changeset.isEmpty) {
         await transport.pushChangeset(changeset: changeset, nodeId: nodeId);
         pushedCount = changeset.recordCount;
 
         // Update push bookmark to the max HLC we just pushed.
-        pushedHlc = changeset.maxHlc;
-        await driftRepo.updateLastSyncedHlc(_pushPeerId, pushedHlc);
+        await driftRepo.updateLastSyncedHlc(_pushPeerId, changeset.maxHlc);
       }
 
       // -- Pull --
       state = state.copyWith(phase: CrdtSyncPhase.pulling);
 
       final pulledSeq = await driftRepo.getSyncedSeq(_pullPeerId);
-      await transport.publishProgress(
-        nodeId: nodeId,
-        pulledSeq: pulledSeq,
-        pushedHlc: pushedHlc,
-      );
-      // Read before pulling: every push the horizon vouches for is then
-      // already in the log this pull reads.
-      final horizon = await transport.readHorizon();
-
-      // A device that hadn't published yet held nothing back from cleanup,
-      // so it may have missed this device's earlier pushes: push everything
-      // again for it.
-      final known = await driftRepo.getKnownSyncDevices();
-      final joined = {...?horizon?.devices}.difference({...known, nodeId});
-      if (joined.isNotEmpty) {
-        final everything = await driftRepo.getChangeset(modifiedAfter: '');
-        if (!everything.isEmpty) {
-          await transport.pushChangeset(changeset: everything, nodeId: nodeId);
-          pushedCount += everything.recordCount;
-          if (everything.maxHlc.compareTo(pushedHlc) > 0) {
-            pushedHlc = everything.maxHlc;
-            await driftRepo.updateLastSyncedHlc(_pushPeerId, pushedHlc);
-          }
-        }
-        await driftRepo.addKnownSyncDevices(joined);
-      }
-
       final pulled = await transport.pullChangesets(
         afterSeq: pulledSeq,
         localNodeId: nodeId,
@@ -169,26 +141,11 @@ class CrdtSyncNotifier extends Notifier<CrdtSyncState> {
 
       if (pulled.lastSeq > pulledSeq) {
         await driftRepo.updateSyncedSeq(_pullPeerId, pulled.lastSeq);
-        await transport.publishProgress(
-          nodeId: nodeId,
-          pulledSeq: pulled.lastSeq,
-          pushedHlc: pushedHlc,
-        );
       }
 
-      // Remove only log entries every published device has read. Tombstones
-      // are kept: a device that hasn't published yet can still push an older
-      // live copy, and only the tombstone makes that copy lose.
-      // Cleanup failure doesn't fail the sync.
-      if (horizon != null) {
-        try {
-          if (horizon.pulledSeq > 0) {
-            await transport.cleanup(throughSeq: horizon.pulledSeq);
-          }
-        } catch (e) {
-          debugPrint('[CrdtSync] cleanup failed (non-fatal): $e');
-        }
-      }
+      // Nothing is cleaned up: the log is the cloud copy a new or restored
+      // device replays, and tombstones are what make a device's older live
+      // copy lose when it finally syncs.
 
       _consecutiveErrors = 0;
       _skipTicks = 0;

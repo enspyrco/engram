@@ -694,26 +694,6 @@ class DriftGraphRepository extends GraphRepository {
   Future<void> updateSyncedSeq(String peerId, int seq) =>
       updateLastSyncedHlc(peerId, '$seq');
 
-  static const _knownDevicePrefix = 'sync-device:';
-
-  /// Node ids of the sync devices this device has already pushed its whole
-  /// graph for.
-  Future<Set<String>> getKnownSyncDevices() async {
-    final rows =
-        await (_db.select(_db.driftSyncMetadata)
-          ..where((t) => t.peerId.like('$_knownDevicePrefix%'))).get();
-    return {
-      for (final r in rows) r.peerId.substring(_knownDevicePrefix.length),
-    };
-  }
-
-  /// Records [nodeIds] as devices this device has pushed its whole graph for.
-  Future<void> addKnownSyncDevices(Set<String> nodeIds) async {
-    for (final id in nodeIds) {
-      await updateLastSyncedHlc('$_knownDevicePrefix$id', '');
-    }
-  }
-
   // -------------------------------------------------------------------------
   // getLastModified — highest HLC across all tables
   // -------------------------------------------------------------------------
