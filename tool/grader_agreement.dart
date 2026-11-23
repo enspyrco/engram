@@ -64,17 +64,26 @@ Future<void> main(List<String> args) async {
     stderr.writeln(
       'usage: ANTHROPIC_API_KEY=... dart run tool/grader_agreement.dart <gold.jsonl>',
     );
-    exit(64);
+    exitCode = 64;
+    return;
   }
 
   final gold = <_GoldAnswer>[];
-  final lines = File(args.single).readAsLinesSync();
+  final List<String> lines;
+  try {
+    lines = File(args.single).readAsLinesSync();
+  } on FileSystemException catch (e) {
+    stderr.writeln('cannot read ${args.single}: ${e.message}');
+    exitCode = 66;
+    return;
+  }
   for (final (i, text) in lines.indexed) {
     if (text.trim().isEmpty) continue;
     final answer = _parseLine(i + 1, text);
     if (answer == null) {
       stderr.writeln('line ${i + 1}: not a valid gold answer');
-      exit(65);
+      exitCode = 65;
+      return;
     }
     gold.add(answer);
   }
@@ -94,7 +103,8 @@ Future<void> main(List<String> args) async {
     switch (outcome) {
       case Graded(:final receipt):
         pairs.add((human: answer.humanRating, grader: receipt.rating));
-        unsupported += receipt.unsupportedCount;
+        unsupported +=
+            receipt.unsupportedCount + receipt.unquotedMisconceptionCount;
         if (receipt.rating != answer.humanRating) {
           stdout.writeln(
             'line ${answer.line}: person ${answer.humanRating.name}, '
@@ -114,9 +124,7 @@ Future<void> main(List<String> args) async {
   final version = assessor.graderVersion;
   stdout
     ..writeln()
-    ..writeln(
-      'Grader: ${version.model}, prompt revision ${version.promptRevision}',
-    )
+    ..writeln('Grader: ${version.model}, prompt ${version.prompt}')
     ..writeln(
       'Graded ${a.count} of ${gold.length}; $unanswered blank, not sent; '
       '${failures.length} failed',
@@ -125,6 +133,8 @@ Future<void> main(List<String> args) async {
     ..writeln('Within one step: ${a.withinOne} (${pct(a.withinOne)})')
     ..writeln('Grader higher: ${a.overRated} (${pct(a.overRated)})')
     ..writeln('Grader lower: ${a.underRated} (${pct(a.underRated)})')
+    // Counts only quotes that are absent. A quote that is present but does
+    // not show its criterion is invisible here; only the ratings catch it.
     ..writeln('Grader quotes not found in the answer: $unsupported')
     ..writeln()
     ..writeln(
@@ -140,5 +150,5 @@ Future<void> main(List<String> args) async {
     stderr.writeln(failure);
   }
   // A run with failures, or with nothing graded, is not a measurement.
-  if (failures.isNotEmpty || a.count == 0) exit(1);
+  if (failures.isNotEmpty || a.count == 0) exitCode = 1;
 }

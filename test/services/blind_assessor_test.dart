@@ -21,7 +21,7 @@ Message _reply(
   role: MessageRole.assistant,
   stopReason: stopReason,
   content: MessageContent.blocks(blocks),
-  model: defaultAssessorModel,
+  model: GraderModel.opus55.id,
   type: 'message',
   usage: const Usage(inputTokens: 10, outputTokens: 10),
 );
@@ -102,7 +102,7 @@ void main() {
     expect(receipt.unsupportedCount, 0);
     expect(receipt.judgements.map((j) => j.criterion), _rubric.criteria);
     expect(receipt.judgements[0].evidence!.text, 'Precision and recall.');
-    expect(receipt.graderVersion.model, defaultAssessorModel);
+    expect(receipt.graderVersion.model, GraderModel.opus55);
   });
 
   test('a quote that is not in the answer counts as missed', () async {
@@ -174,22 +174,26 @@ void main() {
     expect(receipt.rating, FsrsRating.hard);
   });
 
-  test('an unquoted misconception is dropped and counted', () async {
-    replyWith(
-      _grading(
-        fullMarks(
-          misconceptions: [
-            _misconception('claims recall is accuracy', 'recall is accuracy'),
-          ],
+  test(
+    'an unquoted misconception is hidden but still caps the rating',
+    () async {
+      replyWith(
+        _grading(
+          fullMarks(
+            misconceptions: [
+              _misconception('claims recall is accuracy', 'recall is accuracy'),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    final receipt = receiptOf(await assess());
-    expect(receipt.misconceptions, isEmpty);
-    expect(receipt.unsupportedCount, 1);
-    expect(receipt.rating, FsrsRating.good);
-  });
+      final receipt = receiptOf(await assess());
+      expect(receipt.misconceptions, isEmpty);
+      expect(receipt.unquotedMisconceptionCount, 1);
+      expect(receipt.unsupportedCount, 0);
+      expect(receipt.rating, FsrsRating.hard);
+    },
+  );
 
   group('malformed gradings fail closed', () {
     final cases = <String, Map<String, dynamic>>{

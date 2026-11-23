@@ -9,12 +9,6 @@ import 'retry.dart';
 
 const _toolName = 'grade_answer';
 
-/// Bumped whenever [_systemPrompt] or [_gradeTool] changes meaning.
-const _promptRevision = 1;
-
-/// Default grader model.
-const defaultAssessorModel = 'claude-opus-5-5';
-
 const _systemPrompt = '''
 You grade one learner's written answer to a quiz question against a rubric.
 
@@ -22,7 +16,7 @@ The user message is a JSON object with the question, a reference answer, the rub
 
 For each criterion, decide whether the learner's answer meets it, meets it partially, or misses it. Judge the answer as written, not what the learner probably meant. Wording different from the reference answer is fine when the meaning is right.
 
-For a criterion you mark met or partial, quote the words from the learner's answer that show it, copied verbatim and at least two words long (or the whole answer if it is one word). If you cannot quote such words, the criterion is missed.
+For a criterion you mark met or partial, quote the words from the learner's answer that show it, copied verbatim and at least two words long. If you cannot quote such words, the criterion is missed.
 
 List any wrong claims the answer makes as misconceptions, each with the learner's words that make the claim, quoted the same way. Write one short line of feedback addressed to the learner.
 
@@ -80,6 +74,10 @@ const _gradeTool = Tool.custom(
   },
 );
 
+final _promptDigest = PromptDigest.of(
+  utf8.encode('$_systemPrompt\n${jsonEncode(_gradeTool)}'),
+);
+
 /// Grades a learner's free-text answer against a card's rubric, without
 /// seeing anything else about the learner.
 ///
@@ -91,20 +89,17 @@ class BlindAssessor {
   BlindAssessor({
     required String apiKey,
     AnthropicClient? client,
-    String model = defaultAssessorModel,
+    GraderModel model = GraderModel.opus55,
     int maxRetries = 2,
   }) : _client = client ?? AnthropicClient(apiKey: apiKey),
        _model = model,
        _maxRetries = maxRetries;
 
   final AnthropicClient _client;
-  final String _model;
+  final GraderModel _model;
   final int _maxRetries;
 
-  GraderVersion get graderVersion => (
-    promptRevision: _promptRevision,
-    model: _model,
-  );
+  GraderVersion get graderVersion => (prompt: _promptDigest, model: _model);
 
   Future<AssessmentOutcome> assess({
     required String question,
@@ -120,7 +115,7 @@ class BlindAssessor {
         maxRetries: _maxRetries,
         () => _client.createMessage(
           request: CreateMessageRequest(
-            model: Model.modelId(_model),
+            model: Model.modelId(_model.id),
             maxTokens: 4096,
             system: const CreateMessageRequestSystem.text(_systemPrompt),
             tools: const [_gradeTool],
@@ -243,6 +238,7 @@ AssessmentOutcome parseGrading(
   }
 
   final misconceptions = <Misconception>[];
+  var unquotedMisconceptions = 0;
   for (final raw in rawMisconceptions) {
     if (raw is! Map) return malformed('a misconception is not an object');
     final claim = raw['claim'];
@@ -252,7 +248,7 @@ AssessmentOutcome parseGrading(
     }
     final quote = Quote.find(production, evidence);
     if (quote == null) {
-      unsupported++;
+      unquotedMisconceptions++;
     } else {
       misconceptions.add(Misconception(claim, quote));
     }
@@ -264,6 +260,7 @@ AssessmentOutcome parseGrading(
       misconceptions: misconceptions.lock,
       feedback: feedback,
       unsupportedCount: unsupported,
+      unquotedMisconceptionCount: unquotedMisconceptions,
       graderVersion: graderVersion,
     ),
   );

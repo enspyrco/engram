@@ -1,3 +1,4 @@
+import 'package:crypto/crypto.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
 
@@ -27,9 +28,12 @@ enum CriterionVerdict {
 /// Words the grader quoted that really appear, in order, in the learner's
 /// answer.
 ///
-/// Matching is on whole words, ignoring case and punctuation, so "correct"
-/// is not found in "incorrect". A quote must be at least two words unless it
-/// is the whole answer, so a single common word cannot stand as evidence.
+/// Matching is on whole whitespace-separated words, ignoring case, quotes,
+/// brackets and sentence punctuation, so "correct" is not found in
+/// "incorrect" and "5" is not found in "-5". A quote must be at least two
+/// words, so a single word cannot stand as evidence. Single-word recall
+/// cards carry no rubric (extraction omits it), so they are never graded
+/// here.
 @immutable
 final class Quote {
   const Quote._(this.text);
@@ -42,7 +46,7 @@ final class Quote {
     final needle = _words(quoted);
     final haystack = _words(answer);
     if (needle.isEmpty) return null;
-    if (needle.length < 2 && needle.length != haystack.length) return null;
+    if (needle.length < 2) return null;
     for (var start = 0; start + needle.length <= haystack.length; start++) {
       var matches = true;
       for (var i = 0; i < needle.length; i++) {
@@ -56,11 +60,27 @@ final class Quote {
     return null;
   }
 
-  static final _word = RegExp(r'[\p{L}\p{N}]+', unicode: true);
+  /// Quotes and brackets around a word, and sentence punctuation after it.
+  /// Symbols that carry meaning (`-5`, `!=`, `x=y`) are kept.
+  static final _wrapping = RegExp(r'''^["'“”‘’(\[]+|["'“”‘’)\]]+$''');
+  static final _trailing = RegExp(r'[.,;:!?…]+$');
 
   static List<String> _words(String s) => [
-    for (final m in _word.allMatches(s.toLowerCase())) m[0]!,
+    for (final token in s.toLowerCase().split(RegExp(r'\s+')))
+      if (_bare(token) case final word when word.isNotEmpty) word,
   ];
+
+  static String _bare(String token) {
+    var word = token;
+    for (var previous = ''; word != previous;) {
+      previous = word;
+      word = word.replaceAll(_wrapping, '');
+      // Keep a token made only of symbols, such as `!=`.
+      final trimmed = word.replaceAll(_trailing, '');
+      if (trimmed.isNotEmpty) word = trimmed;
+    }
+    return word;
+  }
 }
 
 /// The grader's judgement of one rubric criterion. A met or partial
@@ -95,9 +115,57 @@ final class Misconception {
   final Quote evidence;
 }
 
+/// The Claude model the grader runs on.
+@immutable
+final class GraderModel {
+  const GraderModel._(this.id);
+
+  static const opus55 = GraderModel._('claude-opus-5-5');
+
+  static final _shape = RegExp(r'^claude-[a-z0-9][a-z0-9.-]*$');
+
+  /// Reads a model id; null unless it looks like a Claude model id.
+  static GraderModel? parse(String raw) =>
+      _shape.hasMatch(raw) ? GraderModel._(raw) : null;
+
+  /// The id sent to the API.
+  final String id;
+
+  @override
+  bool operator ==(Object other) => other is GraderModel && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => id;
+}
+
+/// A digest of the grader's prompt and tool schema. Derived from their bytes,
+/// so any edit to either changes it without anyone remembering to.
+@immutable
+final class PromptDigest {
+  const PromptDigest._(this.hex);
+
+  /// The first 12 hex digits of the SHA-256 of [promptBytes].
+  factory PromptDigest.of(List<int> promptBytes) =>
+      PromptDigest._(sha256.convert(promptBytes).toString().substring(0, 12));
+
+  final String hex;
+
+  @override
+  bool operator ==(Object other) => other is PromptDigest && other.hex == hex;
+
+  @override
+  int get hashCode => hex.hashCode;
+
+  @override
+  String toString() => hex;
+}
+
 /// Which grader produced a receipt, so receipts from a changed prompt or
 /// model are never pooled with older ones when measuring agreement.
-typedef GraderVersion = ({int promptRevision, String model});
+typedef GraderVersion = ({PromptDigest prompt, GraderModel model});
 
 /// What the blind assessor decided about one answer, and why.
 @immutable
@@ -107,26 +175,35 @@ final class AssessmentReceipt {
     required this.misconceptions,
     required this.feedback,
     required this.unsupportedCount,
+    required this.unquotedMisconceptionCount,
     required this.graderVersion,
   });
 
   /// One judgement per rubric criterion, in rubric order.
   final IList<CriterionJudgement> judgements;
 
+  /// Misconceptions quoted from the answer; only these may be shown to the
+  /// learner.
   final IList<Misconception> misconceptions;
 
   /// One line for the learner.
   final String feedback;
 
-  /// Judgements and misconceptions the grader gave without a quote found in
-  /// the answer. Such a judgement counts as missed; such a misconception is
-  /// dropped.
+  /// Met or partial judgements the grader gave without a quote found in the
+  /// answer; each counts as missed.
   final int unsupportedCount;
+
+  /// Misconceptions the grader named without a quote found in the answer.
+  /// They are never shown, but still cap the rating, so an unverified signal
+  /// errs toward reviewing the card sooner.
+  final int unquotedMisconceptionCount;
 
   final GraderVersion graderVersion;
 
-  FsrsRating get rating =>
-      ratingFor(judgements, misconceptions: misconceptions);
+  FsrsRating get rating => ratingFor(
+    judgements,
+    misconceived: misconceptions.isNotEmpty || unquotedMisconceptionCount > 0,
+  );
 }
 
 /// Turns criterion judgements into an FSRS rating.
@@ -138,12 +215,12 @@ final class AssessmentReceipt {
 /// effortlessly.
 FsrsRating ratingFor(
   IList<CriterionJudgement> judgements, {
-  IList<Misconception> misconceptions = const IListConst([]),
+  bool misconceived = false,
 }) {
   if (judgements.isEmpty) return FsrsRating.again;
   final credit = judgements.fold<double>(0, (sum, j) => sum + j.verdict.credit);
   final fraction = credit / judgements.length;
-  if (fraction == 1 && misconceptions.isEmpty) return FsrsRating.good;
+  if (fraction == 1 && !misconceived) return FsrsRating.good;
   if (fraction >= 0.5) return FsrsRating.hard;
   return FsrsRating.again;
 }
