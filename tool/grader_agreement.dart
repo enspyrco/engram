@@ -82,6 +82,7 @@ Future<void> main(List<String> args) async {
   final assessor = BlindAssessor(apiKey: apiKey);
   final pairs = <({FsrsRating human, FsrsRating grader})>[];
   var unsupported = 0;
+  var unanswered = 0;
   final failures = <String>[];
   for (final answer in gold) {
     final outcome = await assessor.assess(
@@ -100,6 +101,8 @@ Future<void> main(List<String> args) async {
             'grader ${receipt.rating.name}: ${receipt.feedback}',
           );
         }
+      case Unanswered():
+        unanswered++;
       case GradingFailed(:final failure, :final detail):
         failures.add('line ${answer.line}: ${failure.name}: $detail');
     }
@@ -114,12 +117,15 @@ Future<void> main(List<String> args) async {
     ..writeln(
       'Grader: ${version.model}, prompt revision ${version.promptRevision}',
     )
-    ..writeln('Graded ${a.count} of ${gold.length}; ${failures.length} failed')
+    ..writeln(
+      'Graded ${a.count} of ${gold.length}; $unanswered blank, not sent; '
+      '${failures.length} failed',
+    )
     ..writeln('Same rating as the person: ${a.exact} (${pct(a.exact)})')
     ..writeln('Within one step: ${a.withinOne} (${pct(a.withinOne)})')
     ..writeln('Grader higher: ${a.overRated} (${pct(a.overRated)})')
     ..writeln('Grader lower: ${a.underRated} (${pct(a.underRated)})')
-    ..writeln('Quotes not found in the answer: $unsupported')
+    ..writeln('Grader quotes not found in the answer: $unsupported')
     ..writeln()
     ..writeln(
       'person \\ grader  ${FsrsRating.values.map((r) => r.name.padLeft(6)).join()}',
@@ -133,4 +139,6 @@ Future<void> main(List<String> args) async {
   for (final failure in failures) {
     stderr.writeln(failure);
   }
+  // A run with failures, or with nothing graded, is not a measurement.
+  if (failures.isNotEmpty || a.count == 0) exit(1);
 }

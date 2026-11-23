@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
@@ -24,11 +22,17 @@ The user message is a JSON object with the question, a reference answer, the rub
 
 For each criterion, decide whether the learner's answer meets it, meets it partially, or misses it. Judge the answer as written, not what the learner probably meant. Wording different from the reference answer is fine when the meaning is right.
 
-For a criterion you mark met or partial, quote the exact words from the learner's answer that show it, copied verbatim. If you cannot quote such words, the criterion is missed.
+For a criterion you mark met or partial, quote the words from the learner's answer that show it, copied verbatim and at least two words long (or the whole answer if it is one word). If you cannot quote such words, the criterion is missed.
 
-List any wrong claims the answer makes as misconceptions. Write one short line of feedback addressed to the learner.
+List any wrong claims the answer makes as misconceptions, each with the learner's words that make the claim, quoted the same way. Write one short line of feedback addressed to the learner.
 
 Record your grading by calling the grade_answer tool exactly once.''';
+
+const _quoteSchema = {
+  'type': 'string',
+  'description':
+      "Words copied verbatim from the learner's answer, at least two words long.",
+};
 
 const _gradeTool = Tool.custom(
   name: _toolName,
@@ -61,7 +65,15 @@ const _gradeTool = Tool.custom(
       },
       'misconceptions': {
         'type': 'array',
-        'items': {'type': 'string'},
+        'items': {
+          'type': 'object',
+          'additionalProperties': false,
+          'required': ['claim', 'evidence'],
+          'properties': {
+            'claim': {'type': 'string'},
+            'evidence': _quoteSchema,
+          },
+        },
       },
       'feedback': {'type': 'string'},
     },
@@ -73,18 +85,21 @@ const _gradeTool = Tool.custom(
 ///
 /// The grader judges each criterion and quotes its evidence; [ratingFor]
 /// turns the judgements into a rating, so the model never picks the rating
-/// itself. Every failure is returned as [GradingFailed], never thrown, so a
-/// caller can fall back to self-rating.
+/// itself. A failure to grade is returned as [GradingFailed], never thrown,
+/// so a caller can fall back to self-rating.
 class BlindAssessor {
   BlindAssessor({
     required String apiKey,
     AnthropicClient? client,
     String model = defaultAssessorModel,
+    int maxRetries = 2,
   }) : _client = client ?? AnthropicClient(apiKey: apiKey),
-       _model = model;
+       _model = model,
+       _maxRetries = maxRetries;
 
   final AnthropicClient _client;
   final String _model;
+  final int _maxRetries;
 
   GraderVersion get graderVersion => (
     promptRevision: _promptRevision,
@@ -97,29 +112,12 @@ class BlindAssessor {
     required Rubric rubric,
     required String production,
   }) async {
-    if (production.trim().isEmpty) {
-      return Graded(
-        AssessmentReceipt(
-          judgements:
-              [
-                for (final criterion in rubric.criteria)
-                  CriterionJudgement(
-                    criterion: criterion,
-                    verdict: CriterionVerdict.missed,
-                    evidence: null,
-                  ),
-              ].lock,
-          misconceptions: const IListConst([]),
-          feedback: 'No answer was given.',
-          unsupportedCount: 0,
-          graderVersion: graderVersion,
-        ),
-      );
-    }
+    if (production.trim().isEmpty) return const Unanswered();
 
     final Message response;
     try {
       response = await retryWithBackoff(
+        maxRetries: _maxRetries,
         () => _client.createMessage(
           request: CreateMessageRequest(
             model: Model.modelId(_model),
@@ -149,11 +147,7 @@ class BlindAssessor {
           ),
         ),
       );
-    } on AnthropicClientException catch (e) {
-      return GradingFailed(GradingFailure.requestFailed, e.message);
-    } on SocketException catch (e) {
-      return GradingFailed(GradingFailure.requestFailed, e.message);
-    } on TimeoutException catch (e) {
+    } on Exception catch (e) {
       return GradingFailed(GradingFailure.requestFailed, '$e');
     }
 
@@ -167,9 +161,10 @@ class BlindAssessor {
       }
     }
     if (input == null) {
-      return const GradingFailed(
+      return GradingFailed(
         GradingFailure.noToolCall,
-        'The grader did not call $_toolName',
+        'The grader did not call $_toolName '
+        '(stop reason: ${response.stopReason?.name ?? 'none'})',
       );
     }
     return parseGrading(
@@ -181,8 +176,8 @@ class BlindAssessor {
   }
 }
 
-/// Reads the grader's tool input into a receipt, checking every quote
-/// against [production].
+/// Reads the grader's tool input into a receipt, finding every quote in
+/// [production].
 ///
 /// Anything short of exactly one valid judgement per criterion is
 /// [GradingFailure.malformed]: a partial grading is no grading.
@@ -199,9 +194,8 @@ AssessmentOutcome parseGrading(
   final rawMisconceptions = input['misconceptions'];
   final feedback = input['feedback'];
   if (rawJudgements is! List) return malformed('judgements is not a list');
-  if (rawMisconceptions is! List ||
-      rawMisconceptions.any((m) => m is! String)) {
-    return malformed('misconceptions is not a list of strings');
+  if (rawMisconceptions is! List) {
+    return malformed('misconceptions is not a list');
   }
   if (feedback is! String) return malformed('feedback is not a string');
 
@@ -226,16 +220,21 @@ AssessmentOutcome parseGrading(
       return malformed('evidence for criterion $index is not a string');
     }
 
-    final quote = evidence is String ? evidence : null;
-    final supported =
-        verdict == CriterionVerdict.missed ||
-        (quote != null && quotedFrom(production, quote));
-    if (!supported) unsupported++;
-    byIndex[index] = CriterionJudgement(
-      criterion: criteria[index],
-      verdict: supported ? verdict : CriterionVerdict.missed,
-      evidence: supported && verdict != CriterionVerdict.missed ? quote : null,
-    );
+    final criterion = criteria[index];
+    final quote = evidence is String ? Quote.find(production, evidence) : null;
+    final judgement = switch ((verdict, quote)) {
+      (CriterionVerdict.met, final Quote q) => CriterionJudgement.met(
+        criterion,
+        q,
+      ),
+      (CriterionVerdict.partial, final Quote q) => CriterionJudgement.partial(
+        criterion,
+        q,
+      ),
+      _ => CriterionJudgement.missed(criterion),
+    };
+    if (verdict != CriterionVerdict.missed && quote == null) unsupported++;
+    byIndex[index] = judgement;
   }
   if (byIndex.length != criteria.length) {
     return malformed(
@@ -243,24 +242,29 @@ AssessmentOutcome parseGrading(
     );
   }
 
+  final misconceptions = <Misconception>[];
+  for (final raw in rawMisconceptions) {
+    if (raw is! Map) return malformed('a misconception is not an object');
+    final claim = raw['claim'];
+    final evidence = raw['evidence'];
+    if (claim is! String || evidence is! String) {
+      return malformed('a misconception lacks a claim or evidence string');
+    }
+    final quote = Quote.find(production, evidence);
+    if (quote == null) {
+      unsupported++;
+    } else {
+      misconceptions.add(Misconception(claim, quote));
+    }
+  }
+
   return Graded(
     AssessmentReceipt(
       judgements: [for (var i = 0; i < criteria.length; i++) byIndex[i]!].lock,
-      misconceptions: rawMisconceptions.cast<String>().lock,
+      misconceptions: misconceptions.lock,
       feedback: feedback,
       unsupportedCount: unsupported,
       graderVersion: graderVersion,
     ),
   );
-}
-
-/// Whether [quote] appears in [text], ignoring case, whitespace runs and the
-/// punctuation a grader tends to trim from the ends of a quote.
-bool quotedFrom(String text, String quote) {
-  String normalize(String s) => s
-      .toLowerCase()
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .replaceAll(RegExp(r'''^[\s"'.,;:!?…]+|[\s"'.,;:!?…]+$'''), '');
-  final needle = normalize(quote);
-  return needle.isNotEmpty && normalize(text).contains(needle);
 }

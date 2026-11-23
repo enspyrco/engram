@@ -24,22 +24,75 @@ enum CriterionVerdict {
   };
 }
 
-/// The grader's judgement of one rubric criterion, with the learner's own
-/// words that support it.
+/// Words the grader quoted that really appear, in order, in the learner's
+/// answer.
+///
+/// Matching is on whole words, ignoring case and punctuation, so "correct"
+/// is not found in "incorrect". A quote must be at least two words unless it
+/// is the whole answer, so a single common word cannot stand as evidence.
+@immutable
+final class Quote {
+  const Quote._(this.text);
+
+  /// The quote as the grader wrote it.
+  final String text;
+
+  /// The quote if [quoted] is found in [answer], otherwise null.
+  static Quote? find(String answer, String quoted) {
+    final needle = _words(quoted);
+    final haystack = _words(answer);
+    if (needle.isEmpty) return null;
+    if (needle.length < 2 && needle.length != haystack.length) return null;
+    for (var start = 0; start + needle.length <= haystack.length; start++) {
+      var matches = true;
+      for (var i = 0; i < needle.length; i++) {
+        if (haystack[start + i] != needle[i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return Quote._(quoted.trim());
+    }
+    return null;
+  }
+
+  static final _word = RegExp(r'[\p{L}\p{N}]+', unicode: true);
+
+  static List<String> _words(String s) => [
+    for (final m in _word.allMatches(s.toLowerCase())) m[0]!,
+  ];
+}
+
+/// The grader's judgement of one rubric criterion. A met or partial
+/// judgement always carries the learner's words that support it.
 @immutable
 final class CriterionJudgement {
-  const CriterionJudgement({
-    required this.criterion,
-    required this.verdict,
-    required this.evidence,
-  });
+  const CriterionJudgement._(this.criterion, this.verdict, this.evidence);
+
+  const CriterionJudgement.met(String criterion, Quote evidence)
+    : this._(criterion, CriterionVerdict.met, evidence);
+
+  const CriterionJudgement.partial(String criterion, Quote evidence)
+    : this._(criterion, CriterionVerdict.partial, evidence);
+
+  const CriterionJudgement.missed(String criterion)
+    : this._(criterion, CriterionVerdict.missed, null);
 
   final String criterion;
   final CriterionVerdict verdict;
 
-  /// A verbatim quote from the learner's answer; null when the verdict is
-  /// [CriterionVerdict.missed].
-  final String? evidence;
+  /// Null exactly when [verdict] is [CriterionVerdict.missed].
+  final Quote? evidence;
+}
+
+/// A wrong claim the answer makes, with the learner's words that make it.
+@immutable
+final class Misconception {
+  const Misconception(this.claim, this.evidence);
+
+  /// The grader's description of what is wrong.
+  final String claim;
+  final Quote evidence;
 }
 
 /// Which grader produced a receipt, so receipts from a changed prompt or
@@ -60,14 +113,14 @@ final class AssessmentReceipt {
   /// One judgement per rubric criterion, in rubric order.
   final IList<CriterionJudgement> judgements;
 
-  /// Wrong claims the answer makes, in the grader's words.
-  final IList<String> misconceptions;
+  final IList<Misconception> misconceptions;
 
   /// One line for the learner.
   final String feedback;
 
-  /// Judgements the grader marked met or partial whose quote is not in the
-  /// answer; they are counted as missed.
+  /// Judgements and misconceptions the grader gave without a quote found in
+  /// the answer. Such a judgement counts as missed; such a misconception is
+  /// dropped.
   final int unsupportedCount;
 
   final GraderVersion graderVersion;
@@ -85,7 +138,7 @@ final class AssessmentReceipt {
 /// effortlessly.
 FsrsRating ratingFor(
   IList<CriterionJudgement> judgements, {
-  IList<String> misconceptions = const IListConst([]),
+  IList<Misconception> misconceptions = const IListConst([]),
 }) {
   if (judgements.isEmpty) return FsrsRating.again;
   final credit = judgements.fold<double>(0, (sum, j) => sum + j.verdict.credit);
@@ -112,9 +165,16 @@ sealed class AssessmentOutcome {
   const AssessmentOutcome();
 }
 
+/// The grader judged the answer.
 final class Graded extends AssessmentOutcome {
   const Graded(this.receipt);
   final AssessmentReceipt receipt;
+}
+
+/// The answer was blank, so nothing was sent to the grader. The caller
+/// rates it [FsrsRating.again].
+final class Unanswered extends AssessmentOutcome {
+  const Unanswered();
 }
 
 final class GradingFailed extends AssessmentOutcome {
