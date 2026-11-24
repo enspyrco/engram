@@ -17,5 +17,17 @@ jobs:
           flutter-version: 3.50.0
       - run: flutter pub get --enforce-lockfile
       - run: dart format --output=none --set-exit-if-changed .
-      - run: flutter analyze
+      # is_lint_rules reports infos, so analysis must treat infos as fatal.
+      - run: flutter analyze --fatal-infos
+      # A plugin that fails to load reports "No issues found", so prove it ran.
+      - name: Probe that is_lint_rules runs
+        run: |
+          printf "bool probe(String s) => s == 'x';\n" > lib/zz_lint_probe.dart
+          dart analyze --fatal-infos lib/zz_lint_probe.dart > probe.log 2>&1 || true
+          rm lib/zz_lint_probe.dart
+          if ! grep -q no_string_literal_compare probe.log; then
+            cat probe.log
+            echo "is_lint_rules did not run: the probe should have fired no_string_literal_compare" >&2
+            exit 1
+          fi
       - run: flutter test
