@@ -1,0 +1,9 @@
+<section id="difficulty" class="accent" style="justify-content:center">
+<p class="eyebrow rise" style="--i:0;color:#0F1B2D">The key insight</p>
+<p class="statement rise" style="--i:1;width:1600px;font-size:96px">Difficulty belongs to the card, not to you. So Claude can predict it before you’ve seen it.</p>
+<div style="display:flex;gap:64px;margin-top:64px">
+<p class="body rise" style="--i:2;width:780px">FSRS tracks how hard each card is. Engram starts that number at <b>Claude’s prediction</b> instead of a blank guess, so the first reviews are already well spaced.</p>
+<p class="body rise" style="--i:3;width:780px">Every review then <b>checks the prediction</b>. Past accuracy goes back into the next extraction prompt, and Claude gets better at guessing.</p>
+</div>
+<aside>This is the idea the whole design hangs on. Older algorithms like SM-2 tracked “ease” per learner, which drifted and got stuck. FSRS separates difficulty, a property of the material, from stability, a property of your memory. Difficulty is something a model can estimate from the text alone. So extraction hands the scheduler a head start, and the scheduler hands extraction a report card. Very hard cards, above 8 out of 10, get split automatically into smaller sub-concepts.</aside>
+</section>
