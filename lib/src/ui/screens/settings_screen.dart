@@ -5,7 +5,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/clock_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/wiki_group_membership_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -206,19 +205,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _lastSyncLabel(repo.getLastSyncTimestamp()),
               style: theme.textTheme.bodySmall,
             ),
-          ),
-          const SizedBox(height: 24),
-          Text('Social', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            title: const Text('Friend discovery'),
-            subtitle: const Text('Discover teammates from your wiki group'),
-            value: repo.getFriendDiscoveryEnabled(),
-            onChanged: (value) async {
-              await repo.setFriendDiscoveryEnabled(value);
-              ref.invalidate(wikiGroupMembershipProvider);
-              setState(() {});
-            },
           ),
           const SizedBox(height: 32),
           Center(
