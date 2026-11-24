@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runs on nick-mel (has the sentence-transformers venv). Reads {members:[{id,name,building,knows}]}
+"""Runs on the compute host (it has the sentence-transformers venv). Reads {members:[{id,name,building,knows}]}
 on stdin, returns {nodes, edges, missing, known, suppressed} on stdout.
 
 The curvature engine: TWO distance metrics.
