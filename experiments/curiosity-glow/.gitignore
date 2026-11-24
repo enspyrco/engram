@@ -1,0 +1,9 @@
+# PRIVATE corpus + derived artifacts — real Outline doc titles + body text.
+# These never enter git. They live only on the compute host,
+# owner-readable. The code below reads them via $CORPUS / $OUT (see README).
+corpus.json
+graph.json
+corpus/
+.venv/
+__pycache__/
+*.pyc

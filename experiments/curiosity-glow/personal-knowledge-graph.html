@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Doc · Personal Knowledge Graph</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#0a0b10;color:#cdd5dd;font:15px/1.65 ui-sans-serif,system-ui,sans-serif;display:flex;justify-content:center}
+  main{width:min(820px,92vw);padding:40px 0 100px}
+  h1{font-size:26px;color:#ffd479;margin:0 0 4px;font-weight:700;letter-spacing:.2px}
+  h2{font-size:19px;color:#9fdcb0;margin:34px 0 8px;border-bottom:1px solid #1c2433;padding-bottom:5px}
+  h3{font-size:15px;color:#bcd;margin:20px 0 6px}
+  a{color:#ffd479}
+  code,pre{font-family:ui-monospace,Menlo,monospace}
+  code{background:#11131b;border:1px solid #20283a;border-radius:5px;padding:1px 5px;font-size:13px;color:#aee}
+  pre{background:#0d0f17;border:1px solid #1d2334;border-radius:9px;padding:14px 16px;overflow:auto;font-size:12.5px;line-height:1.5}
+  .tldr{background:#0d1a12;border:1px solid #1c3a28;border-radius:11px;padding:16px 18px;margin:18px 0;color:#bfe;font-size:15px}
+  blockquote{border-left:3px solid #ffd479;margin:14px 0;padding:6px 16px;color:#cbd;background:#11131b}
+  details{margin:10px 0;border:1px solid #1d2334;border-radius:9px;padding:10px 14px;background:#0d0f17}
+  summary{cursor:pointer;color:#9fdcb0;font-weight:600}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid #20283a;padding:7px 10px;text-align:left}
+  th{background:#11131b;color:#9fb}
+  .nav{font-size:13px;color:#7b8a9a;margin-bottom:22px}
+  .verdict{border-radius:9px;padding:12px 15px;margin:10px 0;font-size:13.5px}
+  .verdict.approve{background:#0d1a12;border:1px solid #1c3a28}
+  .verdict.revise{background:#1a160d;border:1px solid #3a3018}
+  .sev-high{color:#f3a0a0}.sev-med{color:#ffd479}.sev-low{color:#9fb}
+</style>
+</head>
+<body>
+<main>
+
+<div class="nav">Design docs · <a href="index.html">hub</a></div>
+
+<h1>Personal Knowledge Graph — the curvature engine turned inward</h1>
+
+<div class="tldr">
+Point the curiosity-gap "curvature engine" at <strong>one mind's knowledge</strong>: 213 real Outline docs across two wikis (<code>xdeca</code>, <code>imagineering</code>) embedded as a single graph. The <em>linked</em> set (explicit <code>/doc/</code> links ∪ same-collection siblings — 37 explicit edges; parent/child is named in the design but is <em>inert as implemented</em>, see Risks) is the geodesic baseline; <strong>curiosity = avg(surprise to the top-K non-linked) − avg(sim to linked)</strong>, so a doc <em>glows gold</em> when it is semantically pulled toward knowledge it is <em>siloed away from</em> (note: the two terms are <em>not</em> on the same scale today — <code>avg(surprise)</code> carries a title penalty the linked term does not; this asymmetry is a known limitation, not a designed feature) (the other collection or the other wiki). A surprise re-rank (<code>title_penalty = 0.5·title-Jaccard + 0.35·shared-proper-noun</code>) demotes clerical near-duplicates ("Rivera Onboarding Notes" ↔ "Sam Rivera", shared proper noun <em>Rivera</em>) so genuine cross-silo bridges win. The viewer burns the top ~12% (26 of 213) gold and draws each glowing node's strongest missing bridge as a gold thread. This is the <strong>rolo thesis turned inward</strong> — same engine at three scales: identity (1 endpoint) → connection between people (2) → connection within one mind (2). <strong>Privacy is the load-bearing concern but is currently an <em>operational convention, not an enforced mechanism</em>:</strong> the corpus, <code>graph.json</code>, the rendered viewer, and any screenshot of it all carry Nick's private doc titles, and they live in two homes — <code>/tmp/glow</code> (self-clears on reboot) <em>and</em> <code>~/curiosity-glow-spike</code> (persists across reboots, higher-risk, needs manual cleanup). Nothing in the code prevents a commit today; see <a href="#privacy">Risks</a> for what enforcement would require.
+</div>
+
+<h2>Purpose</h2>
+<p>
+The "curvature engine" (Carnot's curiosity metric) was built to find <em>missing edges</em> — places where two things are semantically close but structurally unconnected. The rolo work applied it to people. This component applies the identical engine to a single person's <strong>recorded knowledge</strong>: every document Nick has written across his two Outline wikis, treated as one space rather than two filing cabinets.
+</p>
+<p>
+The problem it solves is <strong>siloing</strong>. Knowledge accrues inside collections and wikis; the structure that organizes it (which collection, which wiki) also walls related ideas off from each other. A note in <code>xdeca</code> may be "about" the same thing as a note in <code>imagineering</code> and never link to it because they live in different filing systems. The engine makes those latent bridges <em>visible and rankable</em>: it surfaces the documents most pulled toward knowledge they are cut off from, and names the specific bridge each one wants.
+</p>
+<p>
+<strong>Who/what it is for:</strong> a single mind's corpus (here, 213 docs). The output is an interactive 3D viewer (<code>glow.html</code>) for exploration, backed by a static <code>graph.json</code> produced offline. It is a spike/diagnostic over a personal corpus, not a multi-tenant service.
+</p>
+
+<h2>Architecture</h2>
+<p>Two offline Python stages produce a static artifact; one browser stage renders it. The data flows strictly forward — there is no write-back into Outline.</p>
+
+<pre>
+Outline (xdeca + imagineering)
+   │  export_corpus.py   — `outline` CLI, auth boundary stays in the CLI
+   ▼
+/tmp/glow/corpus.json     — [{key, site, urlId, title, text, collectionId, parentDocumentId}]
+   │  build_graph.py      — embed + curiosity metric + surprise re-rank
+   ▼
+graph.json                — {nodes[], links[], missing[], n_collections}
+   │                          (artifacts: /tmp/glow self-clears; ~/curiosity-glow-spike persists — both carry titles)
+   │  glow.html           — 3d-force-graph, percentile gold threshold
+   ▼
+3D viewer in browser
+</pre>
+
+<h3>Stage 1 — corpus export (<code>export_corpus.py</code>)</h3>
+<p>
+Pages both wikis through the <code>outline</code> CLI (<code>documents.list</code>, limit 100) and flattens to one list. The auth boundary is delegated to the CLI — the export script never touches credentials. Each record is normalized to <code>{key, site, urlId, title, text, collectionId, parentDocumentId}</code> (<code>export_corpus.py:24-32</code>), with <code>key = "{site}:{urlId}"</code> as the cross-wiki stable id. Output is written to <code>/tmp/glow/corpus.json</code>.
+</p>
+<p>
+<span class="sev-med">Pagination is NOT verified against a server total.</span> 213 docs across two wikis at limit 100 requires ≥3 page fetches; the script prints <code>wrote N docs</code>, which reports what was <em>fetched</em>, not what <em>exists</em>. If the cursor loop silently stops early (off-by-one, missing cursor), the corpus is truncated to an unknown subset and the entire graph is computed over it with no signal. The "213 docs" headline is therefore <strong>the fetched count, not a verified corpus size</strong>. Closing this requires asserting fetched-count == the server's reported total/pagination cursor (see Risks).
+</p>
+
+<h3>Stage 2 — graph build (<code>build_graph.py</code>)</h3>
+<p>The heart of the component. Control flow:</p>
+<ol>
+<li><strong>Embed</strong> — <code>all-MiniLM-L6-v2</code> over <code>title + "\n\n" + text[:2000]</code> (<code>build_graph.py:54-56</code>), normalized, so the full cosine matrix is just <code>emb @ emb.T</code> with the diagonal set to <code>-1</code> (<code>build_graph.py:57-58</code>).</li>
+<li><strong>Build the <em>linked</em> baseline</strong> — two sets per node. <code>explicit[i]</code> = explicit <code>/doc/</code>-link edges (regex <code>LINK_RE</code> resolving the trailing urlId <em>within a site</em>, <code>build_graph.py:51,69-73</code>). <code>linked[i]</code> = <code>explicit[i]</code> ∪ same-collection siblings (<code>build_graph.py:83-88</code>). Only <code>explicit</code> is drawn as real edges; the wider <code>linked</code> set is what the metric subtracts against. <em>As implemented, linked = explicit ∪ same-collection only</em> — parent/child is built into <code>url_by_parent</code> but never consumed (Risks), so the headline three-way union is aspirational, not active.</li>
+<li><strong>Curiosity with surprise re-rank</strong> — for each node, rank non-linked docs by cosine, take the top <code>RERANK_POOL=25</code>, re-score by <code>surprise</code>, keep the top <code>K_NONLINKED=10</code> (<code>build_graph.py:93-102</code>). Curiosity is <code>avg(surprise of those 10) − avg(sim to the linked set)</code>.</li>
+<li><strong>Emit</strong> — min-max normalize curiosity to [0,1] for glow intensity, assign each (site, collection) a stable colour index, write <code>nodes/links/missing</code> (<code>build_graph.py:107-125</code>), and print the 8 hottest gaps to stdout. <span class="sev-low">Glow intensity is relative-within-corpus, not an absolute demand measure:</span> min-max maps the least-curious doc to 0 and the most to 1 regardless of absolute values, so a corpus with uniformly tiny gaps still produces a full 0..1 ramp, and intensities are not comparable across corpus updates. The "glow = unmet demand" grammar is a within-graph ordering, not a calibrated quantity. Raw curiosity should be preserved alongside the normalized value (Risks).</li>
+</ol>
+
+<details>
+<summary>The curiosity metric, verbatim</summary>
+<pre>
+# build_graph.py:90-105
+raw = np.zeros(n)
+missing = []  # top-3 surprising cross-group candidates per node
+for i in range(n):
+    order = [int(j) for j in np.argsort(-sim[i]) if j not in linked[i] and sim[i][j] > -1]
+    pool = order[:RERANK_POOL]                       # 25 most-similar non-linked
+    scored = sorted(((surprise(float(sim[i][j]), docs[i]["title"], docs[j]["title"]), j)
+                     for j in pool), key=lambda x: -x[0])[:K_NONLINKED]   # re-rank, keep 10
+    lk = list(linked[i])
+    avg_non = float(np.mean([s for s, _ in scored])) if scored else 0.0
+    avg_lk  = float(np.mean(sim[i][lk])) if lk else 0.0
+    raw[i] = avg_non - avg_lk                         # pull-toward-unlinked minus pull-toward-linked
+    for j in [j for _, j in scored][:TOP_MISSING]:
+        missing.append({"source": i, "target": int(j),
+                        "sim": round(float(sim[i][j]), 3),
+                        "surprise": round(surprise(...), 3)})
+</pre>
+<p>
+Read it as a thermodynamic gradient: <code>avg_non</code> is how hard the doc is pulled toward knowledge it is <em>not</em> connected to; <code>avg_lk</code> is how well-served its existing connections already are. The difference is intended as "unmet semantic demand." A doc deeply embedded in its collection (high <code>avg_lk</code>) does not glow even if it has some external pull; a doc whose nearest neighbours are all across a silo wall glows hot.
+</p>
+<p>
+<span class="sev-med">Caveat — the two terms are not in the same units.</span> <code>avg_non</code> is the mean of <em>surprise</em> values (cosine minus a title penalty up to 0.85); <code>avg_lk</code> is the mean of <em>raw cosine</em> to the linked set. The subtraction therefore takes a penalized quantity from an unpenalized one. A doc whose unlinked neighbours all share a proper noun has its <code>avg_non</code> depressed by up to 0.85 while <code>avg_lk</code> is untouched, systematically suppressing its curiosity for a reason unrelated to how siloed it is. The clean "gradient" framing assumes a symmetry the code does not yet have; the fix is either to apply the title penalty to the linked side too, or to compute curiosity from raw cosine on both sides and reserve surprise for bridge ranking only (it is already used that way for display). Recorded in Risks.
+</p>
+</details>
+
+<h3>The surprise re-rank (clerical-gap suppression)</h3>
+<p>
+Raw cosine ranks "obvious missing links" (same entity, near-duplicate titles) above genuine bridges. <code>title_penalty</code> subtracts a clerical signal so the surprising cross-silo pairs dominate (<code>build_graph.py:30-41</code>):
+</p>
+<pre>
+# build_graph.py:35-41
+def title_penalty(ti, tj):
+    si, sj = _sig(ti), _sig(tj)                       # 4+ char content tokens, stopwords dropped
+    jac = len(si & sj) / len(si | sj) if (si | sj) else 0.0
+    shared_proper = 1 if (_proper(ti) & _proper(tj)) else 0   # any shared Capitalized 4+ char word
+    return 0.5 * jac + 0.35 * shared_proper           # clerical signal in [0, 0.85]
+def surprise(s, ti, tj):
+    return s - title_penalty(ti, tj)
+</pre>
+<p>
+So "Rivera Onboarding Notes" ↔ "Sam Rivera" shares the proper noun <em>Rivera</em> → penalty ≥ 0.35 → demoted below a body-similar pair whose titles look nothing alike. The penalty re-ranks <strong>both</strong> the curiosity score (via the re-ranked top-10) <strong>and</strong> the surfaced bridges (the <code>missing</code> list and the viewer's per-node bridge order). Note the deliberate asymmetry: <code>surprise</code> drives <em>ranking</em>, but the bridge cards still report the raw <code>sim</code> to the reader.
+</p>
+<p>
+<span class="sev-med">The weights (0.5, 0.35) are uncalibrated magic numbers</span> chosen by eye, with no labelled bridge/duplicate set behind them; combined they can reach 0.85 and dominate a MiniLM cosine, producing negative surprise. They have not been validated against precision/recall or a sensitivity analysis — this is an untuned heuristic at the core of the surprise mechanic (Risks). <span class="sev-low">Two pool-shape limits compound it:</span> (1) candidates are drawn only from <code>RERANK_POOL=25</code> by raw cosine, so a genuinely surprising doc whose raw cosine ranks below 25 — exactly the case the penalty is meant to surface — can never enter the re-rank; (2) <code>_proper</code> only matches <code>[A-Z][a-z]{3,}</code>, missing ALL-CAPS acronyms and 3-letter names.
+</p>
+
+<h3>Stage 3 — viewer (<code>glow.html</code>)</h3>
+<p>
+<code>3d-force-graph</code> over <code>graph.json</code>. Key behaviours:
+</p>
+<ul>
+<li><strong>Percentile gold threshold</strong> — sort curiosity descending, take the value at index <code>ceil(n·0.12)−1</code> as the cutoff; only nodes ≥ cutoff burn gold (<code>glow.html:36,45-48</code>). With n=213 that is the top ~12% → 26 nodes. The comment records that an earlier fixed <code>&gt;0.5</code> threshold lit 43% of the graph — a "wall of gold" — and the percentile cutoff was chosen so the <em>real</em> gaps read. <span class="sev-med">Known epistemic cost:</span> a pure percentile <em>always</em> lights 12% and draws 26 missing bridges, even on a perfectly well-linked corpus with no real gaps — it can never report "nothing to see." The original absolute threshold could. The intended fix is to floor the percentile with an absolute minimum (glow only if in the top 12% <em>and</em> above a minimum curiosity); recorded in Risks.</li>
+<li><strong>Two-wiki colouring</strong> — non-glowing nodes coloured by site: <code>xdeca</code> blue (<code>#3b6ea5</code>), <code>imagineering</code> green (<code>#2f9e7d</code>) (<code>glow.html:35,64</code>). Glowing nodes use a curiosity-driven ember→gold ramp.</li>
+<li><strong>Edge semantics</strong> — solid dim edges (<code>#1d2740</code>) = explicit links; gold threads (<code>#ffcf66</code>, with directional particles) = the strongest <em>missing</em> bridge per glowing node (<code>glow.html:49-55,67-72</code>). Bridges are ranked by <code>surprise</code> when present, falling back to <code>sim</code> (<code>glow.html:50</code>). <span class="sev-low">Caveat:</span> a missing bridge is <em>directional</em> (A's curiosity toward B), but renders as an undirected thread — it can read as a mutual high-priority gap when it is one-sided (Risks).</li>
+<li><strong>Interaction</strong> — clicking a node flies the camera in and opens a panel asking, for its top-3 bridges, "What connects <em>A</em> &amp; <em>B</em>?" (<code>glow.html:73-85</code>). A gentle sine pulse animates the burning nodes' size (<code>glow.html:91-92</code>).</li>
+<li><strong>Diagnostics</strong> — a <code>window.__diag</code> object and on-page error banner record CDN/load/render stage, so a blank canvas is debuggable (<code>glow.html:27-31,41-43,89-90</code>).</li>
+</ul>
+
+<h2>Invariants &amp; Guarantees</h2>
+<p>These are properties the code <em>actually enforces</em>. Privacy is deliberately <strong>not</strong> in this table — it is an unenforced operational convention; see the Risks section below.</p>
+<table>
+<tr><th>Invariant</th><th>Where enforced</th></tr>
+<tr><td>One graph, two wikis — docs keyed by <code>{site}:{urlId}</code>; cross-wiki collisions impossible <em>provided</em> site labels are unique and correctly assigned by export (asserted, not yet validated — see Risks).</td><td><code>export_corpus.py:25</code></td></tr>
+<tr><td>Explicit links resolve only <em>within a site</em> (a urlId is site-local).</td><td><code>build_graph.py:71</code> keys on <code>(site, urlId)</code></td></tr>
+<tr><td>No self-edges; a doc is never its own neighbour.</td><td><code>np.fill_diagonal(sim,-1)</code> + <code>j != i</code> guards (<code>build_graph.py:58,72,87</code>)</td></tr>
+<tr><td>Curiosity considers only NON-linked targets — you cannot glow toward something you already link.</td><td><code>j not in linked[i]</code> (<code>build_graph.py:94</code>)</td></tr>
+<tr><td>Drawn edges ⊆ explicit set; same-collection siblings inform the metric but are never drawn.</td><td><code>links</code> built from <code>explicit</code> only (<code>build_graph.py:122</code>)</td></tr>
+<tr><td>Read-only: no write-back to Outline; corpus → graph → view is one-directional.</td><td>No mutating CLI verbs anywhere</td></tr>
+<tr><td>Gold set is a fixed fraction of the graph (~12%), not an absolute-score cohort. This is a <em>visualization budget</em>, NOT an anomaly-significance guarantee — the top 12% glow whether or not real gaps exist (see Risks).</td><td>Percentile cutoff (<code>glow.html:45-47</code>)</td></tr>
+</table>
+
+<h2>Key Design Decisions</h2>
+
+<h3>1. <em>linked</em> = explicit ∪ same-collection (parent/child intended but inert), but only explicit is drawn</h3>
+<p><strong>Decision:</strong> the metric subtracts against a <em>wide</em> linked set (37 explicit edges plus all same-collection siblings); the viewer draws only the narrow explicit set.</p>
+<p><strong>Implemented vs designed:</strong> the three-way union (… ∪ parent/child) was the design intent, but parent/child is inert in the code — <code>url_by_parent</code> is built and never consumed — so the <em>actual</em> baseline is explicit ∪ same-collection. The headline definition is corrected to match the code; wiring parent/child in (or removing it) is tracked in Risks.</p>
+<p><strong>Rationale:</strong> a doc surrounded by collection-mates is already well-served even without explicit links, so same-collection membership must count as "connected" for the curiosity gradient to mean "siloed away from." But drawing every same-collection pair would bury the graph in structural edges and hide the gold threads — so the drawn topology stays sparse. <em>Unvalidated assumption:</em> this treats every collection sibling as "well-served," which can suppress real missing links inside large or messy collections; collection quality is assumed, not checked (Risks).</p>
+<p><strong>Alternative rejected:</strong> use only explicit links as the baseline. Rejected because with just 37 explicit edges across 213 docs, nearly every doc would show enormous "curiosity" toward its own collection-mates — the metric would surface filing, not siloing.</p>
+
+<h3>2. Surprise re-rank instead of raw cosine</h3>
+<p><strong>Decision:</strong> re-rank the top-25 non-linked candidates by <code>cosine − title_penalty</code> before computing curiosity and choosing bridges.</p>
+<p><strong>Rationale:</strong> the most-similar non-linked doc is usually a clerical near-duplicate (same person, same title stem) — true but boring. Penalizing title-Jaccard and shared proper nouns pushes those down so the <em>surprising</em> bridges (bodies close, surfaces unlike, across a silo) rise.</p>
+<p><strong>Alternative rejected:</strong> rank by raw similarity. Rejected because it makes the engine a duplicate-finder; the whole thesis is finding <em>non-obvious</em> bridges.</p>
+
+<h3>3. Percentile gold threshold (~12%)</h3>
+<p><strong>Decision:</strong> burn a fixed top fraction (0.12) rather than an absolute curiosity cutoff.</p>
+<p><strong>Rationale:</strong> normalized-curiosity distributions shift with the corpus; a fixed <code>&gt;0.5</code> lit 43% of this graph (the in-code comment, <code>glow.html:36</code>). A percentile keeps the gold set legible (here 26 nodes) regardless of distribution shape.</p>
+<p><strong>Alternative rejected:</strong> fixed absolute threshold. Rejected, on observed evidence, as a "wall of gold."</p>
+<p><strong>Honest cost of this decision:</strong> a pure percentile fabricates a fixed gap count (26 bridges) regardless of ground truth — it cannot ever output "no strong gaps." The right shape is a hybrid: percentile for legibility, floored by an absolute minimum curiosity so the gold cohort can shrink to zero on a well-linked corpus. Until that floor exists, the gold count is a rendering budget, not a finding. Tracked in Risks.</p>
+
+<h3>4. Re-rank by surprise but display raw sim</h3>
+<p><strong>Decision:</strong> ranking uses <code>surprise</code>; the bridge cards still print <code>sim</code> (<code>glow.html:84</code>).</p>
+<p><strong>Rationale:</strong> surprise is an internal ordering signal (clerical-suppressed); the human-facing "how related are these?" number is the honest cosine. Showing penalized scores to the reader would misreport actual similarity.</p>
+<p><strong>Alternative rejected:</strong> show surprise everywhere — rejected as confusing (a strongly-related pair could show a low number purely from a title penalty).</p>
+
+<h3>5. Auth stays in the <code>outline</code> CLI</h3>
+<p><strong>Decision:</strong> export shells out to the CLI rather than calling the Outline API directly (<code>export_corpus.py:2,11</code>).</p>
+<p><strong>Rationale:</strong> keeps tokens/multi-instance routing out of this code; the spike holds no credentials.</p>
+<p><strong>Alternative rejected:</strong> direct API client — more code, a second place for secrets to leak.</p>
+
+<h2>Risks &amp; Limitations</h2>
+
+<div class="verdict revise" id="privacy"><span class="sev-high">PRIVACY — load-bearing concern, PARTIALLY ENFORCED as of 2026-06-25.</span>
+<strong>RESOLVED (2026-06-25): data-at-rest on the compute host.</strong> The corpus files are owner-only on the host (<code>chmod -R go-rwx</code>). <strong>STILL OPEN</strong> (the items below remain unbuilt — this is not a git repo, so no commit guard exists yet, and there is no redacted-export mode): the corpus, <code>graph.json</code>, the rendered viewer, and <strong>any screenshot of the 3D viewer</strong> (the explicit human-judgment deliverable) all contain Nick's private document titles, emitted verbatim into nodes and bridge cards. The doc previously called "private titles never leave /tmp" an <em>invariant</em>; that was an overclaim. It is an <strong>operational convention enforced by nothing</strong>: no <code>.gitignore</code>, no pre-commit hook, no path-refusal check, no redacted-export mode. There are <em>two</em> artifact homes — <code>/tmp/glow</code> (self-clears on reboot, the lower-risk one) and <code>~/curiosity-glow-spike</code> (persists across reboots, requires manual cleanup, the higher-risk one) — so the earlier "live only in /tmp" claim was false. Additional sensitive surfaces: browser memory while the viewer is open, screenshots, and the CDN-loaded viewer code (the data stays local but the bundle is remote).
+<br><br>
+<strong>To make this real (none of this exists yet — code follow-up, see Task #28 / #16):</strong>
+<ul>
+<li><code>.gitignore</code> entries for <code>graph.json</code>, <code>corpus.json</code>, <code>*.html</code>, <code>/tmp/glow/*</code>, and the whole <code>~/curiosity-glow-spike</code> dir — added by the script on first write, not by hand.</li>
+<li>a pre-commit / CI scan that refuses any staged file containing doc titles.</li>
+<li>a redacted export mode (hash or index titles) for any artifact intended to leave the machine.</li>
+<li>screenshots are private-by-default — they carry titles and must never be posted.</li>
+<li>document data-at-rest controls: who can read <code>/tmp/glow</code> and <code>~/curiosity-glow-spike</code>, retention, and cleanup. Note the real privacy boundary after export is the <em>exported text/titles at rest</em>, not the credential isolation in the CLI — keeping auth in the CLI protects tokens, not the sensitive corpus.</li>
+</ul></div>
+
+<details open>
+<summary>Code risks surfaced by adversarial review (real, not just doc gaps)</summary>
+<ul>
+<li><span class="sev-high">Pagination is not verified to be exhaustive.</span> <code>documents.list</code> at limit 100 over 213 docs needs ≥3 fetches; the script reports <code>wrote N docs</code> (fetched, not extant). If the cursor loop stops early the corpus is silently truncated and the whole graph is computed over an unknown subset. <em>Fix:</em> assert fetched-count == server total/cursor and fail otherwise; restate "213 = all docs, verified against server total."</li>
+<li><span class="sev-high">Curiosity subtracts incommensurable scales.</span> <code>avg_non</code> is penalized surprise, <code>avg_lk</code> is raw cosine; a node whose unlinked neighbours share a proper noun is suppressed by up to 0.85 for a reason unrelated to siloing. <em>Fix:</em> penalize both sides, or use raw cosine for curiosity and reserve surprise for bridge ranking.</li>
+<li><span class="sev-high">Percentile threshold fabricates a fixed gap count.</span> Top 12% always glows (26 bridges) even on a gap-free corpus; the engine can never say "nothing to see." <em>Fix:</em> floor the percentile with an absolute minimum curiosity so the gold cohort can be empty.</li>
+<li><span class="sev-med">Title-penalty weights (0.5, 0.35) are uncalibrated.</span> Chosen by eye, combined max 0.85 can dominate the cosine and yield negative surprise; no labelled set, no precision/recall, no sensitivity analysis. <em>Fix:</em> calibrate against labelled bridge/duplicate pairs, or expose as tuned parameters; report a sensitivity analysis.</li>
+<li><span class="sev-med"><code>RERANK_POOL=25</code> can permanently exclude the surprising candidate.</span> The pool is the top-25 by <em>raw</em> cosine; a doc whose raw cosine ranks below 25 but whose penalized surprise would rank highly never enters the re-rank — exactly the case the penalty exists to surface. <em>Fix:</em> widen/adapt the pool, or compute surprise over all non-linked candidates (feasible at this corpus size).</li>
+<li><span class="sev-med">Parent/child is built but inert.</span> <code>parentDocumentId</code> is a doc <em>id</em> but resolution keys on <em>urlId</em>; <code>url_by_parent</code> is built and never consumed (<code>build_graph.py:80-81</code>). The <em>linked</em> definition has been corrected to drop it. <em>Fix:</em> resolve parent/child by actual document id, or leave it removed.</li>
+<li><span class="sev-med">Cross-wiki explicit links are mis-counted as gaps.</span> A <code>/doc/</code> link resolves only within one site (<code>build_graph.py:71</code>); a genuine xdeca→imagineering link in body text becomes a "missing bridge," counting a real connection as a silo symptom — directly against the goal. <em>Fix:</em> parse full Outline URLs, route by site, and mark unresolved links separately from true missing bridges.</li>
+<li><span class="sev-med">Same-collection = "well-served" is an unvalidated semantic assumption.</span> Treating every collection sibling as linked can suppress real missing links inside large or messy collections. <em>Fix:</em> validate collection quality, cap same-collection baseline influence, or weight structural proximity rather than binary membership.</li>
+<li><span class="sev-med">2000-char truncation biases toward openings.</span> Long docs are embedded from their head only (<code>build_graph.py:55</code>); a bridge buried deep is invisible, and truncation toward the title is then partly fought by the title penalty. <em>Fix:</em> chunk full docs and aggregate embeddings; measure whether truncation changes top bridge rankings.</li>
+<li><span class="sev-med">"Genuine cross-silo bridges win" is asserted on one eyeballed case.</span> The only evidence is observing the "Rivera" clerical pair drop. <em>Fix:</em> human evaluation over a sample of top bridges, duplicate false-positive checks, and before/after rankings for the penalty.</li>
+</ul>
+</details>
+
+<details>
+<summary>Lower-severity carve-outs and honest gaps</summary>
+<ul>
+<li><span class="sev-low">Glow intensity is relative, not calibrated.</span> Min-max normalization maps least→0 / most→1 per graph, so intensity carries no absolute meaning and is incomparable across corpus updates. Raw curiosity (plus mean/std/quantiles) should be preserved and normalized values used only as a rendering attribute.</li>
+<li><span class="sev-low">Curiosity is asymmetric but edges are drawn symmetric.</span> <code>raw[i]</code> depends on <code>i</code>'s own neighbourhood, so A may glow toward B without B glowing toward A; explicit edges are symmetrized (<code>explicit[i].add(j); explicit[j].add(i)</code>). The "missing bridge" is directional yet renders as an undirected thread, which can imply mutual priority. <em>Fix:</em> render direction, or dedupe reciprocal/non-reciprocal gaps with labels.</li>
+<li><span class="sev-low"><code>_proper</code> regex is narrow.</span> <code>[A-Z][a-z]{3,}</code> misses ALL-CAPS acronyms and 3-letter names; <code>shared_proper</code> is binary and over-penalizes docs sharing one common capitalized word.</li>
+<li><span class="sev-low">Cross-wiki key uniqueness is asserted, not validated.</span> "Cross-wiki collisions impossible" depends on site labels being stable, unique, and correctly assigned by export. <em>Fix:</em> assert unique <code>(site, urlId)</code> keys and fail on duplicates or unknown sites.</li>
+<li><span class="sev-low">CDN dependency.</span> The viewer loads <code>3d-force-graph</code> from unpkg; offline/CSP failure yields a blank canvas (mitigated by the on-page error banner, <code>glow.html:41</code>). A local bundle would also remove the remote-code surface from the privacy story.</li>
+<li><span class="sev-low">Single-corpus spike.</span> Hardcoded sites (<code>xdeca</code>, <code>imagineering</code>) and paths; not generalized to other minds/wikis without edits.</li>
+</ul>
+</details>
+
+<h2>Verification</h2>
+<p>How it was actually exercised (claims scoped to what the code and run-outputs demonstrate):</p>
+<ul>
+<li><strong>Corpus run.</strong> <code>export_corpus.py</code> pages both wikis and prints a per-site count plus <code>wrote N docs</code> (<code>export_corpus.py:36,40</code>). The graph build prints <code>{n} docs</code> on load (<code>build_graph.py:45</code>); the headline figure is <strong>213 docs</strong>. <span class="sev-med">Caveat:</span> this is the <em>fetched</em> count, not a count verified against the server's total — see the pagination risk. Read "213 = what we wrote," not "213 = all docs that exist," until the total assertion is added.</li>
+<li><strong>Graph build assertion line.</strong> <code>build_graph.py:128</code> prints <code>"wrote {OUT}: {n} nodes, {len(links)} explicit edges, {len(missing)} gap-edges"</code> — the source of the <strong>37 explicit edges</strong> figure (a real measurement that varies with the corpus). The <strong>639 gap-edges</strong> figure is <em>fixed by construction</em> (213 nodes × <code>TOP_MISSING</code> 3) and would be 639 even if every embedding were random noise — it is NOT a measurement and is no longer cited as evidence. A quantity that actually varies with the data (e.g. the distribution of curiosity scores, or how many distinct target docs the bridges point at) would be the informative figure to report; this spike has not yet emitted one.</li>
+<li><strong>Hottest-gaps probe.</strong> The build prints the top-8 nodes by raw curiosity with <code>title ~~wants~~&gt; target</code> (<code>build_graph.py:127-133</code>) — a manual eyeball that surfaced the "Rivera" clerical case that motivated the title penalty. The penalty's effect was confirmed by observing that clerical pairs dropped below cross-silo pairs in this list.</li>
+<li><strong>Viewer self-diagnostics.</strong> <code>window.__diag</code> records <code>fg</code> (ForceGraph3D presence), <code>stage</code> (fetch status → data count → rendered), and <code>canvas</code> count (<code>glow.html:28,42-43,90</code>); the cutoff and node array are exposed as <code>window.__cutoff</code> / <code>window.__nodes</code> for console inspection of the gold cohort.</li>
+<li><strong>Threshold tuning evidence.</strong> The <code>&gt;0.5 → 43%</code> "wall of gold" observation (<code>glow.html:36</code>) is itself a recorded verification step: the percentile cutoff was adopted <em>because</em> the absolute threshold was observed to over-light the graph.</li>
+</ul>
+<blockquote>
+Not yet verified, and explicitly outstanding: (1) that the surfaced gold bridges are <em>genuinely</em> useful connections to Nick — a human-judgment gate that requires a real person reading sampled top bridges, not a passing code path; (2) that no clerical pair survives into the top-12% gold cohort — the algorithm demotes them, but the demotion's sufficiency at this corpus is unmeasured (no before/after ranking, no precision/recall); (3) that the corpus is complete — see the pagination risk. None of these is a code check; the experiential gate (a human seeing the bridges and judging them) is the last and unmet one. Until it clears, the right status is "spine live, value not yet verified," not "done."
+</blockquote>
+
+<h2>The rolo thesis, turned inward</h2>
+<p>
+This is the same curvature engine at a third scale. <strong>Identity</strong> operates on 1 endpoint (who am I). <strong>Connection between people</strong> operates on 2 endpoints across separate minds. <strong>This</strong> — connection <em>within</em> one mind — also operates on 2 endpoints, but both inside a single corpus. One metric (pull-toward-unlinked minus pull-toward-linked), one re-rank (clerical suppression), one rendering grammar (glow = unmet demand, gold thread = the bridge it wants); the only thing that changes is what the endpoints <em>are</em>. The personal knowledge graph is offered as <em>evidence for the hypothesis</em> that the engine generalizes: the same gap geometry appears whether the silo wall runs between people or between two of your own wikis.
+</p>
+<p>
+<span class="sev-low">"Scale-free" is a hypothesis, not a proven property.</span> The earlier draft asserted the engine <em>is</em> scale-free; that overclaims from a single 213-doc corpus and a reused metaphor. The honest claim is that the <em>same code</em> runs unchanged across the three scales and produces legible output at each — establishing portability of the <em>mechanism</em>, not equivalence of <em>behaviour</em> across scales. Demonstrating scale-free behaviour would require comparative evaluation across multiple corpora and sizes, which has not been done.
+</p>
+
+</main>
+</body>
+</html>
