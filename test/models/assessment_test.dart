@@ -118,16 +118,22 @@ void main() {
     });
   });
 
-  test('the tokenizer fingerprint records each token with its offsets', () {
-    final entries =
+  test('the tokenizer fingerprint holds the pattern, then each probe token '
+      'with UTF-16 offsets', () {
+    final [pattern, ...tokens] =
         jsonDecode(AnswerText.tokenizerFingerprint)
             as List; // cast-ok: test decodes what the model encoded
-    expect(entries, isNotEmpty);
-    expect(entries, everyElement(hasLength(3)));
-    expect(
-      entries.map((e) => (e as List).first),
-      contains('東京は首都'),
-    ); // cast-ok: each entry is a list, checked above
+    expect(pattern, r'\S+');
+    expect(tokens, everyElement(hasLength(3)));
+    expect(tokens, anyElement(equals(['東京は首都', isA<int>(), isA<int>()])));
+    // The emoji is two UTF-16 units, so offsets in code points would differ.
+    switch (tokens.last) {
+      case [final String text, final int start, final int end]:
+        expect(text, '${String.fromCharCode(0x1f600)}z');
+        expect(end - start, 3);
+      case final other:
+        fail('expected [text, start, end], got $other');
+    }
   });
 
   group('scheduledRating', () {

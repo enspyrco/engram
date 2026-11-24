@@ -42,22 +42,26 @@ final class AnswerText {
     ].lock,
   );
 
-  static final _token = RegExp(r'\S+');
+  static const _tokenPattern = r'\S+';
+  static final _token = RegExp(_tokenPattern);
 
-  /// How this tokenizer splits a fixed probe of every kind of whitespace,
-  /// punctuation and script, with offsets. It is part of the grader version,
-  /// so any change to what the grader sees as tokens changes the version,
-  /// whether the change is in the pattern or in the code around it.
+  /// The tokenizer's pattern, then how it splits a fixed probe, with
+  /// offsets. It is part of the grader version. The pattern catches any
+  /// change to the pattern; the probe is a sample that catches changes in
+  /// the code around it only where the probe exercises them.
   static final tokenizerFingerprint = jsonEncode([
+    _tokenPattern,
     for (final t in AnswerText.of(_probe).tokens) [t.text, t.start, t.end],
   ]);
 
-  // No-break space, em space, zero-width space, byte-order mark and a
-  // combining accent, written as code points so the source holds no
-  // invisible characters.
+  // No-break space, em space, zero-width space, byte-order mark, a
+  // combining accent and an emoji outside the 16-bit range (so offsets in
+  // UTF-16 units and in code points differ), written as code points so the
+  // source holds no invisible characters.
   static final _probe =
       ' a  b\tc\nd\r\ne${_char(0x00a0)}f${_char(0x2003)}g${_char(0x200b)}h'
-      '${_char(0xfeff)}i "j" (k), -5 x!=y \\l 東京は首都 é e${_char(0x0301)}. ';
+      '${_char(0xfeff)}i "j" (k), -5 x!=y a;b \\l 東京は首都 é e${_char(0x0301)}. '
+      '${_char(0x1f600)}z ';
 
   static String _char(int codePoint) => String.fromCharCode(codePoint);
 

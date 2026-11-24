@@ -219,7 +219,8 @@ Future<void> main(List<String> args) async {
   for (final failure in failures) {
     stderr.writeln(failure);
   }
-  // A request that never reached the grader says nothing about it, so a run
-  // with one, or with nothing answered, is not a measurement.
-  if (requestFailures > 0 || a.count == 0) exitCode = 1;
+  // A request that never reached the grader says nothing about it, and with
+  // nothing graded the agreement and evidence counts are empty, so neither
+  // run is a measurement. Partial coverage is one, and exits 0.
+  if (requestFailures > 0 || graded == 0) exitCode = 1;
 }
