@@ -1,8 +1,8 @@
-# Assessor evidence as copied tokens, located by engram
+# Assessor evidence as copied tokens with a checked position
 
-Status: round 3, folded from round 2 (`TEMPER.md`: two rounds, all four families
-RECAST both times, converging). Replaces the evidence mechanism of the blind assessor
-merged in https://github.com/enspyrco/engram/pull/183
+Status: provisional after the three-round temper cap (`TEMPER.md`), with Nick's two
+tradeoff decisions and the agreed round-3 folds applied. Replaces the evidence
+mechanism of the blind assessor merged in https://github.com/enspyrco/engram/pull/183
 (`lib/src/models/assessment.dart`, `lib/src/services/blind_assessor.dart`).
 
 ## Producer first
@@ -16,13 +16,17 @@ so FSRS schedules it after it has been forgotten (over-rating).
    let words the learner never wrote pass as theirs (two cage-match rounds on PR 183
    found a new hole each time). **Removed:** matching is exact equality of whole
    tokens; there is no normalization to have holes in.
-2. *The grader counts positions.* Models copy well and count badly; any protocol
-   that asks for positions turns miscounts into wrong credit or failed gradings.
-   **Removed:** the grader never returns a number. It copies tokens; engram locates
-   them.
+2. *A miscounted position becomes credit.* Models copy well and count badly.
+   **Made unable to produce credit (Nick, 2026-11-24):** the grader sends the copied
+   tokens and their position, and a citation resolves only when the two agree. A
+   miscount fails the grading; it can never credit the wrong words. The position
+   also says which occurrence of a repeated phrase is meant ("Paris is wrong. Paris
+   is correct.").
 3. *A failed grading falls back to something that can lengthen the interval.*
    Self-rating can mark a success, and it is the rating the grader exists to replace.
-   **Removed:** a failed grading writes nothing to FSRS. The card stays due.
+   **Removed (Nick, 2026-11-24):** a failed grading writes Again. That never lengthens
+   the interval, and the card leaves the due queue, so a card the grader cannot grade
+   is not stuck there forever. Failures still count against coverage.
 4. *The rating rule.* Hard is a successful recall in FSRS. **Restructured (Nick,
    2026-11-24):** Hard only when nothing was missed and there is no misconception.
 5. *The grader's judgement of whether real words show a criterion.* Only a reader of
@@ -41,20 +45,19 @@ learner's answer. It does not guarantee the slice shows the criterion.
   indentation intact), and the token list as a JSON array of strings, both as data
   in the JSON-encoded user message.
 - **What the grader returns.** For a met or partial criterion, and for each
-  misconception, `"evidence": ["tok", "tok", ...]`: one or more consecutive tokens
-  copied from the list. No positions.
-- **`Span`.** Private constructor; built only by `Span.find(answer, tokens)`, which
-  returns the first place in the answer where those tokens occur consecutively, by
-  raw string equality, or null. Repeated phrases resolve to the first occurrence;
-  the credit is the same wherever they occur. A `Span` holds the token range, the
+  misconception, `"evidence": {"start": i, "tokens": ["tok", "tok", ...]}`: the
+  position (0-based) of the first copied token, and one or more consecutive tokens
+  copied from the list.
+- **`Span`.** Private constructor; built only by `Span.of(answer, start, tokens)`,
+  which returns null unless the answer's tokens from `start` onward equal `tokens`,
+  by raw string equality (no case folding). A `Span` holds the token range, the
   character offsets and the captured substring of the original answer, so a receipt
   is self-contained.
 - **No length rule.** One token can fully meet a criterion ("Paris", "42", "-5") or
   carry a misconception ("Yes" to "Is the earth flat?").
 - **Failed gradings.** If any citation does not resolve, or the tool call is missing
-  or malformed, the outcome is `GradingFailed`. **A `GradingFailed` never writes to
-  FSRS:** the card stays due and comes back. The conversation may still ask the
-  learner how it went, but that answer cannot move the schedule.
+  or malformed, the outcome is `GradingFailed`, and the caller writes **Again**. No
+  self-rating is asked for: there is no reply that could reach the schedule.
 - **Grader version.** The digest covers the system prompt, the tool schema, and the
   tokenizer's pattern constant (`\S+`) and its offset rule. Changing how answers are
   tokenized changes the version without anyone remembering to. Receipts store the
@@ -81,16 +84,23 @@ and an untouched evaluation part.
 The agreement tool reports, naming the grader version and rating policy:
 
 - **Coverage:** the share of answered items that were graded (not `GradingFailed`),
-  with the failed items and the tokens that would not resolve.
-- **Over-rating:** among graded items, the share the grader rated higher than the
-  person. Failed items count as "no schedule change", which cannot over-rate.
-- Judgements citing more than half the answer, and one citation reused across
-  criteria (the lazy-evidence residual of producer 5).
+  with the failed items and the tokens that would not resolve, by answer type.
+- **Over-rating and under-rating:** among all answered items, the share rated higher
+  and lower than the person. A failed item counts as the Again it writes.
+- Lazy-evidence residuals of producer 5: one-token citations, citations of more than
+  half the answer, and one citation reused across criteria.
 
-On the calibration part, Nick sets an over-rating threshold and a coverage bar
-(his decision: after the first run). They are committed with the calibration
-report, then frozen, and the grader is wired to a schedule only if the evaluation
-part meets both.
+Gold-set labels are per-criterion judgements and misconceptions, turned into ratings
+by the same `RatingPolicy` as the grader, so the two are compared like for like.
+
+On the calibration part, Nick sets an over-rating threshold, an under-rating bar, a
+coverage bar and a minimum evaluation size (his decision: after the first run).
+They are committed with the calibration report, then frozen. The grader writes to a
+schedule only if the evaluation part meets all of them.
+
+**The gate is keyed to `GraderVersion`.** A pass covers one version. Any change to
+the prompt, schema, tokenizer, rating policy or model makes a new version, which
+must pass again before it writes to a schedule.
 
 ## Named tradeoffs
 
@@ -99,3 +109,9 @@ part meets both.
   weak evidence for those answers; grades still work. Mitigation: the agreement
   tool reports token counts; a word segmenter is added if such answers appear.
 - **Relevance** (producer 5) is measured, not guarded.
+- **Copy fidelity.** Punctuation stays glued to tokens (`capital.`), and a token
+  containing `"` or `\` reaches the grader JSON-escaped; a grader that copies either
+  imperfectly fails the grading (Again). Measured in coverage, with the failing
+  tokens listed.
+- **All-partial is Hard** (Noether, round 3): there is no floor below "nothing
+  missed". This is Nick's rating decision, recorded, not reopened.
