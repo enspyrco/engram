@@ -60,7 +60,7 @@ typedef LazyEvidence =
       /// Citations of a single token.
       int oneToken,
 
-      /// Citations covering more than half the answer's tokens.
+      /// Citations covering more than half of an answer of two or more tokens.
       int overHalf,
 
       /// Criterion citations that repeat another criterion's citation exactly.
@@ -76,10 +76,12 @@ LazyEvidence lazyEvidenceOf(AssessmentReceipt receipt, AnswerText answer) {
     ...criterionSpans,
     for (final m in receipt.misconceptions) m.evidence,
   ];
-  final half = answer.tokens.length / 2;
+  // A one-token answer has only one possible citation, so it counts as one
+  // token, not also as citing most of the answer.
+  final tokens = answer.tokens.length;
   return (
     oneToken: spans.where((s) => s.length == 1).length,
-    overHalf: spans.where((s) => s.length > half).length,
+    overHalf: tokens < 2 ? 0 : spans.where((s) => s.length > tokens / 2).length,
     reused: criterionSpans.length - criterionSpans.toSet().length,
   );
 }

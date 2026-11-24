@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:meta/meta.dart';
@@ -40,10 +42,19 @@ final class AnswerText {
     ].lock,
   );
 
-  /// The tokenizer's pattern. It is part of the grader version, so changing
-  /// how answers are tokenized changes the version.
-  static const tokenPattern = r'\S+';
-  static final _token = RegExp(tokenPattern);
+  static final _token = RegExp(r'\S+');
+
+  /// How this tokenizer splits a fixed probe of every kind of whitespace,
+  /// punctuation and script, with offsets. It is part of the grader version,
+  /// so any change to what the grader sees as tokens changes the version,
+  /// whether the change is in the pattern or in the code around it.
+  static final tokenizerFingerprint = jsonEncode([
+    for (final t in AnswerText.of(_probe).tokens) [t.text, t.start, t.end],
+  ]);
+
+  static const _probe =
+      ' a  b\tc\nd\r\ne f g​h﻿i "j" (k), -5 x!=y '
+      '\\l 東京は首都 é é. ';
 
   final String text;
   final IList<AnswerToken> tokens;
@@ -69,7 +80,9 @@ final class Span {
   /// tokens from there equal [tokens] by raw string equality; otherwise null.
   static Span? of(AnswerText answer, int start, List<String> tokens) {
     final all = answer.tokens;
-    if (tokens.isEmpty || start < 0 || start + tokens.length > all.length) {
+    // Subtracting keeps both sides small: `start + tokens.length` wraps
+    // negative for a start near the int maximum, which the grader can send.
+    if (tokens.isEmpty || start < 0 || start > all.length - tokens.length) {
       return null;
     }
     for (final (i, token) in tokens.indexed) {
@@ -101,10 +114,14 @@ final class Span {
 
   @override
   bool operator ==(Object other) =>
-      other is Span && other.start == start && other.end == end;
+      other is Span &&
+      other.start == start &&
+      other.end == end &&
+      other.charStart == charStart &&
+      other.text == text;
 
   @override
-  int get hashCode => Object.hash(start, end);
+  int get hashCode => Object.hash(start, end, charStart, text);
 
   @override
   String toString() => 'Span($start..$end: $text)';
@@ -192,9 +209,14 @@ final class GraderModel {
   String toString() => id;
 }
 
-/// A digest of everything that shapes the grader's output in code: its
-/// prompt, its tool schema and the tokenizer. Derived from their bytes, so
-/// any edit changes it without anyone remembering to.
+/// A digest of what the grader model is shown: its prompt, its tool schema
+/// and how answers are tokenized. Derived from their bytes, so any edit to
+/// them changes it without anyone remembering to.
+///
+/// It does not cover the rules that read the grader's reply back (which
+/// citations resolve, what makes a reply malformed). Code cannot hash
+/// itself, so a change to those rules must be treated as a new version by
+/// hand.
 @immutable
 final class PromptDigest {
   const PromptDigest._(this.hex);

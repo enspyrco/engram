@@ -214,6 +214,21 @@ void main() {
       });
     }
 
+    test('a start near the int maximum fails instead of throwing', () async {
+      replyWith(
+        _grading(
+          grading([
+            _judgement(0, 'met', _cite((1 << 62) - 1 + (1 << 62), ['and'])),
+            _judgement(1, 'met', _why),
+          ]),
+        ),
+      );
+      expect(
+        failureOf(await assess()).failure,
+        GradingFailure.unresolvedCitation,
+      );
+    });
+
     test('and names the tokens that would not resolve', () async {
       replyWith(_grading(cases['words the answer does not contain']!));
       expect(

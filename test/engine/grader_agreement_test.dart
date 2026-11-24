@@ -65,4 +65,27 @@ void main() {
     expect(lazy.overHalf, 2);
     expect(lazy.reused, 1);
   });
+
+  test('a one-token answer counts as one token, not also as over half', () {
+    final answer = AnswerText.of('Paris');
+    final paris = Span.of(answer, 0, ['Paris'])!;
+    final receipt = AssessmentReceipt(
+      judgements:
+          [
+            CriterionJudgement.met('a', paris),
+            CriterionJudgement.met('b', paris),
+          ].lock,
+      misconceptions: const IListConst([]),
+      feedback: '',
+      graderVersion: (
+        prompt: PromptDigest.of([0]),
+        model: GraderModel.opus55,
+        policy: RatingPolicy.nothingMissed,
+      ),
+    );
+
+    final lazy = lazyEvidenceOf(receipt, answer);
+    expect(lazy.oneToken, 2);
+    expect(lazy.overHalf, 0);
+  });
 }

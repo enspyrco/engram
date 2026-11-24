@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:engram/src/engine/fsrs_engine.dart';
 import 'package:engram/src/models/assessment.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
@@ -100,6 +102,32 @@ void main() {
       expect(Span.of(answer, 6, ['x']), isNull);
       expect(Span.of(answer, 0, []), isNull);
     });
+
+    test('a start near the int maximum resolves to nothing, not a throw', () {
+      // 2^63 - 1, written so dart2js accepts the literal too.
+      const max = (1 << 62) - 1 + (1 << 62);
+      expect(Span.of(answer, max, ['Paris']), isNull);
+      expect(Span.of(answer, max - 1, ['Paris', 'is']), isNull);
+    });
+
+    test('spans of different words are not equal', () {
+      final paris = Span.of(AnswerText.of('Paris'), 0, ['Paris']);
+      final london = Span.of(AnswerText.of('London'), 0, ['London']);
+      expect(paris, isNot(london));
+      expect(paris, Span.of(AnswerText.of('Paris'), 0, ['Paris']));
+    });
+  });
+
+  test('the tokenizer fingerprint records each token with its offsets', () {
+    final entries =
+        jsonDecode(AnswerText.tokenizerFingerprint)
+            as List; // cast-ok: test decodes what the model encoded
+    expect(entries, isNotEmpty);
+    expect(entries, everyElement(hasLength(3)));
+    expect(
+      entries.map((e) => (e as List).first),
+      contains('東京は首都'),
+    ); // cast-ok: each entry is a list, checked above
   });
 
   group('scheduledRating', () {

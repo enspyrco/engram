@@ -93,7 +93,8 @@ const _gradeTool = Tool.custom(
 
 final _promptDigest = PromptDigest.of(
   utf8.encode(
-    '$_systemPrompt\n${jsonEncode(_gradeTool)}\n${AnswerText.tokenPattern}',
+    '$_systemPrompt\n${jsonEncode(_gradeTool)}\n'
+    '${AnswerText.tokenizerFingerprint}',
   ),
 );
 

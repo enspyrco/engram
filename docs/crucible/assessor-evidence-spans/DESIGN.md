@@ -60,7 +60,11 @@ learner's answer. It does not guarantee the slice shows the criterion.
   self-rating is asked for: there is no reply that could reach the schedule.
 - **Grader version.** The digest covers the system prompt, the tool schema, and the
   tokenizer's pattern constant (`\S+`) and its offset rule. Changing how answers are
-  tokenized changes the version without anyone remembering to. Receipts store the
+  tokenized changes the version without anyone remembering to. (Built as a
+  fingerprint: the tokenizer's output on a fixed probe, so a change in the code
+  around the pattern is caught too.) The rules that read the reply back (which
+  citations resolve, what is malformed) are code and cannot be hashed; a change
+  to them is a new version by hand. Receipts store the
   judgements, not a rating; the rating is derived by a named `RatingPolicy`, and
   every report names the policy it used.
 - **Deleted:** `Quote`, `_words`, `_bare`, the punctuation and bracket patterns, the
