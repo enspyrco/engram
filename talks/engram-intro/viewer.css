@@ -1,0 +1,103 @@
+/* Shows the 1920×1080 slides from source/ scaled to the window. */
+
+html, body { margin: 0; height: 100%; background: #0B1524; overflow: hidden; }
+
+#canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center;
+}
+
+#canvas section {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+#canvas section:not(.active) { display: none; }
+#canvas aside { display: none; }
+/* :where() keeps these resets weaker than any class rule in deck.css. */
+:where(#canvas) :where(h1, h2, h3, p, ul, ol) { margin: 0; }
+:where(#canvas) svg { overflow: visible; }
+
+/* The Slides elements this deck uses, drawn in plain CSS. */
+x-shape { display: block; }
+x-shape[kind="ellipse"] { border-radius: 50%; }
+x-shape[kind="rounded"] { border-radius: 16px; }
+
+x-connector {
+  display: block;
+  position: relative;
+  height: 0;
+  border-top-style: solid;
+  border-top-color: currentColor;
+}
+x-connector::after,
+x-connector[head="both"]::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  border-style: solid;
+  border-color: transparent;
+}
+x-connector::after { right: -2px; border-width: 7px 0 7px 12px; border-left-color: currentColor; }
+x-connector[head="none"]::after { display: none; }
+x-connector[head="both"]::before { left: -2px; border-width: 7px 12px 7px 0; border-right-color: currentColor; }
+
+#canvas table { border-collapse: collapse; }
+#canvas th, #canvas td { padding: 0.35em 0.6em; text-align: left; border-bottom: 1px solid #D9D4C7; }
+#canvas th { background: #E8E4DA; font-weight: 600; }
+
+/* Controls */
+#hud {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font: 14px/1 Inter, Arial, sans-serif;
+  color: #B8C7D9;
+  opacity: 0.35;
+  transition: opacity 200ms;
+}
+#hud:hover, #hud:focus-within { opacity: 1; }
+#hud button {
+  font: inherit;
+  color: inherit;
+  background: #17283F;
+  border: 1px solid #2A3F5C;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+#count { min-width: 56px; text-align: center; }
+
+#notes {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 64px;
+  max-height: 35vh;
+  overflow: auto;
+  padding: 16px 20px;
+  background: rgba(11, 21, 36, 0.94);
+  color: #F4F2EC;
+  border: 1px solid #2A3F5C;
+  border-radius: 12px;
+  font: 18px/1.5 Inter, Arial, sans-serif;
+}
+
+@media print {
+  html, body { height: auto; overflow: visible; background: none; }
+  #hud, #notes { display: none !important; }
+  @page { size: 1920px 1080px; margin: 0; }
+  #canvas { position: static; transform: none !important; height: auto; }
+  #canvas section { position: relative; display: flex !important; break-after: page; }
+  #canvas section * { animation: none !important; }
+}

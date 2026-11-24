@@ -1,0 +1,13 @@
+<section id="localfirst">
+<p class="eyebrow rise" style="--i:0">Under the hood</p>
+<h2 class="title rise" style="--i:1">Your device is the source of truth</h2>
+<div class="row" style="align-items:stretch;gap:0">
+<div class="card rise" style="--i:2"><p class="tag">On the device</p><h3>SQLite</h3><p class="small">The whole graph and every review live locally, so it works offline and opens instantly.</p></div>
+<x-connector head="both" style="width:72px;color:#0B6E7A;border-width:4px;align-self:center"></x-connector>
+<div class="card rise" style="--i:3"><p class="tag">The merge rule</p><h3>CRDTs</h3><p class="small">Every change carries a clock stamp; two devices can edit apart and always agree when they meet.</p></div>
+<x-connector head="both" style="width:72px;color:#0B6E7A;border-width:4px;align-self:center"></x-connector>
+<div class="card rise" style="--i:4"><p class="tag">In the cloud</p><h3>Firestore</h3><p class="small">A sync peer, not the boss: on launch, every five minutes, and when the app pauses or resumes.</p></div>
+</div>
+<p class="lede rise" style="--i:5;margin-top:56px;width:1500px">A happy accident: a knowledge graph is naturally merge-friendly. Concepts only get added, a field takes its latest write, and team contributions only add up.</p>
+<aside>Engram is local-first. Drift, a SQLite layer for Flutter, is the primary store. Sync uses conflict-free replicated data types: a hybrid logical clock stamps each change, the last writer wins per field, and deletions are tombstones so they can’t be resurrected by an old device. It turned out the knowledge graph and even the cooperative game map almost directly onto the textbook CRDTs: grow-only sets, last-writer-wins registers and grow-only counters.</aside>
+</section>

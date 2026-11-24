@@ -1,0 +1,22 @@
+<section id="pointing">
+<p class="eyebrow rise" style="--i:0">The fix</p>
+<h2 class="title rise" style="--i:1">Point by number, and copy exactly</h2>
+<p class="lede rise" style="--i:2;width:1600px">Your answer is split into numbered words. The marker must say “starting at word <i>N</i>, the words are …”, and both parts have to match exactly.</p>
+<div class="rise" style="--i:3;display:flex;gap:12px;margin-top:40px">
+<div class="tokcol"><p class="idx">0</p><p class="tok hit">Light</p></div>
+<div class="tokcol"><p class="idx">1</p><p class="tok hit">is</p></div>
+<div class="tokcol"><p class="idx">2</p><p class="tok hit">faster</p></div>
+<div class="tokcol"><p class="idx">3</p><p class="tok hit">than</p></div>
+<div class="tokcol"><p class="idx">4</p><p class="tok hit">sound,</p></div>
+<div class="tokcol"><p class="idx">5</p><p class="tok">so</p></div>
+<div class="tokcol"><p class="idx">6</p><p class="tok">it</p></div>
+<div class="tokcol"><p class="idx">7</p><p class="tok">arrives</p></div>
+<div class="tokcol"><p class="idx">8</p><p class="tok">first.</p></div>
+</div>
+<div class="rise" style="--i:4;display:flex;flex-direction:column;gap:20px;margin-top:48px">
+<div class="reply"><p class="mono">word 0 → “Light is faster than sound,”</p><p class="verdict met">Matches</p><p class="out">credit counts</p></div>
+<div class="reply"><p class="mono">word 0 → “Light and thunder start together”</p><p class="verdict fail">Not there</p><p class="out">marking fails</p></div>
+<div class="reply"><p class="mono">word 2 → “Light is faster than sound,”</p><p class="verdict fail">Wrong spot</p><p class="out">marking fails</p></div>
+</div>
+<aside>Now there’s nothing fuzzy to get wrong. The marker copies your words and says where they start; the code checks both, letter for letter. First reply: correct, so the credit counts. Second: those words aren’t in the answer at all; the marker made them up, so the marking fails. Third: right words, wrong position. Models copy well but count badly, so this will happen, and it fails rather than guessing. Why the position at all? Because an answer can contain the same words twice, like “Paris is wrong. Paris is correct.” and only one of them earns the mark. The number says which.</aside>
+</section>
