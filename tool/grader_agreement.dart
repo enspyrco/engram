@@ -2,12 +2,18 @@
 //
 //   ANTHROPIC_API_KEY=... dart run tool/grader_agreement.dart gold.jsonl
 //
-// Each line of the gold set is one answer a person has rated:
+// Each line of the gold set is one answer a person has graded against its
+// rubric, one verdict per criterion, plus any wrong claims it makes:
 //   {"question": "...", "reference_answer": "...", "rubric": ["...", "..."],
-//    "learner_answer": "...", "human_rating": "again|hard|good|easy"}
+//    "learner_answer": "...", "human_verdicts": ["met", "partial"],
+//    "human_misconceptions": ["..."]}
 //
-// The human ratings must come from a person. Ratings written by a model
-// measure agreement between two models, not whether the grader is right.
+// The person's verdicts are rated by the same policy as the grader's, so the
+// two ratings are compared like for like. Split the gold set before the
+// first run: calibrate on one file, and run the other once, untouched.
+//
+// The verdicts must come from a person. Verdicts written by a model measure
+// agreement between two models, not whether the grader is right.
 
 import 'dart:convert';
 import 'dart:io';
@@ -24,9 +30,28 @@ typedef _GoldAnswer =
       String question,
       String referenceAnswer,
       Rubric rubric,
-      String learnerAnswer,
-      FsrsRating humanRating,
+      AnswerText learnerAnswer,
+      List<CriterionVerdict> humanVerdicts,
+      bool humanMisconceived,
     });
+
+/// Answers grouped by how many tokens a citation can choose from. A
+/// one-token answer is often a script without spaces, a URL or a code blob,
+/// where citations audit little.
+enum _AnswerLength {
+  oneToken('1 token'),
+  short('2-10 tokens'),
+  long('over 10 tokens');
+
+  const _AnswerLength(this.label);
+  final String label;
+
+  static _AnswerLength of(AnswerText answer) => switch (answer.tokens.length) {
+    <= 1 => oneToken,
+    <= 10 => short,
+    _ => long,
+  };
+}
 
 _GoldAnswer? _parseLine(int line, String text) {
   final Object? decoded;
@@ -40,21 +65,32 @@ _GoldAnswer? _parseLine(int line, String text) {
   final reference = decoded['reference_answer'];
   final learner = decoded['learner_answer'];
   final rubric = Rubric.parse(decoded['rubric']);
-  final human = FsrsRating.values.asNameMap()[decoded['human_rating']];
+  final rawVerdicts = decoded['human_verdicts'];
+  final rawMisconceptions = decoded['human_misconceptions'];
   if (question is! String ||
       reference is! String ||
       learner is! String ||
       rubric == null ||
-      human == null) {
+      rawVerdicts is! List ||
+      rawMisconceptions is! List ||
+      rawMisconceptions.any((m) => m is! String)) {
     return null;
+  }
+  if (rawVerdicts.length != rubric.criteria.length) return null;
+  final verdicts = <CriterionVerdict>[];
+  for (final raw in rawVerdicts) {
+    final verdict = CriterionVerdict.parse(raw);
+    if (verdict == null) return null;
+    verdicts.add(verdict);
   }
   return (
     line: line,
     question: question,
     referenceAnswer: reference,
     rubric: rubric,
-    learnerAnswer: learner,
-    humanRating: human,
+    learnerAnswer: AnswerText.of(learner),
+    humanVerdicts: verdicts,
+    humanMisconceived: rawMisconceptions.isNotEmpty,
   );
 }
 
@@ -89,9 +125,12 @@ Future<void> main(List<String> args) async {
   }
 
   final assessor = BlindAssessor(apiKey: apiKey);
+  final version = assessor.graderVersion;
   final pairs = <({FsrsRating human, FsrsRating grader})>[];
-  var unsupported = 0;
-  var unanswered = 0;
+  var unanswered = 0, requestFailures = 0;
+  var oneToken = 0, overHalf = 0, reused = 0;
+  final answeredBy = {for (final l in _AnswerLength.values) l: 0};
+  final gradedBy = {for (final l in _AnswerLength.values) l: 0};
   final failures = <String>[];
   for (final answer in gold) {
     final outcome = await assessor.assess(
@@ -100,42 +139,73 @@ Future<void> main(List<String> args) async {
       rubric: answer.rubric,
       production: answer.learnerAnswer,
     );
+    if (outcome is Unanswered) {
+      unanswered++;
+      continue;
+    }
+    final length = _AnswerLength.of(answer.learnerAnswer);
+    answeredBy[length] = answeredBy[length]! + 1;
+    final human = version.policy.rate(
+      answer.humanVerdicts,
+      misconceived: answer.humanMisconceived,
+    );
+    // A failed grading counts as the Again it writes to the schedule.
+    pairs.add((human: human, grader: outcome.scheduledRating));
     switch (outcome) {
       case Graded(:final receipt):
-        pairs.add((human: answer.humanRating, grader: receipt.rating));
-        unsupported +=
-            receipt.unsupportedCount + receipt.unquotedMisconceptionCount;
-        if (receipt.rating != answer.humanRating) {
+        gradedBy[length] = gradedBy[length]! + 1;
+        final lazy = lazyEvidenceOf(receipt, answer.learnerAnswer);
+        oneToken += lazy.oneToken;
+        overHalf += lazy.overHalf;
+        reused += lazy.reused;
+        if (receipt.rating != human) {
           stdout.writeln(
-            'line ${answer.line}: person ${answer.humanRating.name}, '
+            'line ${answer.line}: person ${human.name}, '
             'grader ${receipt.rating.name}: ${receipt.feedback}',
           );
         }
-      case Unanswered():
-        unanswered++;
       case GradingFailed(:final failure, :final detail):
-        failures.add('line ${answer.line}: ${failure.name}: $detail');
+        if (failure == GradingFailure.requestFailed) requestFailures++;
+        failures.add(
+          'line ${answer.line} (${length.label}): ${failure.name}: $detail',
+        );
+      case Unanswered():
+        break;
     }
   }
 
   final a = agreementOf(pairs);
-  String pct(int n) =>
-      a.count == 0 ? '-' : '${(100 * n / a.count).toStringAsFixed(0)}%';
-  final version = assessor.graderVersion;
+  String pct(int n, int of) =>
+      of == 0 ? '-' : '${(100 * n / of).toStringAsFixed(0)}%';
+  final graded = a.count - failures.length;
   stdout
     ..writeln()
-    ..writeln('Grader: ${version.model}, prompt ${version.prompt}')
     ..writeln(
-      'Graded ${a.count} of ${gold.length}; $unanswered blank, not sent; '
-      '${failures.length} failed',
+      'Grader: ${version.model}, prompt ${version.prompt}, '
+      'policy ${version.policy.name}',
     )
-    ..writeln('Same rating as the person: ${a.exact} (${pct(a.exact)})')
-    ..writeln('Within one step: ${a.withinOne} (${pct(a.withinOne)})')
-    ..writeln('Grader higher: ${a.overRated} (${pct(a.overRated)})')
-    ..writeln('Grader lower: ${a.underRated} (${pct(a.underRated)})')
-    // Counts only quotes that are absent. A quote that is present but does
-    // not show its criterion is invisible here; only the ratings catch it.
-    ..writeln('Grader quotes not found in the answer: $unsupported')
+    ..writeln(
+      'Answered ${a.count} of ${gold.length}; $unanswered blank, not sent',
+    )
+    ..writeln('Coverage: graded $graded (${pct(graded, a.count)})');
+  for (final length in _AnswerLength.values) {
+    stdout.writeln(
+      '  ${length.label}: ${gradedBy[length]} of ${answeredBy[length]} '
+      '(${pct(gradedBy[length]!, answeredBy[length]!)})',
+    );
+  }
+  stdout
+    ..writeln('Among answered, a failed grading counted as again:')
+    ..writeln(
+      '  same rating as the person: ${a.exact} (${pct(a.exact, a.count)})',
+    )
+    ..writeln('  grader higher: ${a.overRated} (${pct(a.overRated, a.count)})')
+    ..writeln('  grader lower: ${a.underRated} (${pct(a.underRated, a.count)})')
+    // Real words cited for the wrong reason are invisible to every check;
+    // these counts are where lazy citation would show.
+    ..writeln('Citations of one token: $oneToken')
+    ..writeln('Citations of more than half the answer: $overHalf')
+    ..writeln('Criterion citations reused across criteria: $reused')
     ..writeln()
     ..writeln(
       'person \\ grader  ${FsrsRating.values.map((r) => r.name.padLeft(6)).join()}',
@@ -149,6 +219,8 @@ Future<void> main(List<String> args) async {
   for (final failure in failures) {
     stderr.writeln(failure);
   }
-  // A run with failures, or with nothing graded, is not a measurement.
-  if (failures.isNotEmpty || a.count == 0) exitCode = 1;
+  // A request that never reached the grader says nothing about it, and with
+  // nothing graded the agreement and evidence counts are empty, so neither
+  // run is a measurement. Partial coverage is one, and exits 0.
+  if (requestFailures > 0 || graded == 0) exitCode = 1;
 }

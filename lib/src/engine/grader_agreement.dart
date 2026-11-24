@@ -1,5 +1,6 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
+import '../models/assessment.dart';
 import 'fsrs_engine.dart';
 
 /// How often the blind assessor gives the rating a person gave the same
@@ -48,5 +49,39 @@ GraderAgreement agreementOf(
           for (final MapEntry(:key, :value) in confusion.entries)
             key: value.lock,
         }.lock,
+  );
+}
+
+/// Signs of lazy evidence in one receipt: citations that are real words of
+/// the answer but may not show what they are cited for. Real words are
+/// guaranteed; relevance is not, so it is counted here rather than guarded.
+typedef LazyEvidence =
+    ({
+      /// Citations of a single token.
+      int oneToken,
+
+      /// Citations covering more than half of an answer of two or more tokens.
+      int overHalf,
+
+      /// Criterion citations that repeat another criterion's citation exactly.
+      int reused,
+    });
+
+LazyEvidence lazyEvidenceOf(AssessmentReceipt receipt, AnswerText answer) {
+  final criterionSpans = [
+    for (final j in receipt.judgements)
+      if (j.evidence case final Span span) span,
+  ];
+  final spans = [
+    ...criterionSpans,
+    for (final m in receipt.misconceptions) m.evidence,
+  ];
+  // A one-token answer has only one possible citation, so it counts as one
+  // token, not also as citing most of the answer.
+  final tokens = answer.tokens.length;
+  return (
+    oneToken: spans.where((s) => s.length == 1).length,
+    overHalf: tokens < 2 ? 0 : spans.where((s) => s.length > tokens / 2).length,
+    reused: criterionSpans.length - criterionSpans.toSet().length,
   );
 }
