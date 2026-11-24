@@ -1,9 +1,9 @@
-# Assessor evidence as cited token ranges, not quoted text
+# Assessor evidence as copied tokens, located by engram
 
-Status: round 2, folded from the round-1 strike (`TEMPER.md`, all four families
-RECAST). Replaces the evidence mechanism of the blind assessor merged in
-https://github.com/enspyrco/engram/pull/183 (`lib/src/models/assessment.dart`,
-`lib/src/services/blind_assessor.dart`).
+Status: round 3, folded from round 2 (`TEMPER.md`: two rounds, all four families
+RECAST both times, converging). Replaces the evidence mechanism of the blind assessor
+merged in https://github.com/enspyrco/engram/pull/183
+(`lib/src/models/assessment.dart`, `lib/src/services/blind_assessor.dart`).
 
 ## Producer first
 
@@ -12,89 +12,90 @@ so FSRS schedules it after it has been forgotten (over-rating).
 
 **Its producers, and what this design does with each.**
 
-1. *The grader writes its evidence as text, and we match that text back to the
-   answer.* Every matching rule let words the learner never wrote pass as theirs:
-   two cage-match rounds on PR 183 found a new hole each time (`correct` inside
-   `incorrect`, a lone stopword, `5` matching `-5`, one word supporting every
-   criterion). **Removed.** The grader cites tokens of the learner's answer; evidence
-   is copied from the answer. No matching rule exists.
-2. *A miscounted citation that still lands inside the answer.* Models copy text well
-   and count badly; a bounds check alone would turn a miscount into credit. **Made
-   unable to produce credit:** each citation also carries the exact token text, and
-   it resolves only when that text equals the cited slice. A miscount fails closed.
-3. *The grader's judgement of whether real words show a criterion.* Only a reader of
-   meaning can make it (citing "correct" out of "not correct" uses real words).
-   **Cannot be removed;** it is the feature. It is measured by the human-rated
-   agreement tool (task 22), against an acceptance threshold set before anything
-   is wired to a schedule.
-4. *The rating rule.* `ratingFor` maps half credit, and a full answer with a
-   misconception, to Hard, and Hard is a successful recall in FSRS, so the interval
-   still grows. Cheaper valid citations make this path fire more often. See
-   **Rating** below; the choice is Nick's and is recorded there.
+1. *The grader writes evidence text and we fuzzy-match it back.* Every matching rule
+   let words the learner never wrote pass as theirs (two cage-match rounds on PR 183
+   found a new hole each time). **Removed:** matching is exact equality of whole
+   tokens; there is no normalization to have holes in.
+2. *The grader counts positions.* Models copy well and count badly; any protocol
+   that asks for positions turns miscounts into wrong credit or failed gradings.
+   **Removed:** the grader never returns a number. It copies tokens; engram locates
+   them.
+3. *A failed grading falls back to something that can lengthen the interval.*
+   Self-rating can mark a success, and it is the rating the grader exists to replace.
+   **Removed:** a failed grading writes nothing to FSRS. The card stays due.
+4. *The rating rule.* Hard is a successful recall in FSRS. **Restructured (Nick,
+   2026-11-24):** Hard only when nothing was missed and there is no misconception.
+5. *The grader's judgement of whether real words show a criterion.* Only a reader of
+   meaning can make it ("correct" can be cited out of "not correct"). **Cannot be
+   removed;** it is the feature. Measured by the agreement tool before wiring.
 
 **What evidence guarantees, narrowly:** displayed evidence is an exact slice of the
 learner's answer. It does not guarantee the slice shows the criterion.
 
 ## Design
 
-- **One immutable answer.** `AnswerText` holds the learner's answer exactly as
-  written and the tokens derived from it. A token is a maximal non-empty run of
-  non-whitespace characters, with its start and end character offsets in the
-  untrimmed answer. Nothing is normalized.
+- **One immutable answer.** `AnswerText` holds the answer exactly as written and the
+  tokens derived from it: maximal non-empty runs of non-whitespace, each with its
+  character offsets in the untrimmed answer. Nothing is normalized.
 - **What the grader sees.** The original answer unchanged (line breaks and
-  indentation intact), and the numbered token list derived from it, both inside the
-  JSON-encoded user message as data. Token numbers start at 0. Rubric criteria keep
-  their own `criterion_index`; the token list is the only sequence the model counts
-  in.
+  indentation intact), and the token list as a JSON array of strings, both as data
+  in the JSON-encoded user message.
 - **What the grader returns.** For a met or partial criterion, and for each
-  misconception: `{"start": i, "end": j, "text": "<tokens i..j joined by single
-  spaces>"}`, with `end` inclusive.
-- **`Span`.** Private constructor; built only by `Span.of(answer, start, end, text)`,
-  which returns null unless `0 <= start <= end < tokenCount` and `text` equals the
-  cited tokens joined by single spaces (raw string equality, no case folding). A
-  `Span` holds the token range, the character offsets, and the captured substring of
-  the original answer (`answer.substring(startOffset, endOffset)`), so a receipt is
-  self-contained and old receipts never move if the tokenizer changes.
-- **Lengths.** `CriterionJudgement.met` and `Misconception` require a span of two or
-  more tokens. A one-token span may support `partial` only. (Disputed in round 1:
-  one number can be complete evidence. Partial credit lets it count without
-  letting one lone word earn full marks.)
-- **Unresolved citations fail closed.** If any citation, for a criterion or a
-  misconception, does not resolve, the whole grading is `GradingFailure.malformed`,
-  and the caller falls back to self-rating. A citation the grader got wrong is a
-  grader fault, never a learner miss. This deletes `unsupportedCount`,
-  `unquotedMisconceptionCount`, and the rating input `misconceived` takes from them;
-  `misconceived` is true exactly when the receipt lists a misconception.
-- **Grader version.** The prompt digest covers the system prompt, the tool schema
-  and a `tokenizerRevision` string. Changing how answers are tokenized is a version
-  change.
+  misconception, `"evidence": ["tok", "tok", ...]`: one or more consecutive tokens
+  copied from the list. No positions.
+- **`Span`.** Private constructor; built only by `Span.find(answer, tokens)`, which
+  returns the first place in the answer where those tokens occur consecutively, by
+  raw string equality, or null. Repeated phrases resolve to the first occurrence;
+  the credit is the same wherever they occur. A `Span` holds the token range, the
+  character offsets and the captured substring of the original answer, so a receipt
+  is self-contained.
+- **No length rule.** One token can fully meet a criterion ("Paris", "42", "-5") or
+  carry a misconception ("Yes" to "Is the earth flat?").
+- **Failed gradings.** If any citation does not resolve, or the tool call is missing
+  or malformed, the outcome is `GradingFailed`. **A `GradingFailed` never writes to
+  FSRS:** the card stays due and comes back. The conversation may still ask the
+  learner how it went, but that answer cannot move the schedule.
+- **Grader version.** The digest covers the system prompt, the tool schema, and the
+  tokenizer's pattern constant (`\S+`) and its offset rule. Changing how answers are
+  tokenized changes the version without anyone remembering to. Receipts store the
+  judgements, not a rating; the rating is derived by a named `RatingPolicy`, and
+  every report names the policy it used.
 - **Deleted:** `Quote`, `_words`, `_bare`, the punctuation and bracket patterns, the
-  two-word minimum as a matching rule, `unsupportedCount`,
-  `unquotedMisconceptionCount`.
-- **Kept:** `ratingFor` (subject to Rating below), `Unanswered`, `GradingFailed`,
-  `GraderModel`, the agreement tool.
+  two-word minimum, `unsupportedCount`, `unquotedMisconceptionCount`, and the
+  self-rating fallback's write to the schedule.
+- **Kept:** `Unanswered`, `GradingFailed`, `GraderModel`, the agreement tool.
 
-## Rating
+## Rating (`RatingPolicy.nothingMissed`, Nick 2026-11-24)
 
-Hard is a successful recall in FSRS. Today `ratingFor` gives Hard for at least half
-the rubric's credit, and caps a full answer with a misconception at Hard. Both
-lengthen the interval. **Nick's decision:** [pending] keep Hard for those cases, or
-give Again (the card counts as forgotten and comes back soon).
+- **Good:** every criterion met, and no misconception.
+- **Hard:** no criterion missed, at least one only partial, and no misconception.
+- **Again:** any criterion missed, or any misconception.
+
+The grader never gives Easy.
 
 ## Acceptance before wiring
 
-The agreement tool runs the grader on the human-rated set (task 22) and reports:
-over-rating (grader higher than the person) separately from overall agreement;
-unresolved citations (malformed gradings); judgements citing more than half the
-answer; one full-answer range reused across criteria; and one-token partials. The
-grader is not wired to any schedule until over-rating is at or below **[pending:
-Nick's threshold]**.
+The human-rated gold set (task 22) is split before anything runs: a calibration part
+and an untouched evaluation part.
 
-## Named tradeoff
+The agreement tool reports, naming the grader version and rating policy:
 
-- **Scripts without spaces** (Chinese, Japanese, Thai): a run of such text is one
-  token, so citations cover whole runs and audit little. Owner: Nick. Cost: weak
-  evidence for those answers. Mitigation: the agreement tool reports token counts
-  per answer; a word segmenter is added if such answers appear.
-- **Relevance** stays unchecked by any type, as producer 3 says; measured, not
-  guarded.
+- **Coverage:** the share of answered items that were graded (not `GradingFailed`),
+  with the failed items and the tokens that would not resolve.
+- **Over-rating:** among graded items, the share the grader rated higher than the
+  person. Failed items count as "no schedule change", which cannot over-rate.
+- Judgements citing more than half the answer, and one citation reused across
+  criteria (the lazy-evidence residual of producer 5).
+
+On the calibration part, Nick sets an over-rating threshold and a coverage bar
+(his decision: after the first run). They are committed with the calibration
+report, then frozen, and the grader is wired to a schedule only if the evaluation
+part meets both.
+
+## Named tradeoffs
+
+- **Scripts without spaces** (Chinese, Japanese, Thai) and single code blobs or URLs
+  are one token, so citations cover whole runs and audit little. Owner: Nick. Cost:
+  weak evidence for those answers; grades still work. Mitigation: the agreement
+  tool reports token counts; a word segmenter is added if such answers appear.
+- **Relevance** (producer 5) is measured, not guarded.

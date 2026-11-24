@@ -36,6 +36,19 @@ Bundle: `DESIGN.md`, `lib/src/models/assessment.dart`, `lib/src/services/blind_a
 
 RECAST: flaws 1-7 and 9 fold into `DESIGN.md`; flaws 8 and 9's threshold wait on Nick; then re-strike (round 2 of at most 3).
 
+Nick's decisions (2026-11-24): Hard only when nothing was missed; the over-rating threshold is set after the first run.
+
+## Round 2 synthesis (dt-1795487997): RECAST, all four families
+
+Deduped, most severe first:
+
+1. **The grader is still asked to count.** Text binding guards a miscount instead of deleting it. — Noether, Tesla. DISPOSITION: fold. The grader returns copied token text only; engram finds the first contiguous whole-token run that equals it. No numbers in the grader's output, nothing to miscount.
+2. **The fallback is itself an over-rating producer.** A failed grading fell back to self-rating, which can lengthen the interval and is invisible to the acceptance gate. — Noether, Tesla, Carnot. DISPOSITION: fold. A failed grading writes nothing to FSRS; the card stays due. Self-rating may be offered in the conversation, but it cannot move the schedule.
+3. **The token-count rule changes grades and pushes graders to one-token partials.** — Carnot, Noether, Tesla. DISPOSITION: fold. Deleted; one token can fully meet a criterion or carry a misconception. Lazy one-token evidence reused across criteria is relevance, measured by the agreement tool (Tesla's residual, named).
+4. **`tokenizerRevision` is a hand-bumped string.** — Maxwell, Noether. DISPOSITION: fold. The digest covers the tokenizer's pattern constant itself.
+5. **The acceptance gate's population and policy are undefined.** — Carnot, Tesla, Maxwell. DISPOSITION: fold. Coverage (share of answers graded, not malformed) is reported with its own bar; over-rating is computed on graded answers, and malformed answers count as "no schedule change"; the gold set is split, the first part calibrates the threshold, which is then frozen and checked on the untouched second part. Reports name the rating policy.
+6. **A misconception the grader can't cite.** — Noether, Tesla. DISPOSITION: resolved by 1 and 3 (copying one word always works). Tesla's "grader learns to emit none" is rejected: a grading call has no learning loop; misconception recall is measured on the gold set.
+
 ---
 
 <!-- Per-family strikes, in arrival order, written as each returned. -->
@@ -168,3 +181,143 @@ The new check is `Span.of` — a bounds/existence test. Its producer (the model'
 - One number line in the prompt. Rubric identity stays `criterion_index` in the tool call. The token list is the only sequence the model counts. With token-text binding, a criterion index echoed as a span fails equality and becomes grader failure.
 - Rewrite "What this does not fix" and open question 3 so the scheduling claim matches the mechanism: this design removes invented words, and it does not remove interval growth from `Hard`. State that partial credit and a misconception cap still lengthen the interval, and that cheaper in-range credit increases how often that happens. Leave Again-versus-Hard as Nick's decision, in the rating section, beside `ratingFor`, as part of this design's effect on the stated harm.
 - Point the agreement tool at unresolved citations, token-text disagreements, identical full-answer spans repeated across criteria, and one-token partials. Clipping of an already accepted range is the smaller harmonic.
+
+---
+
+# Round 2 — dt-1795487997
+
+<!-- Arrival order, written as each returned. -->
+
+## MaxwellMergeSlam's Design Strike
+
+**Verdict:** RECAST
+
+**Summary:** The folded design closes the fail-open miscount and makes grader faults fail closed, but it reintroduces the hand-bumped version string that round 1's digest existed to delete, now under the name `tokenizerRevision`.
+
+**Producer first:** Bad outcome one: receipts from two different tokenizers pooled as one grader. Its producer is `tokenizerRevision`, a string a person must remember to change when the tokenizer changes. That is the same producer `PromptDigest` deleted for the prompt (Noether, PR 183 round 2). It can be removed: the tokenizer is defined by one pattern ("maximal non-empty runs of non-whitespace"), so hash the pattern constant itself into the digest, and an edit to the tokenizer changes the version with no one remembering. Bad outcome two: over-rating from a miscounted citation. Its producer, the bounds-only check, is made unable to produce credit by the text binding. That holds. Bad outcome three: relevance. It cannot be removed, and it is measured. That holds.
+
+**Fatal flaws:**
+- **A hand-maintained version input (DESIGN.md "Grader version").** `tokenizerRevision` is a string someone bumps by hand. A tokenizer edit without a bump pools receipts across two tokenizations: the exact failure the round-1 strike filed against the old `promptRevision`. Class: a check whose producer could be removed. Fold: the digest covers the tokenizer's pattern constant (and the token-joining rule, "single spaces"), not a revision label.
+- **Unpriced liveness cost of fail-closed binding (DESIGN.md "Unresolved citations fail closed").** Raw string equality means a grader that writes a straight apostrophe where the learner typed a curly one, or a hyphen where they typed an en dash, fails the whole grading. That is the safe direction, but if it happens often, the grader is almost never usable, and the design doesn't say how that would be noticed or handled. Class: missing failure mode (degradation to zero coverage). Fold: the agreement tool reports the malformed rate, with the token pairs that failed equality, and the design names a coverage bar beside the over-rating threshold. Not a retry: a retry spends a second call to paper over the same copying fault.
+
+**What holds:**
+- Binding each citation to its exact text turns an in-range miscount from credit into a failed grading.
+- Unresolved citations fail closed as grader faults; both unsupported counters and their rating input are deleted.
+- The original answer goes to the grader unchanged, so line breaks and indentation reach it.
+- The new rating rule makes "interval grows" require nothing missed and no misconception, which aligns the rule with the stated harm.
+- The post-hoc threshold risk is named, with a commit-the-report-first mitigation.
+
+**If RECAST, what to fold back:**
+- Replace `tokenizerRevision` with the tokenizer's pattern constant and joining rule inside the digest.
+- Add the malformed rate (with failing token pairs) to the agreement tool's report, and a coverage bar to "Acceptance before wiring".
+
+## NoetherNullPointer's Design Strike
+
+**Verdict:** RECAST
+
+**Summary:** The design assumes a symmetry between two encodings of one citation — the grader's count (`start`/`end`) and the grader's copy (`text`) — and then, when the symmetry breaks (which the design itself predicts, "models count badly"), it pays for the break by handing the rating to the one rater the entire mechanism exists to distrust. That is the broken invariant, and it is load-bearing.
+
+**Producer first:**
+
+The harm: a card the learner did not demonstrate is rated as recalled; FSRS lengthens the interval; the fact is met after it was forgotten. Over-rating.
+
+- **Producer 1 — grader writes evidence text the learner never wrote** (the old matching holes: `correct` inside `incorrect`, a lone stopword, `5` inside `-5`). **Removed.** No matching rule; evidence is copied from the token list. Its conduit is also deleted: `unsupportedCount` → "counts as missed" no longer exists, so the producer *and* the path that turned it into a rating are gone. Correct producer-first surgery.
+- **Producer 2 — the grader miscounts a citation.** Not removed. The design **keeps the count in the protocol** and guards it with text-equality, then fails closed. This is a DEFECT (F1): the count can be deleted from the protocol entirely — the copied text alone locates the slice — and then the miscount is structurally unable to be produced and the guard becomes unnecessary.
+- **Producer 3 — the grader's judgement of relevance.** Untrusted meaning-reading across a trust boundary; the harm *is* the input's meaning arriving, and only a meaning-reader can judge it. Cannot be removed; the design says so and measures it. Guard reviewed normally.
+- **Producer 4 — the rating rule mapping half-credit to Hard.** Restructured by Nick's decision (Hard only when nothing was missed). Acceptable.
+- **Producer 5 — self-rating on the failure path.** OURS, and **the producer table omits it.** "The caller falls back to self-rating" is stated and never analysed, yet self-rating is the producer the blind assessor was built to replace. This is a DEFECT (F2).
+
+**Fatal flaws:**
+
+- **F1 — the count is kept, then guarded, instead of deleted (producer not made impossible; guard where deletion belongs).** `DESIGN.md` "What the grader returns" / "`Span`": the citation carries `start`/`end` *and* the copied text, and resolves only when they agree. The design's own premise is "models copy text well and count badly," so the guard fires exactly on the failure the design predicts. The count is not needed to express the citation: a copied run matched against contiguous **whole-token** runs of the answer names the same slice, cannot miscount, and keeps every guarantee the design states. Keeping the count manufactures the failure; the text-equality check is then a hole in a guard, not a guard.
+- **F2 — the fallback is the producer (under-counted blast radius; wrong option-frame).** One unresolvable citation among N criteria discards all N judgements — including a misconception the grader *did* see — and routes to self-rating. Self-rating over-rates; that is the premise of the whole feature. The design frames the choice as "penalize the learner for a grader fault vs. not," but the axis that matters is "which failure direction over-rates," and it chose the one that does. Worse: the acceptance gate measures "over-rating (grader higher than the person)" — self-rating is not the grader, so this over-rating is **invisible to the gate that is supposed to catch over-rating.**
+- **F3 — the conservative signal was deleted (missing failure mode; safety signal replaced in the unsafe direction).** `unquotedMisconceptionCount` "still cap[s] the rating… err[s] toward reviewing the card sooner." Deleted; `misconceived` is now true only for a *resolvable* misconception. A grader that sees a wrong claim but cannot cite it (see F4) now routes the whole grading to self-rating instead of capping at Hard. The Rating section's promise — "a confidently wrong claim now brings the card back soon" — holds only when the claim is cited in two or more resolvable tokens.
+- **F4 — the length rule's enforcement point is unspecified, and one-token misconceptions are unrepresentable (type cannot hold a state the domain has).** "`met` and `Misconception` require a span of two or more tokens. A one-token span may support `partial` only." The design does not say whether a one-token `met` citation is *invalid* (→ fail closed → self-rating) or *downgraded* (→ Hard). For short answers — "Yes", "4", "Paris", the common case — those differ by a full fallback. And a one-token misconception **cannot be constructed at all**, so an honest grader citing the wrong claim in a one-token answer ("Yes" to "is the earth flat?") emits a malformed grading → self-rating. Length is a proxy for evidence, not evidence: two tokens "it is" earn `met`; one token "42" cannot.
+- **F5 — `tokenizerRevision` is remembered, not derived (invariant asserted, not conserved).** `PromptDigest`'s stated property is "derived from their bytes, so any edit to either changes it without anyone remembering to." The `tokenizerRevision` is a hand-maintained string inside the digest. A tokenizer edit that forgets the bump leaves the digest unchanged and pools receipts from two tokenizations in the agreement tool. The conserved quantity "one digest ⇔ one grader behaviour" leaks on the tokenizer half.
+
+**What holds:**
+
+- Producer 1 is removed cleanly: no normalization, no punctuation stripping, no word-splitting — whole-token citation makes `correct` unfindable inside `incorrect` and `5` unfindable inside `-5`. The conduit (`unsupportedCount`) dies with it. This is the right surgery.
+- "Displayed evidence is an exact slice of the learner's answer" is the right invariant to want, and the design states its limit honestly: it does not guarantee the slice shows the criterion.
+- Separating `criterion_index` from the token sequence is correct; the token list being "the only sequence the model counts in" is the right separation — the mistake is making it count at all.
+- Storing the captured substring in the receipt so old receipts never move under a tokenizer change: right.
+- The Rating change conserves the right quantity: partial credit no longer buys a lengthened interval.
+- Acceptance before wiring, first-run report committed before the threshold, over-rating measured separately from overall agreement, relevance measured rather than guarded with the reason stated.
+
+**If RECAST, what to fold back:**
+
+- Delete `start`/`end` from the grader's citation. The grader returns the copied token run only; `Span.of(answer, text)` finds it as a contiguous run of **whole tokens** and computes character offsets at parse time. A miscount then cannot exist, and the fail-closed rule for it becomes unnecessary — not better-guarded, unnecessary.
+- If indices are kept for any reason, they are a *hint*: on disagreement the text wins (the design says the text is what models get right), and the disagreement is recorded for the agreement tool, never fatal.
+- Malformed must never fall back to self-rating. Retry the grader inside the existing `maxRetries` budget (the design currently spends it on the rare failure — network — and none on the predicted one — miscount), then produce the conservative outcome: the card comes back sooner. Reinstate conservative treatment of an unverified misconception.
+- Make the length rule's enforcement explicit: a one-token citation for `met` downgrades to `partial` (never fails the grading); make a one-token misconception representable, or state that it caps at `Again`.
+- Derive `tokenizerRevision` from the tokenizer's own artifact rather than a hand-written string, so the digest keeps its "no one has to remember" property.
+- The acceptance report must include the malformed rate **and** the over-rating of the fallback path, or the gate is measuring only the grader while the deployed system over-rates around it.
+
+## CarnotCodeCarver's Design Strike
+
+**Verdict:** RECAST
+
+**Summary:** Exact spans improve provenance, but whitespace still controls semantic credit and the acceptance gate can be fitted to its results. No real engine matches the Carnot cycle; a reviewer's job is to say how far short we are. Here, evidence integrity improves while grading reliability remains unproven.
+
+**Producer first:** Bad outcome: the learner receives a successful-recall rating without demonstrating the required knowledge, delaying review. The trigger is an incorrect model judgement; our producers are the parser admitting that judgement and ratingFor converting it into Good or Hard. Exact citations cannot make this impossible: selecting genuine words does not establish their meaning. Semantic judgement must remain if automated assessment remains the feature. A separate harm is downgrading a complete answer solely because it occupies one token. Its producer is our two-token eligibility rule, which can be deleted. Finally, malformed output triggers self-rating: this prevents an automated receipt, but does not itself prevent an excessive scheduling interval. That fallback preserves manual review and must be assessed as a separate outcome.
+
+**Fatal flaws:**
+- Make whitespace-dependent eligibility impossible: remove token-count requirements from met judgements and misconceptions; then the two-token eligibility checks become unnecessary. A criterion inside a multi-criterion rubric can be fully answered by one number, formula, or name. Calling that partial changes the assessment rather than preserving it. A one-token wrong claim also needs to be representable. The acknowledged script limitation therefore changes grading outcomes, not merely audit quality.
+- The acceptance gate has no independent acceptance evidence. Choosing the threshold after inspecting the same results permits an arbitrary pass; committing the report preserves the history but does not remove that selection bias. Use the first run for calibration, then freeze the threshold and evaluate on untouched human-rated examples before schedule wiring.
+- The acceptance population is unspecified. Malformed citations divert answers to self-rating, so agreement calculated only on successful receipts can improve by excluding difficult answers. Reporting malformed counts separately does not establish acceptable coverage or scheduling behavior. Define the denominator, minimum coverage, and treatment of fallbacks before the acceptance run.
+- Evaluation identity omits a component that directly produces the harm: ratingFor. Its policy changes in this design, yet GraderVersion identifies only prompt, schema, tokenizer, and model. Identical criterion judgements can therefore produce different ratings under one recorded grader version. Preserve raw judgements and identify the rating policy used for every reported scheduling comparison.
+
+**What holds:**
+- Constructing displayed evidence from the immutable answer removes invented quotations and normalization-based false matches.
+- Checking both token coordinates and exact token text rejects miscounts that land on different text. It does not detect every wrong coordinate when identical text repeats.
+- Rejecting the whole malformed grading avoids quietly converting grader citation errors into learner misses.
+- The revised rating policy closes the explicit paths from missed criteria or recorded misconceptions to Hard.
+- The design correctly limits its guarantee to provenance and leaves semantic relevance to empirical evaluation.
+
+**If RECAST, what to fold back:**
+- Keep spans as provenance and remove token length as a semantic eligibility rule. Dijkstra: "Simplicity is prerequisite for reliability." The unnecessary machinery is the attempt to infer evidential sufficiency from whitespace.
+- Use the first report to develop the grader and acceptance criteria. Require a subsequent untouched evaluation with frozen over-rating and coverage requirements; report uncertainty and results by answer length and script.
+- Report the complete outcome distribution: automated receipts, malformed results, other failures, and manual fallbacks. Describe self-rating as a manual handoff, rather than an end-to-end fail-closed scheduling guarantee.
+- Version the rating policy alongside grader inputs, and record the evaluation dataset and human-label revision so acceptance results remain reproducible.
+- Specify that all spans in a receipt belong to the same answer. Captured substrings preserve display, but answer identity and tokenizer revision are needed if stored coordinates will later be audited.
+
+
+## Tesla, the Arc-Prophet's Design Strike
+
+**Verdict:** RECAST
+
+Tesla: "If you want the secrets of the universe, think in energy, frequency and vibration."
+
+**Summary:** The citation type is true, and the protocol still asks the model to count — the one motion this design says the model loses — so at steady state the grades that survive are the easy one-token partials, Hard lengthens the interval, and every miscount falls through to self-rating, which the acceptance gate is built not to hear.
+
+**Producer first:** The harm is a card scheduled as recalled after the learner did not show it. Four checks, four producers.
+
+1. `Span.of` refuses an in-bounds index unless the supplied `text` equals tokens `i..j` joined by single spaces (Design, `Span`; Producer first §2). The producer is ours: the return shape asks the grader to emit `start` and `end`, and a later reader treats a resolved span as credit. A miscount can be made unable to exist by taking indices off the model's output. The model copies token text from the numbered list; only the program locates the unique contiguous range whose join equals that text. Zero matches or more than one and the citation does not resolve. The index-equality check then has nothing to guard.
+
+2. The two-token floor on `met` and `Misconception`, with one token allowed only for `partial` (Design, Lengths). The producer of the original matching hole "one word supports every criterion" is the rating rule counting each partial as its own credit. That floor leaves the producer in place: the same one-token span, repeated once per criterion, is a legal receipt and rates Hard, and Hard is a successful recall. Make a success rating unable to come from a union of evidence that is a single token; the length floor is then a display rule, and it stops being the guard.
+
+3. Any citation that does not resolve burns the whole grading to `GradingFailure.malformed`, and the caller self-rates (Design, Unresolved citations fail closed). The producer of over-rating on that path is the fallback writing a learner-chosen success into FSRS. The trigger is a bad citation. The schedule write is ours. Make an interval increase impossible from anything except a resolved receipt; self-rating can remain a UI conversation and still be unable to lengthen a card. Fail-closed stays as "no receipt." It stops being a door onto the schedule.
+
+4. The agreement gate withholds wiring until an over-rating threshold is passed, and the number is chosen after the first run (Design, Acceptance before wiring). The producer is the wiring step treating "resolved receipts look calm" as "the schedule will be calm." The numerator can be fixed now so unresolved grades count as the rating the schedule will actually apply. A threshold chosen afterward can still be honest only if that definition is already closed.
+
+Producer 3 in the design, the semantic judgement, stays. A reader of meaning is the feature. Nothing above replaces it.
+
+**Fatal flaws:**
+- Make a miscounted citation unable to touch the schedule: the grader returns copied token text only, and `Span` is born only from a unique program-side location in the token list; then model-emitted `start`/`end` and the index-equality check become unnecessary. As written, the grader still returns inclusive indices (Design, What the grader returns) while Producer first §2 states that models count badly and copy well. Inclusive ends are the native off-by-one of every model trained on half-open slices. Each of those vibrations is specified to destroy the entire grading, and the caller falls back to self-rating. Self-rating is allowed to mark a successful recall. The old `Quote` path turned a bad citation into a miss and the card came back; this fold turns the same fault into the learner's hand on the interval. The third consequence sits one octave up: a two-token `met` is easy to miscount and dies, a one-token `partial` is the easiest equality there is (`start == end`, copy one list item), and the Lengths rule teaches the grader, by rejection, to speak only in one-token partials.
+- Those surviving receipts rate Hard whenever nothing is marked missed (Design, Rating), and Hard lengthens the FSRS interval. One token attached to every criterion is a full success-shaped receipt. A spaceless answer is the same chord played on one string: Chinese, Japanese, Thai, a URL, a single code blob is one token (Design, Named tradeoff), so a `met` or a misconception cannot resolve at all, and the only receipt that both resolves and advances the card is every criterion `partial` on that lone run. The tradeoff calls this "weak evidence" and "audit little." Under Lengths plus Rating it is a Hard, or a malformed grading routed to self-rating. The segmenter is described as a later mitigation; until it exists those answers still move the schedule.
+- The acceptance instrument listens to the wrong frequency (Design, Acceptance before wiring). It reports over-rating on grader-versus-human judgements, and reports unresolved citations beside that number. Production will schedule the fallback, and the threshold is written down after the report exists. A numerator that excludes malformed grades will look like agreement exactly when the live path is self-rating. The commit-the-report mitigation freezes the table and leaves the definition of "over-rating" free. The same gap sits in the version: the digest covers the prompt, the tool schema, and `tokenizerRevision`, and `ratingFor` stays a live derivation, as it is on `AssessmentReceipt.rating` today. A later edit to the rating rule moves every old receipt's meaning, and the threshold commit still cites a report from the previous mapping.
+- A misconception counts only when a two-token span resolves, and a citation that fails takes the whole receipt with it (Design, Producer first §4's deletion of `unquotedMisconceptionCount`; Unresolved citations fail closed). The durable strategy is to emit no misconception. A wrong claim then leaves Good available whenever the criteria were cited cleanly. The old unquoted count erred toward reviewing sooner. This design deletes that input and keeps "no misconception" as the condition for Good.
+
+**What holds:**
+- Fuzzy matching is actually gone. No case folding, no punctuation strip, no `correct` inside `incorrect`, no `5` inside `-5`. Evidence text is copied from the answer's own tokens. That deletion is the ore and it is sound.
+- A `Span` that stores `answer.substring(startOffset, endOffset)` plus the offsets is a receipt that stays still when the tokenizer later changes. Putting `tokenizerRevision` in the digest keeps old and new grades out of one agreement pool.
+- The new `ratingFor` map is the right coupling for the stated harm wherever a receipt is real: a miss is Again, a misconception is Again, half credit is no longer a success, Easy is never offered. Nick's decision is recorded in Rating and belongs there.
+- Relevance of a true slice stays outside the type, measured by the human-rated set. That refusal to invent a semantic checker is correct.
+- Fail-closed as "a bad citation is a grader fault" is the right instinct. Its blast radius is what has to be folded, and the instinct stays.
+
+**If RECAST, what to fold back:**
+- In **What the grader returns** and **`Span`**, delete model-emitted `start` and `end`. The tool returns `text` copied from the numbered token list, the space-join of a contiguous range. `Span.resolve(answer, text)` is the only constructor: it finds every contiguous token range with that join. One match builds a span carrying the token range, the original character offsets, and `answer.substring(startOffset, endOffset)`. Zero or many matches do not resolve. Say in the same paragraph that a `met`, a `partial`, or a misconception that omits `text` is the same failure as a text that does not resolve, and that `missed` carries no span. Credit without a `Span` is unrepresentable.
+- In **Unresolved citations fail closed**, specify the schedule effect: `GradingFailed` cannot advance an FSRS interval. The UI may still ask the learner what they think. That answer is not a success rating. The card waits, or it is written as Again. Name this as deleting the producer, not as a stricter threshold.
+- In **Lengths** and **Rating**, add one rule to `ratingFor`: Good and Hard require a resolved span per credited criterion, and the union of those spans is at least two tokens. The same range repeated across criteria credits once; the other criteria are missed for scheduling. One token can still display as a `partial` and can still be stored on the receipt. It cannot, alone, lengthen an interval. Keep Nick's map otherwise: any miss or any resolved misconception is Again; all met and no misconception is Good; mixed met/partial with a union of two or more tokens and no misconception is Hard.
+- In **Named tradeoff**, replace "audit little" with the consequence of the rules above: a one-token answer cannot receive a success rating until a segmenter splits it. Until then it takes the no-advance path. The agreement tool's per-answer token counts remain the signal that says whether the segmenter is due.
+- In **Grader version** and **Acceptance before wiring**, fold the rating rule into the version (digest the source of `ratingFor`, or store the `FsrsRating` applied at grade time on the receipt). Fix the over-rating numerator before any run: a grading that will not advance is not an over-rate; a grading whose failure path would let the learner write a success counts as an over-rate. Nick still chooses the numeric threshold after the first committed report. He chooses it against that numerator, and the threshold commit cites the report by that definition.
