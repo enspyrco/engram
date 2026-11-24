@@ -52,9 +52,14 @@ final class AnswerText {
     for (final t in AnswerText.of(_probe).tokens) [t.text, t.start, t.end],
   ]);
 
-  static const _probe =
-      ' a  b\tc\nd\r\ne f g​h﻿i "j" (k), -5 x!=y '
-      '\\l 東京は首都 é é. ';
+  // No-break space, em space, zero-width space, byte-order mark and a
+  // combining accent, written as code points so the source holds no
+  // invisible characters.
+  static final _probe =
+      ' a  b\tc\nd\r\ne${_char(0x00a0)}f${_char(0x2003)}g${_char(0x200b)}h'
+      '${_char(0xfeff)}i "j" (k), -5 x!=y \\l 東京は首都 é e${_char(0x0301)}. ';
+
+  static String _char(int codePoint) => String.fromCharCode(codePoint);
 
   final String text;
   final IList<AnswerToken> tokens;
