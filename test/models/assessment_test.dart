@@ -3,63 +3,135 @@ import 'package:engram/src/models/assessment.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:test/test.dart';
 
-final _quote = Quote.find('some quoted words', 'quoted words')!;
-
-IList<CriterionJudgement> _judged(List<CriterionVerdict> verdicts) =>
-    [
-      for (final (i, v) in verdicts.indexed)
-        switch (v) {
-          CriterionVerdict.met => CriterionJudgement.met(
-            'criterion $i',
-            _quote,
-          ),
-          CriterionVerdict.partial => CriterionJudgement.partial(
-            'criterion $i',
-            _quote,
-          ),
-          CriterionVerdict.missed => CriterionJudgement.missed('criterion $i'),
-        },
-    ].lock;
-
 void main() {
   const met = CriterionVerdict.met;
   const partial = CriterionVerdict.partial;
   const missed = CriterionVerdict.missed;
 
-  group('ratingFor', () {
+  group('RatingPolicy.nothingMissed', () {
+    FsrsRating rate(
+      List<CriterionVerdict> verdicts, {
+      bool misconceived = false,
+    }) => RatingPolicy.nothingMissed.rate(verdicts, misconceived: misconceived);
+
     test('every criterion met is good', () {
-      expect(ratingFor(_judged([met, met, met])), FsrsRating.good);
+      expect(rate([met, met, met]), FsrsRating.good);
     });
 
-    test('a misconception caps a full answer at hard', () {
-      expect(
-        ratingFor(_judged([met, met]), misconceived: true),
-        FsrsRating.hard,
-      );
+    test('nothing missed and something partial is hard', () {
+      expect(rate([met, met, met, partial]), FsrsRating.hard);
+      expect(rate([partial, partial]), FsrsRating.hard);
     });
 
-    test('half the credit is hard, less is again', () {
-      expect(ratingFor(_judged([met, missed])), FsrsRating.hard);
-      expect(ratingFor(_judged([partial, partial])), FsrsRating.hard);
-      expect(ratingFor(_judged([partial, missed])), FsrsRating.again);
-      expect(ratingFor(_judged([met, missed, missed])), FsrsRating.again);
+    test('any missed criterion is again', () {
+      expect(rate([met, missed]), FsrsRating.again);
+      expect(rate([met, met, met, missed]), FsrsRating.again);
+      expect(rate([partial, missed]), FsrsRating.again);
     });
 
-    test('one partial keeps a nearly full answer at hard', () {
-      expect(ratingFor(_judged([met, met, met, partial])), FsrsRating.hard);
+    test('any misconception is again, even with every criterion met', () {
+      expect(rate([met, met], misconceived: true), FsrsRating.again);
+      expect(rate([met, partial], misconceived: true), FsrsRating.again);
     });
 
     test('never easy', () {
-      for (final verdicts in [
-        [met],
-        [met, met, met, met],
-      ]) {
-        expect(ratingFor(_judged(verdicts)), isNot(FsrsRating.easy));
-      }
+      expect(rate([met]), isNot(FsrsRating.easy));
+      expect(rate([met, met, met, met]), isNot(FsrsRating.easy));
     });
 
-    test('no judgements is again', () {
-      expect(ratingFor(const IListConst([])), FsrsRating.again);
+    test('no verdicts is again', () {
+      expect(rate([]), FsrsRating.again);
+    });
+  });
+
+  group('AnswerText', () {
+    test('tokens are runs of non-whitespace with offsets', () {
+      final answer = AnswerText.of('  Paris,\n\tthe  capital. ');
+      expect(answer.tokens.map((t) => t.text), ['Paris,', 'the', 'capital.']);
+      expect(answer.tokens.map((t) => (t.start, t.end)), [
+        (2, 8),
+        (10, 13),
+        (15, 23),
+      ]);
+      expect(answer.text, '  Paris,\n\tthe  capital. ');
+    });
+
+    test('a blank answer has no tokens', () {
+      expect(AnswerText.of(' \n\t ').isBlank, isTrue);
+      expect(AnswerText.of('').isBlank, isTrue);
+      expect(AnswerText.of('-5').isBlank, isFalse);
+    });
+  });
+
+  group('Span.of', () {
+    final answer = AnswerText.of('Paris is wrong.  Paris is\ncorrect.');
+    // Tokens: 0 Paris, 1 is, 2 wrong., 3 Paris, 4 is, 5 correct.
+
+    test('cites the tokens at the position, spacing kept', () {
+      final span = Span.of(answer, 3, ['Paris', 'is', 'correct.'])!;
+      expect((span.start, span.end, span.length), (3, 6, 3));
+      expect(span.text, 'Paris is\ncorrect.');
+      expect(answer.text.substring(span.charStart, span.charEnd), span.text);
+    });
+
+    test('the position says which occurrence is meant', () {
+      expect(Span.of(answer, 0, ['Paris', 'is'])!.start, 0);
+      expect(Span.of(answer, 3, ['Paris', 'is'])!.start, 3);
+    });
+
+    test('a miscounted position resolves to nothing', () {
+      expect(Span.of(answer, 1, ['Paris', 'is']), isNull);
+      expect(Span.of(answer, 4, ['Paris', 'is', 'correct.']), isNull);
+    });
+
+    test('tokens are compared exactly, without normalizing', () {
+      expect(Span.of(answer, 5, ['correct']), isNull);
+      expect(Span.of(answer, 0, ['paris']), isNull);
+      expect(Span.of(answer, 5, ['correct.']), isNotNull);
+    });
+
+    test('one token is enough', () {
+      expect(Span.of(AnswerText.of('-5'), 0, ['-5'])!.text, '-5');
+    });
+
+    test('a citation past either end, or of nothing, resolves to nothing', () {
+      expect(Span.of(answer, -1, ['Paris']), isNull);
+      expect(Span.of(answer, 5, ['correct.', 'more']), isNull);
+      expect(Span.of(answer, 6, ['x']), isNull);
+      expect(Span.of(answer, 0, []), isNull);
+    });
+  });
+
+  group('scheduledRating', () {
+    final span = Span.of(AnswerText.of('Paris'), 0, ['Paris'])!;
+
+    test('a failed grading or a blank answer writes again', () {
+      expect(
+        const GradingFailed(
+          GradingFailure.unresolvedCitation,
+          '',
+        ).scheduledRating,
+        FsrsRating.again,
+      );
+      expect(const Unanswered().scheduledRating, FsrsRating.again);
+    });
+
+    test('a graded answer writes its policy rating', () {
+      final receipt = AssessmentReceipt(
+        judgements:
+            [
+              CriterionJudgement.met('a', span),
+              CriterionJudgement.met('b', span),
+            ].lock,
+        misconceptions: const IListConst([]),
+        feedback: '',
+        graderVersion: (
+          prompt: PromptDigest.of([1]),
+          model: GraderModel.opus55,
+          policy: RatingPolicy.nothingMissed,
+        ),
+      );
+      expect(Graded(receipt).scheduledRating, FsrsRating.good);
     });
   });
 
@@ -84,49 +156,5 @@ void main() {
     expect(CriterionVerdict.parse('MET'), isNull);
     expect(CriterionVerdict.parse(1), isNull);
     expect(CriterionVerdict.parse(null), isNull);
-  });
-
-  group('Quote.find', () {
-    const answer =
-        'Precision and recall. You normalize so that  big counts\n'
-        "don't swamp small ones; the result is incorrect otherwise.";
-
-    test('ignores case, whitespace runs and punctuation', () {
-      expect(Quote.find(answer, 'precision AND recall'), isNotNull);
-      expect(Quote.find(answer, 'so that big counts'), isNotNull);
-      expect(Quote.find(answer, '"Precision and recall."'), isNotNull);
-      expect(Quote.find(answer, 'recall you normalize'), isNotNull);
-    });
-
-    test('matches whole words only', () {
-      expect(Quote.find(answer, 'is correct'), isNull);
-      expect(Quote.find(answer, 'ecall. You'), isNull);
-    });
-
-    test('keeps symbols that carry meaning', () {
-      const physics = 'The charge is -5 coulombs, so x != y here.';
-      expect(Quote.find(physics, 'charge is 5 coulombs'), isNull);
-      expect(Quote.find(physics, 'charge is -5 coulombs'), isNotNull);
-      expect(Quote.find(physics, 'x = y'), isNull);
-      expect(Quote.find(physics, 'x != y'), isNotNull);
-      expect(Quote.find(physics, '(so x != y)'), isNotNull);
-    });
-
-    test('rejects a one-word quote, even of a one-word answer', () {
-      expect(Quote.find(answer, 'precision'), isNull);
-      expect(Quote.find('Mitochondria.', 'mitochondria'), isNull);
-    });
-
-    test('rejects words the answer does not contain', () {
-      expect(Quote.find(answer, 'precision and accuracy'), isNull);
-      expect(Quote.find(answer, '  ...  '), isNull);
-    });
-
-    test('keeps the text the grader wrote', () {
-      expect(
-        Quote.find(answer, ' Precision and recall ')!.text,
-        'Precision and recall',
-      );
-    });
   });
 }

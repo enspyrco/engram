@@ -17,70 +17,97 @@ enum CriterionVerdict {
     }
     return null;
   }
-
-  double get credit => switch (this) {
-    CriterionVerdict.met => 1,
-    CriterionVerdict.partial => 0.5,
-    CriterionVerdict.missed => 0,
-  };
 }
 
-/// Words the grader quoted that really appear, in order, in the learner's
-/// answer.
-///
-/// Matching is on whole whitespace-separated words, ignoring case, quotes,
-/// brackets and sentence punctuation, so "correct" is not found in
-/// "incorrect" and "5" is not found in "-5". A quote must be at least two
-/// words, so a single word cannot stand as evidence. Single-word recall
-/// cards carry no rubric (extraction omits it), so they are never graded
-/// here.
-@immutable
-final class Quote {
-  const Quote._(this.text);
+/// One run of non-whitespace in an answer, with its character offsets.
+typedef AnswerToken = ({String text, int start, int end});
 
-  /// The quote as the grader wrote it.
+/// A learner's answer exactly as written, and the tokens a grader cites it
+/// by.
+///
+/// A token is a maximal run of non-whitespace; its offsets index the
+/// untrimmed answer. Nothing is normalized, so a cited token is always
+/// byte-for-byte the learner's.
+@immutable
+final class AnswerText {
+  const AnswerText._(this.text, this.tokens);
+
+  factory AnswerText.of(String text) => AnswerText._(
+    text,
+    [
+      for (final m in _token.allMatches(text))
+        (text: m[0]!, start: m.start, end: m.end),
+    ].lock,
+  );
+
+  /// The tokenizer's pattern. It is part of the grader version, so changing
+  /// how answers are tokenized changes the version.
+  static const tokenPattern = r'\S+';
+  static final _token = RegExp(tokenPattern);
+
+  final String text;
+  final IList<AnswerToken> tokens;
+
+  bool get isBlank => tokens.isEmpty;
+}
+
+/// Consecutive tokens of the learner's answer, cited as evidence.
+///
+/// Only [Span.of] builds one, and only when the grader's position and its
+/// copied tokens agree, so a span is always an exact slice of the answer.
+@immutable
+final class Span {
+  const Span._({
+    required this.start,
+    required this.end,
+    required this.charStart,
+    required this.charEnd,
+    required this.text,
+  });
+
+  /// The span whose first token is at [start] in [answer], if the answer's
+  /// tokens from there equal [tokens] by raw string equality; otherwise null.
+  static Span? of(AnswerText answer, int start, List<String> tokens) {
+    final all = answer.tokens;
+    if (tokens.isEmpty || start < 0 || start + tokens.length > all.length) {
+      return null;
+    }
+    for (final (i, token) in tokens.indexed) {
+      if (all[start + i].text != token) return null;
+    }
+    final first = all[start];
+    final last = all[start + tokens.length - 1];
+    return Span._(
+      start: start,
+      end: start + tokens.length,
+      charStart: first.start,
+      charEnd: last.end,
+      text: answer.text.substring(first.start, last.end),
+    );
+  }
+
+  /// The first token's position; [end] is one past the last token.
+  final int start;
+  final int end;
+
+  /// Character offsets of [text] in the answer.
+  final int charStart;
+  final int charEnd;
+
+  /// The cited words exactly as the learner wrote them, spacing included.
   final String text;
 
-  /// The quote if [quoted] is found in [answer], otherwise null.
-  static Quote? find(String answer, String quoted) {
-    final needle = _words(quoted);
-    final haystack = _words(answer);
-    if (needle.isEmpty) return null;
-    if (needle.length < 2) return null;
-    for (var start = 0; start + needle.length <= haystack.length; start++) {
-      var matches = true;
-      for (var i = 0; i < needle.length; i++) {
-        if (haystack[start + i] != needle[i]) {
-          matches = false;
-          break;
-        }
-      }
-      if (matches) return Quote._(quoted.trim());
-    }
-    return null;
-  }
+  int get length => end - start;
 
-  /// Quotes and brackets around a word, and sentence punctuation after it.
-  /// Symbols that carry meaning (`-5`, `!=`, `x=y`) are kept.
-  static final _wrapping = RegExp(r'''^["'“”‘’(\[]+|["'“”‘’)\]]+$''');
-  static final _trailing = RegExp(r'[.,;:!?…]+$');
+  @override
+  bool operator ==(Object other) =>
+      other is Span && other.start == start && other.end == end;
 
-  static List<String> _words(String s) => [
-    for (final token in s.toLowerCase().split(RegExp(r'\s+')))
-      if (_bare(token) case final word when word.isNotEmpty) word,
-  ];
+  @override
+  int get hashCode => Object.hash(start, end);
 
-  static String _bare(String token) {
-    var word = token;
-    for (var previous = ''; word != previous;) {
-      previous = word;
-      word = word.replaceAll(_wrapping, '');
-      // Keep a token made only of symbols, such as `!=`.
-      final trimmed = word.replaceAll(_trailing, '');
-      if (trimmed.isNotEmpty) word = trimmed;
-    }
-    return word;
-  }
+  @override
+  String toString() => 'Span($start..$end: $text)';
 }
 
 /// The grader's judgement of one rubric criterion. A met or partial
@@ -89,10 +116,10 @@ final class Quote {
 final class CriterionJudgement {
   const CriterionJudgement._(this.criterion, this.verdict, this.evidence);
 
-  const CriterionJudgement.met(String criterion, Quote evidence)
+  const CriterionJudgement.met(String criterion, Span evidence)
     : this._(criterion, CriterionVerdict.met, evidence);
 
-  const CriterionJudgement.partial(String criterion, Quote evidence)
+  const CriterionJudgement.partial(String criterion, Span evidence)
     : this._(criterion, CriterionVerdict.partial, evidence);
 
   const CriterionJudgement.missed(String criterion)
@@ -102,7 +129,7 @@ final class CriterionJudgement {
   final CriterionVerdict verdict;
 
   /// Null exactly when [verdict] is [CriterionVerdict.missed].
-  final Quote? evidence;
+  final Span? evidence;
 }
 
 /// A wrong claim the answer makes, with the learner's words that make it.
@@ -112,7 +139,31 @@ final class Misconception {
 
   /// The grader's description of what is wrong.
   final String claim;
-  final Quote evidence;
+  final Span evidence;
+}
+
+/// How criterion judgements become an FSRS rating. The grader never picks
+/// the rating, and never gives [FsrsRating.easy]: a written answer shows
+/// what was recalled, not how effortlessly.
+enum RatingPolicy {
+  /// [FsrsRating.good] when every criterion is met; [FsrsRating.hard] when
+  /// none is missed and at least one is partial; otherwise
+  /// [FsrsRating.again]. Any misconception is [FsrsRating.again].
+  nothingMissed;
+
+  FsrsRating rate(
+    Iterable<CriterionVerdict> verdicts, {
+    required bool misconceived,
+  }) => switch (this) {
+    RatingPolicy.nothingMissed =>
+      verdicts.isEmpty ||
+              misconceived ||
+              verdicts.contains(CriterionVerdict.missed)
+          ? FsrsRating.again
+          : verdicts.contains(CriterionVerdict.partial)
+          ? FsrsRating.hard
+          : FsrsRating.good,
+  };
 }
 
 /// The Claude model the grader runs on.
@@ -141,8 +192,9 @@ final class GraderModel {
   String toString() => id;
 }
 
-/// A digest of the grader's prompt and tool schema. Derived from their bytes,
-/// so any edit to either changes it without anyone remembering to.
+/// A digest of everything that shapes the grader's output in code: its
+/// prompt, its tool schema and the tokenizer. Derived from their bytes, so
+/// any edit changes it without anyone remembering to.
 @immutable
 final class PromptDigest {
   const PromptDigest._(this.hex);
@@ -163,9 +215,11 @@ final class PromptDigest {
   String toString() => hex;
 }
 
-/// Which grader produced a receipt, so receipts from a changed prompt or
-/// model are never pooled with older ones when measuring agreement.
-typedef GraderVersion = ({PromptDigest prompt, GraderModel model});
+/// Which grader produced a receipt and how its judgements are rated, so
+/// receipts from a changed prompt, model or policy are never pooled with
+/// older ones, and a version that passed acceptance is exactly one version.
+typedef GraderVersion =
+    ({PromptDigest prompt, GraderModel model, RatingPolicy policy});
 
 /// What the blind assessor decided about one answer, and why.
 @immutable
@@ -174,59 +228,28 @@ final class AssessmentReceipt {
     required this.judgements,
     required this.misconceptions,
     required this.feedback,
-    required this.unsupportedCount,
-    required this.unquotedMisconceptionCount,
     required this.graderVersion,
   });
 
   /// One judgement per rubric criterion, in rubric order.
   final IList<CriterionJudgement> judgements;
 
-  /// Misconceptions quoted from the answer; only these may be shown to the
-  /// learner.
+  /// Wrong claims the answer makes, each cited from it.
   final IList<Misconception> misconceptions;
 
   /// One line for the learner.
   final String feedback;
 
-  /// Met or partial judgements the grader gave without a quote found in the
-  /// answer; each counts as missed.
-  final int unsupportedCount;
-
-  /// Misconceptions the grader named without a quote found in the answer.
-  /// They are never shown, but still cap the rating, so an unverified signal
-  /// errs toward reviewing the card sooner.
-  final int unquotedMisconceptionCount;
-
   final GraderVersion graderVersion;
 
-  FsrsRating get rating => ratingFor(
-    judgements,
-    misconceived: misconceptions.isNotEmpty || unquotedMisconceptionCount > 0,
+  FsrsRating get rating => graderVersion.policy.rate(
+    judgements.map((j) => j.verdict),
+    misconceived: misconceptions.isNotEmpty,
   );
 }
 
-/// Turns criterion judgements into an FSRS rating.
-///
-/// All criteria met with no misconception is [FsrsRating.good]; at least half
-/// the rubric's credit is [FsrsRating.hard], and a misconception caps the
-/// rating there; less is [FsrsRating.again]. The grader never gives
-/// [FsrsRating.easy]: a written answer shows what was recalled, not how
-/// effortlessly.
-FsrsRating ratingFor(
-  IList<CriterionJudgement> judgements, {
-  bool misconceived = false,
-}) {
-  if (judgements.isEmpty) return FsrsRating.again;
-  final credit = judgements.fold<double>(0, (sum, j) => sum + j.verdict.credit);
-  final fraction = credit / judgements.length;
-  if (fraction == 1 && !misconceived) return FsrsRating.good;
-  if (fraction >= 0.5) return FsrsRating.hard;
-  return FsrsRating.again;
-}
-
-/// Why the assessor produced no receipt. The caller falls back to
-/// self-rating.
+/// Why the assessor produced no receipt. The caller writes
+/// [FsrsRating.again].
 enum GradingFailure {
   /// The grader replied without calling the grading tool.
   noToolCall,
@@ -234,28 +257,46 @@ enum GradingFailure {
   /// The tool call did not hold one valid judgement per criterion.
   malformed,
 
+  /// A citation's tokens are not the answer's tokens at its position.
+  unresolvedCitation,
+
   /// The request to the grader failed.
   requestFailed,
 }
 
 sealed class AssessmentOutcome {
   const AssessmentOutcome();
+
+  /// The rating to write to the schedule. Only a successful grading can
+  /// lengthen the interval; there is no self-rating fallback.
+  FsrsRating get scheduledRating;
 }
 
 /// The grader judged the answer.
 final class Graded extends AssessmentOutcome {
   const Graded(this.receipt);
   final AssessmentReceipt receipt;
+
+  @override
+  FsrsRating get scheduledRating => receipt.rating;
 }
 
-/// The answer was blank, so nothing was sent to the grader. The caller
-/// rates it [FsrsRating.again].
+/// The answer was blank, so nothing was sent to the grader.
 final class Unanswered extends AssessmentOutcome {
   const Unanswered();
+
+  @override
+  FsrsRating get scheduledRating => FsrsRating.again;
 }
 
+/// The grader could not grade the answer. Again never lengthens the
+/// interval, and it takes the card out of the due queue, so a card the
+/// grader cannot grade is not stuck there.
 final class GradingFailed extends AssessmentOutcome {
   const GradingFailed(this.failure, this.detail);
   final GradingFailure failure;
   final String detail;
+
+  @override
+  FsrsRating get scheduledRating => FsrsRating.again;
 }

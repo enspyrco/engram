@@ -1,5 +1,7 @@
 import 'package:engram/src/engine/fsrs_engine.dart';
 import 'package:engram/src/engine/grader_agreement.dart';
+import 'package:engram/src/models/assessment.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -31,5 +33,36 @@ void main() {
     expect(a.count, 0);
     expect(a.exact, 0);
     expect(a.confusion[easy]![again], 0);
+  });
+
+  test('lazy evidence counts one-token, over-half and reused citations', () {
+    final answer = AnswerText.of('cells need energy from mitochondria daily');
+    Span cite(int start, List<String> tokens) =>
+        Span.of(answer, start, tokens)!;
+    final whole = cite(0, answer.tokens.map((t) => t.text).toList());
+    final receipt = AssessmentReceipt(
+      judgements:
+          [
+            CriterionJudgement.met('a', cite(4, ['mitochondria'])),
+            CriterionJudgement.met('b', whole),
+            CriterionJudgement.partial('c', whole),
+            const CriterionJudgement.missed('d'),
+          ].lock,
+      misconceptions:
+          [
+            Misconception('daily', cite(5, ['daily'])),
+          ].lock,
+      feedback: '',
+      graderVersion: (
+        prompt: PromptDigest.of([0]),
+        model: GraderModel.opus55,
+        policy: RatingPolicy.nothingMissed,
+      ),
+    );
+
+    final lazy = lazyEvidenceOf(receipt, answer);
+    expect(lazy.oneToken, 2);
+    expect(lazy.overHalf, 2);
+    expect(lazy.reused, 1);
   });
 }
