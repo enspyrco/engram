@@ -93,6 +93,11 @@ x-connector[head="both"]::before { left: -2px; border-width: 7px 12px 7px 0; bor
   font: 18px/1.5 Inter, Arial, sans-serif;
 }
 
+/* Viewers who ask for less motion see each slide fully drawn on arrival. */
+@media (prefers-reduced-motion: reduce) {
+  #canvas *, #canvas *::before, #canvas *::after { animation: none !important; transition: none !important; }
+}
+
 @media print {
   html, body { height: auto; overflow: visible; background: none; }
   #hud, #notes { display: none !important; }

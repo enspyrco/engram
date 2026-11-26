@@ -12,6 +12,7 @@
 </svg>
 <p class="eyebrow rise" style="--i:0">Step 4 · The living graph</p>
 <h2 class="title rise" style="--i:1;width:700px">Watch your understanding grow</h2>
+<div class="fill">
 <div class="legend rise" style="--i:2;width:700px">
 <div class="legend-row"><x-shape kind="ellipse" style="background:#8A94A3"></x-shape><p><b>Locked</b> · prerequisites first</p></div>
 <div class="legend-row"><x-shape kind="ellipse" style="background:#E0604F"></x-shape><p><b>Due</b> · about to fade</p></div>
@@ -20,5 +21,6 @@
 <div class="legend-row"><x-shape kind="ellipse" style="background:#3FD0E0"></x-shape><p><b>Just learned</b> · glows as it arrives</p></div>
 </div>
 <p class="small rise" style="--i:3;width:700px;margin-top:40px">Nodes you already know stay pinned in place. New ones fall in among their neighbours by a physics simulation, so where a concept lands says what it’s close to.</p>
+</div>
 <aside>The graph is a custom Flutter painter with a force-directed layout: edges act like springs, nodes repel, and there’s some viscosity so it settles smoothly instead of wobbling. The important design choice is pinning: once you’ve seen your graph, it doesn’t reshuffle. New concepts animate in and find their place, which turns spatial memory into a second memory of the material. Colour is the FSRS state of each concept.</aside>
 </section>
